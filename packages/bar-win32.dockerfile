@@ -19,7 +19,7 @@ RUN    apt clean \
 RUN apt-get -y update
 
 # install packages
-RUN apt-get -y install --fix-missing \
+RUN apt-get -y install --no-install-recommends --fix-missing \
   bc \
   bzip2 \
   coreutils \
@@ -49,7 +49,7 @@ RUN apt-get -y install --fix-missing \
   xvfb \
   xz-utils \
   ;
-RUN apt-get -y install --fix-missing \
+RUN apt-get -y install --no-install-recommends --fix-missing \
   gcc \
   g++ \
   libblkid-dev \

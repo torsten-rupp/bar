@@ -746,7 +746,6 @@ LOCAL Errors vsyncExecuteCommand(ServerIO                      *serverIO,
 
   // wait for result
   bool      completedFlag;
-  uint      errorCode;
   StringMap resultMap = StringMap_new();
   do
   {

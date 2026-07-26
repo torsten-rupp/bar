@@ -742,7 +742,7 @@ void Job_init(Job *job);
 * Notes  : -
 \***********************************************************************/
 
-void Job_initDuplicate(Job *job, const Job *fromJob);
+void Job_initDuplicate(Job *job, Job *fromJob);
 
 /***********************************************************************\
 * Name   : Job_done
@@ -1004,8 +1004,8 @@ JobNode *Job_new(JobTypes    jobType,
 * Notes  : -
 \***********************************************************************/
 
-JobNode *Job_copy(const JobNode *jobNode,
-                  ConstString   fileName
+JobNode *Job_copy(JobNode     *jobNode,
+                  ConstString fileName
                  );
 
 /***********************************************************************\
@@ -1604,7 +1604,7 @@ void Job_initOptions(JobOptions *jobOptions);
 * Notes  : -
 \***********************************************************************/
 
-void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions);
+void Job_copyOptions(JobOptions *jobOptions, JobOptions *fromJobOptions);
 
 /***********************************************************************\
 * Name   : Job_getOptions

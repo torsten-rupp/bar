@@ -1223,11 +1223,11 @@ LOCAL void expandMacros(char *line, uint lineSize, const char *template, size_t 
         {
           if (stringEquals(commandLineOptions[i].name,commandLineOptions[j].name))
           {
-            HALT_INTERNAL_ERROR("duplicate name '%s' in command line options %d and %d",commandLineOptions[i].name,i,j);
+            HALT_INTERNAL_ERROR("duplicate name '%s' in command line options %zu and %zu",commandLineOptions[i].name,i,j);
           }
           if ((commandLineOptions[i].shortName != '\0') && (commandLineOptions[i].shortName == commandLineOptions[j].shortName))
           {
-            HALT_INTERNAL_ERROR("duplicate short name '%c' in command line options %d and %d",commandLineOptions[i].shortName,i,j);
+            HALT_INTERNAL_ERROR("duplicate short name '%c' in command line options %zu and %zu",commandLineOptions[i].shortName,i,j);
           }
         }
       }

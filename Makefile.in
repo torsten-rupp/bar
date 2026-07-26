@@ -730,8 +730,8 @@ packages: \
 docker_build docker_update update_docker:
 	# base images
 	$(DOCKER) pull almalinux:8.10
-	$(DOCKER) pull debian:10
-	$(DOCKER) pull ubuntu:22.04
+	$(DOCKER) pull debian:13
+	$(DOCKER) pull ubuntu:24.04
 	#
 	$(INSTALL) download-third-party-packages.sh packages
 	#
@@ -809,7 +809,7 @@ docker_run_win32-x86_64:
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
             --name=bar-win32-x86_64 \
-            bar-mingw32 setarch x86_64 -- /media/home/packages/build_win32.sh \
+            bar-win32 setarch x86_64 -- /media/home/packages/build_win32.sh \
               -s \
               $(PACKAGE_NAME) \
               $(DISTRIBUTION_NAME).tar.bz2 \
@@ -962,10 +962,9 @@ $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@: \
             --net=host \
             --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
-            -v $(PWD)/extern:/media/extern \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
-            bar-mingw32 setarch x86_64 -- /bin/bash -c "make -C /media/home build_win32 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
+            bar-win32 setarch x86_64 -- /bin/bash -c "make -C /media/home build_win32 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -1034,7 +1033,7 @@ functionInstallTestWin32 = \
     if test -n "$(DOCKER)"; then \
       $(DOCKER) $(DOCKER_RUN_FLAGS) \
         --rm \
---net=host \
+        --net=host \
         -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
         -v $(PWD):/media/home \
         $1 `if test -n "$2"; then echo "setarch $2 --"; fi` \

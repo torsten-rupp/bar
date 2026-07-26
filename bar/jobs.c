@@ -1212,7 +1212,7 @@ void Job_init(Job *job)
   DEBUG_ADD_RESOURCE_TRACE(job,Job);
 }
 
-void Job_initDuplicate(Job *job, const Job *fromJob)
+void Job_initDuplicate(Job *job, Job *fromJob)
 {
   assert(job != NULL);
   assert(fromJob != NULL);
@@ -1345,8 +1345,8 @@ JobNode *Job_new(JobTypes    jobType,
   return jobNode;
 }
 
-JobNode *Job_copy(const JobNode *jobNode,
-                  ConstString   fileName
+JobNode *Job_copy(JobNode     *jobNode,
+                  ConstString fileName
                  )
 {
   // allocate job node
@@ -2823,7 +2823,7 @@ void Job_initOptions(JobOptions *jobOptions)
   DEBUG_ADD_RESOURCE_TRACE(jobOptions,JobOptions);
 }
 
-void Job_copyOptions(JobOptions *jobOptions, const JobOptions *fromJobOptions)
+void Job_copyOptions(JobOptions *jobOptions, JobOptions *fromJobOptions)
 {
   assert(jobOptions != NULL);
   assert(fromJobOptions != NULL);
@@ -2961,7 +2961,7 @@ void Job_getOptions(String jobName, JobOptions *jobOptions, ConstString uuid)
 
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,LOCK_TIMEOUT)
   {
-    const JobNode *jobNode = Job_findByUUID(uuid);
+    JobNode *jobNode = Job_findByUUID(uuid);
     if (jobNode != NULL)
     {
       String_set(jobName,jobNode->name);

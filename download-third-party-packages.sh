@@ -65,7 +65,7 @@ KRB5_VERSION=1.22
 KRB5_VERSION_MINOR=2
 # Note: at least 2.6.2 is required
 SMB2_VERSION=2.6.2
-PAR2_VERSION=1.0.0
+PAR2_VERSION=1.2.0
 UTIL_LINUX_VERSION="v2.41.1"
 ISOFS_VERSION="release-1.5.6.pl01"
 RCU_VERSION=0.15.3
@@ -1673,7 +1673,7 @@ if test $cleanFlag -eq 0; then
        # patch to fix defintions for MinGW:
        #   diff -Naur libsmb2-4.0.0.org libsmb2-4.0.0 > libsmb2-4.0.0-mingw-definitions.patch
        # Note: ignore exit code 1: patch may already be applied
-       (cd $workingDirectory/libsmb2; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-4.0.0-mingw-definitions.patch) 1>/dev/null
+       (cd $workingDirectory/libsmb2; $PATCH --batch -N -p1 < $patchDirectory/libsmb2-$SMB2_VERSION.patch) 1>/dev/null
        if test $? -gt 1; then
          fatalError "patch"
        fi
@@ -2024,6 +2024,14 @@ if test $cleanFlag -eq 0; then
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
+
+       # patch to fix defintions for MinGW:
+       #   git diff > par2cmdline-$PAR2_VERSION.patch linux
+       # Note: ignore exit code 1: patch may already be applied
+       (cd $workingDirectory/par2cmdline; $PATCH --batch -N -p1 < $patchDirectory/par2cmdline-$PAR2_VERSION.patch) 1>/dev/null
+#       if test $? -gt 1; then
+#         fatalError "patch"
+#       fi
 
        # fix missing file README
        (cd $workingDirectory/par2cmdline; $TOUCH README) 1>/dev/null

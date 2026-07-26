@@ -70,7 +70,7 @@ typedef void(*HashTableFreeFunction)(const void *data, ulong length, void *userD
 typedef struct HashTableEntry
 {
   #if HASH_TABLE_COLLISION_ALGORITHM == HASH_TABLE_COLLISION_ALGORITHM_NONE
-    struct HashTablEntry *next;
+    struct HashTableEntry *next;
   #endif
 
   void  *keyData;                            // key data of entry

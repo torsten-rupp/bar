@@ -1324,8 +1324,8 @@ LOCAL void outputProgressInit(const char *text,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void outputProgressDone(ulong totalTime,
-                              void  *userData
+LOCAL void outputProgressDone(size_t totalTime,
+                              void   *userData
                              )
 {
   UNUSED_VARIABLE(userData);
@@ -1366,10 +1366,10 @@ LOCAL void outputProgressDone(ulong totalTime,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void outputProgressInfo(uint64 progress,
-                              ulong  estimatedTotalTime,
-                              ulong  estimatedRestTime,
-                              void   *userData
+LOCAL void outputProgressInfo(uint64  progress,
+                              size_t  estimatedTotalTime,
+                              size_t  estimatedRestTime,
+                              void    *userData
                              )
 {
   const char *WHEEL = "|/-\\";

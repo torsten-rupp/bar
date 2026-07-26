@@ -70,7 +70,7 @@ typedef struct
   bool                  symbolFound;
   const char            *fileName;
   const char            *symbolName;
-  size_t                lineNb;
+  unsigned int          lineNb;
 } AddressInfo;
 
 // file match info
@@ -134,7 +134,7 @@ LOCAL bool readSymbolTable(bfd           *abfd,
 
   // read mini-symbols
   (*symbols) = NULL;
-  size_t size;
+  unsigned int size;
   long n = bfd_read_minisymbols(abfd,
                                 FALSE,  // not dynamic
                                 (void**)symbols,
@@ -656,7 +656,7 @@ void Stacktrace_init(const SignalHandlerInfo *signalHandlerInfo_,
                      void                    *signalHandlerUserData_
                     )
 {
-  assert(signalHandlerInfo != NULL);
+  assert(signalHandlerInfo_ != NULL);
 
   #if   defined(PLATFORM_LINUX)
     // initialize signal handler stack

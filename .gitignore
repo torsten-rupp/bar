@@ -1,4 +1,18 @@
+# general
+*~
+
+# IDE
+.geany
+
+# git
+*.orig
+
+# generated
+*.o
+*.sym
+
 Makefile
+Makefile.depend
 bar/Makefile
 bar/Makefile.depend
 bar/archive_format.c
@@ -7,6 +21,7 @@ bar/archive_format_const.h
 bar/bar
 bar/bar-debug
 bar/bar-keygen
+bar/bar-index
 bar/config.h
 bar/debug/
 bar/errors.c
@@ -31,6 +46,44 @@ c-ares
 config.log
 config.status
 curl
+
+epm.list
+extern/
+gmp
+gnutls
+icu
+libcdio
+libgcrypt
+libgpg-error
+libiconv
+libidn2
+libssh2
+libunistring
+libxfs
+libburn
+libisofs
+libsmb2
+krb5
+lz4
+lzo
+mariadb-connector-c
+mtx
+mxml
+nettle
+openssl
+pcre
+par2cmdline
+postgresql
+pthreads-w32
+sqlite
+xdelta3
+xfsprogs
+xz
+zlib
+zstd
+launch4j
+jre_windows
+
 doc/Makefile
 doc/images/archivename-editor-large.png
 doc/images/archivename-editor-small.png
@@ -77,33 +130,15 @@ doc/images/status.png
 doc/images/storage-large.png
 doc/images/storage-small.png
 doc/images/storage.png
-epm.list
-extern/
-gmp
-gnutls
-icu
-libcdio
-libgcrypt
-libgpg-error
-libiconv
-libidn2
-libssh2
-lz4
-lzo
-mtx
-mxml
-nettle
-openssl
-pcre
-pthreads-w32
-sqlite
-xdelta3
-xz
-zlib
-zstd
 
 files
 build
 bar/build
+ci/download-third-party-packages.sh
 
+*.deb
+*.rpm
+*.exe
+
+# misc
 trash

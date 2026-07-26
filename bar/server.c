@@ -12337,7 +12337,7 @@ LOCAL void serverCommand_jobClone(ClientInfo *clientInfo, IndexHandle *indexHand
     }
 
     // find job
-    const JobNode *jobNode = Job_findByUUID(jobUUID);
+    JobNode *jobNode = Job_findByUUID(jobUUID);
     if (jobNode == NULL)
     {
       ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_JOB_NOT_FOUND,"%S",jobUUID);

@@ -469,8 +469,7 @@ StringMap StringMap_move(StringMap stringMap, StringMap fromStringMap)
         case STRINGMAP_TYPE_DATA:    stringMap->entries[i].value.data.p      = fromStringMap->entries[i].value.data.p;      break;
         #ifndef NDEBUG
           default:
-          fprintf(stderr,"%s:%d: %d fromStringMap->entries[i].name=%s fromStringMap->entries[i].type=%d\n",__FILE__,__LINE__,fromStringMap->size,fromStringMap->entries[i].name,fromStringMap->entries[i].type);
-
+//            fprintf(stderr,"%s:%d: %zu fromStringMap->entries[i].name=%s fromStringMap->entries[i].type=%d\n",__FILE__,__LINE__,fromStringMap->size,fromStringMap->entries[i].name,fromStringMap->entries[i].type);
             HALT_INTERNAL_ERROR_UNHANDLED_SWITCH_CASE();
             break;
         #endif /* NDEBUG */
@@ -1752,7 +1751,7 @@ void StringMap_debugDump(FILE *handle, size_t indent, const StringMap stringMap)
       assert(stringMap->entries[i].type < SIZE_OF_ARRAY(STRING_MAP_TYPE_NAMES));
       for (size_t j = 0; j < indent; j++) fputc(' ',handle);
       fprintf(handle,
-              "#%3u (%-8s): %s = '%s' (%"PRIuPTR")\n",
+              "#%3zu (%-8s): %s = '%s' (%"PRIuPTR")\n",
               i,
               STRING_MAP_TYPE_NAMES[stringMap->entries[i].type],
               stringMap->entries[i].name,

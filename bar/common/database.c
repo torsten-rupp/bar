@@ -719,7 +719,7 @@ LOCAL Errors getStatementColumns(DatabaseColumn          columns[],
 LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
                          DatabaseRowFunction  databaseRowFunction,
                          void                 *databaseRowUserData,
-                         ulong                *changedRowCount,
+                         size_t               *changedRowCount,
                          const char           *tableNames[],
                          uint                 tableNameCount,
                          uint                 flags,
@@ -963,7 +963,7 @@ LOCAL int logTraceCommandHandler(unsigned int traceCommand, void *context, void 
 * Notes  : -
 \***********************************************************************/
 
-LOCAL_INLINE void initTimeSpec(struct timespec *timespec, ulong timeout)
+LOCAL_INLINE void initTimeSpec(struct timespec *timespec, size_t timeout)
 {
   #if   defined(PLATFORM_LINUX)
   #elif defined(PLATFORM_WINDOWS)
@@ -3782,7 +3782,7 @@ LOCAL void postgresqlDisconnect(PGconn *connection)
 \***********************************************************************/
 
 LOCAL Errors postgresqlExecute(PGconn     *connection,
-                               ulong      *changedRowCount,
+                               size_t     *changedRowCount,
                                const char *sqlString,
                                const Oid  parameterTypes[],
                                const char *parameterValues[],
@@ -6993,7 +6993,7 @@ LOCAL String vformatSQLString(String     sqlString,
                 if (quoteFlag) String_appendChar(sqlString,'\'');
                 if (value.string != NULL)
                 {
-                  ulong i = 0L;
+                  size_t i = 0L;
                   while (i < String_length(value.string))
                   {
                     char ch = String_index(value.string,i);
@@ -7647,7 +7647,7 @@ LOCAL Errors bindResults(DatabaseStatementHandle *databaseStatementHandle,
 \***********************************************************************/
 
 LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHandle,
-                                  ulong                   *changedRowCount,
+                                  size_t                  *changedRowCount,
                                   long                    timeout
                                  )
 {
@@ -7728,7 +7728,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             // get number of changes
             if (changedRowCount != NULL)
             {
-              (*changedRowCount) += (ulong)sqlite3_changes(databaseStatementHandle->databaseHandle->sqlite.handle);
+              (*changedRowCount) += (size_t)sqlite3_changes(databaseStatementHandle->databaseHandle->sqlite.handle);
             }
           }
         }
@@ -7779,7 +7779,7 @@ LOCAL Errors executePreparedQuery(DatabaseStatementHandle *databaseStatementHand
             // get number of changes
             if (changedRowCount != NULL)
             {
-              (*changedRowCount) += (ulong)mysql_affected_rows(databaseStatementHandle->databaseHandle->mariadb.handle);
+              (*changedRowCount) += (size_t)mysql_affected_rows(databaseStatementHandle->databaseHandle->mariadb.handle);
             }
           }
         #else /* HAVE_MARIADB */
@@ -8404,7 +8404,7 @@ LOCAL DatabaseId getLastInsertRowId(DatabaseStatementHandle *databaseStatementHa
 LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatementHandle,
                                       DatabaseRowFunction     databaseRowFunction,
                                       void                    *databaseRowUserData,
-                                      ulong                   *changedRowCount,
+                                      size_t                  *changedRowCount,
                                       uint                    flags,
                                       long                    timeout
                                      )
@@ -8513,7 +8513,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
             // get number of changes
             if (changedRowCount != NULL)
             {
-              (*changedRowCount) += (ulong)sqlite3_changes(databaseStatementHandle->databaseHandle->sqlite.handle);
+              (*changedRowCount) += (size_t)sqlite3_changes(databaseStatementHandle->databaseHandle->sqlite.handle);
             }
           }
         }
@@ -8545,7 +8545,7 @@ LOCAL Errors executePreparedStatement(DatabaseStatementHandle *databaseStatement
               // get number of changes
               if (changedRowCount != NULL)
               {
-                (*changedRowCount) += (ulong)mysql_stmt_affected_rows(databaseStatementHandle->mariadb.statementHandle);
+                (*changedRowCount) += (size_t)mysql_stmt_affected_rows(databaseStatementHandle->mariadb.statementHandle);
               }
             }
           }
@@ -10765,7 +10765,7 @@ LOCAL void resetFilters(DatabaseStatementHandle *databaseStatementHandle)
 \***********************************************************************/
 
 LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
-                          ulong          *changedRowCount,
+                          size_t         *changedRowCount,
                           long           timeout,
                           uint           flags,
                           const char     *sqlString
@@ -10798,7 +10798,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
           // get number of changes
           if (changedRowCount != NULL)
           {
-            (*changedRowCount) += (ulong)sqlite3_changes(databaseHandle->sqlite.handle);
+            (*changedRowCount) += (size_t)sqlite3_changes(databaseHandle->sqlite.handle);
           }
         }
         break;
@@ -10810,7 +10810,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
             // get number of changes
             if (changedRowCount != NULL)
             {
-              (*changedRowCount) += (ulong)mysql_affected_rows(databaseHandle->mariadb.handle);
+              (*changedRowCount) += (size_t)mysql_affected_rows(databaseHandle->mariadb.handle);
             }
           }
         #else /* HAVE_MARIADB */
@@ -10895,7 +10895,7 @@ LOCAL Errors executeQuery(DatabaseHandle *databaseHandle,
 LOCAL Errors databaseGet(DatabaseHandle       *databaseHandle,
                          DatabaseRowFunction  databaseRowFunction,
                          void                 *databaseRowUserData,
-                         ulong                *changedRowCount,
+                         size_t               *changedRowCount,
                          const char           *tableNames[],
                          uint                 tableNameCount,
                          uint                 flags,
@@ -13943,7 +13943,7 @@ assert(Thread_isCurrentThread(toDatabaseHandle->debug.threadId));
 
   #ifdef DATABASE_DEBUG_COPY_TABLE
     uint64 t0       = Misc_getTimestamp();
-    ulong  rowCount = 0;
+    size_t rowCount = 0;
   #endif /* DATABASE_DEBUG_COPY_TABLE */
 
   uint64 t;
@@ -15995,7 +15995,7 @@ char *Database_filterTimeString(const DatabaseHandle *databaseHandle,
 }
 
 Errors Database_execute(DatabaseHandle *databaseHandle,
-                        ulong          *changedRowCount,
+                        size_t         *changedRowCount,
                         uint           flags,
                         const char     *sqlString
                        )
@@ -16375,7 +16375,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
 }
 
 Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
-                             ulong                *changedRowCount,
+                             size_t               *changedRowCount,
                              const char           *tableName,
                              uint                 flags,
                              const DatabaseColumn toColumns[],
@@ -16574,7 +16574,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
 }
 
 Errors Database_update(DatabaseHandle       *databaseHandle,
-                       ulong                *changedRowCount,
+                       size_t               *changedRowCount,
                        const char           *tableName,
                        uint                 flags,
                        const DatabaseValue  values[],
@@ -16724,7 +16724,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
 }
 
 Errors Database_delete(DatabaseHandle       *databaseHandle,
-                       ulong                *changedRowCount,
+                       size_t               *changedRowCount,
                        const char           *tableName,
                        uint                 flags,
                        const char           *filter,
@@ -16845,13 +16845,13 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 }
 
 Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
-                            ulong                *changedRowCount,
+                            size_t               *changedRowCount,
                             const char           *tableName,
                             uint                 flags,
                             const char           *filter,
                             DatabaseDataTypes    filterDataType,
                             const void           *filterArrayData,
-                            ulong                filterArrayLength,
+                            size_t               filterArrayLength,
                             uint64               limit
                            )
 {
@@ -16927,7 +16927,7 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
                DATABASE_LOCK_TYPE_READ_WRITE,
                databaseHandle->timeout,
   {
-    for (ulong i = 0; i < filterArrayLength; i++)
+    for (size_t i = 0; i < filterArrayLength; i++)
     {
       if (filter != NULL)
       {
@@ -16983,12 +16983,12 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
 }
 
 Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
-                            ulong            *changedRowCount,
+                            size_t           *changedRowCount,
                             const char       *tableName,
                             const char       *columnName,
                             uint             flags,
                             const DatabaseId ids[],
-                            ulong            length
+                            size_t           length
                            )
 {
   Errors error;
@@ -17008,7 +17008,7 @@ Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
 
     // create SQL string
     String sqlString = String_format(String_new(),"DELETE FROM %s WHERE %s IN (",tableName,columnName);
-    for (ulong i = 0; i < length; i++)
+    for (size_t i = 0; i < length; i++)
     {
       if (i > 0) String_appendChar(sqlString,',');
       String_appendFormat(sqlString,"%"PRIi64,ids[i]);
@@ -17534,7 +17534,7 @@ bool Database_existsValue(DatabaseHandle       *databaseHandle,
 Errors Database_get(DatabaseHandle       *databaseHandle,
                     DatabaseRowFunction  databaseRowFunction,
                     void                 *databaseRowUserData,
-                    ulong                *changedRowCount,
+                    size_t               *changedRowCount,
                     const char           *tableNames[],
                     uint                 tableNameCount,
                     uint                 flags,

@@ -15,13 +15,13 @@ RUN    apt clean \
 # update
 RUN apt-get -y update
 
-RUN apt-get -y install --no-install-recommends --fix-missing install \
+RUN apt-get -y install --no-install-recommends --fix-missing \
   initscripts \
   openssl \
   default-jre \
   ;
 
-RUN apt-get -y install --no-install-recommends --fix-missing install \
+RUN apt-get -y install --no-install-recommends --fix-missing \
   bc \
   coreutils \
   joe \
@@ -33,7 +33,7 @@ RUN apt-get -y install --no-install-recommends --fix-missing install \
   ;
 
 # install packages (Note: ignore expired key with --force-yes)
-RUN apt-get -y install --no-install-recommends --fix-missing install \
+RUN apt-get -y install --no-install-recommends --fix-missing \
   autoconf \
   autotools-dev \
   bison \
@@ -73,7 +73,7 @@ RUN apt-get -y install --no-install-recommends --fix-missing install \
   xz-utils \
   ;
 
-RUN apt-get install -y --no-install-recommends --fix-missing install \
+RUN apt-get install -y --no-install-recommends --fix-missing \
   libreoffice \
   python3-pip \
   python3-uno \

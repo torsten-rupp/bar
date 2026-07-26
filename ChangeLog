@@ -1,4 +1,4 @@
-2026-07-01 28
+2026-07-26 28
   * fix clean-up index with invalid states (bug #48)
   * fix schedule job when day light saving changes (bug #49)
   * fix various warnings
@@ -13,6 +13,7 @@
   * upgrade SQLite 3.53.3
   * upgrade PostgreSQL 18.4
   * upgrade Kerberos 1.22.2
+  * upgrade PAR2 1.2.0
   * BARControl: upgarde to Java 8
 
 2026-03-08 27a

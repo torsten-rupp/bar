@@ -3211,7 +3211,7 @@ LOCAL Errors runJob(ConstString jobUUIDOrName)
   JOB_LIST_LOCKED_DO(SEMAPHORE_LOCK_TYPE_READ,NO_WAIT)
   {
     // find job by name or UUID
-    const JobNode *jobNode = NULL;
+    JobNode *jobNode = NULL;
     if (jobNode == NULL) jobNode = Job_findByName(jobUUIDOrName);
     if (jobNode == NULL) jobNode = Job_findByUUID(jobUUIDOrName);
     if      (jobNode == NULL)

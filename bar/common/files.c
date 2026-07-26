@@ -55,6 +55,7 @@
   #include <combaseapi.h>
   #include <knownfolders.h>
   #include <direct.h>
+  #include <winioctl.h>
 #endif /* PLATFORM_... */
 
 #include "common/global.h"
@@ -810,10 +811,6 @@ LOCAL bool setAccessTime(int fileDescriptor, const struct timespec *ts)
 {
   #if   defined(PLATFORM_LINUX)
     struct timespec times[2];
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
-  #if   defined(PLATFORM_LINUX)
     times[0].tv_sec  = ts->tv_sec;
     times[0].tv_nsec = ts->tv_nsec;
     times[1].tv_sec  = 0;
@@ -1416,30 +1413,23 @@ String File_getDeviceName(String deviceName, ConstString fileName)
 
 String File_getDeviceNameCString(String deviceName, const char *fileName)
 {
-  #if   defined(PLATFORM_LINUX)
-    FILE *handle;
-    char line[FILE_MAX_PATH_LENGTH+256];
-    char name[FILE_MAX_PATH_LENGTH];
-    uint n0,n1;
-  #elif defined(PLATFORM_WINDOWS)
-    uint n;
-  #endif /* PLATFORM_... */
-
   assert(deviceName != NULL);
 
   String_clear(deviceName);
   if (fileName != NULL)
   {
     #if   defined(PLATFORM_LINUX)
-      handle = FOPEN(MOUNTS_FILENAME,"r");
+      FILE *handle = FOPEN(MOUNTS_FILENAME,"r");
       if (handle != NULL)
       {
-        n0 = stringLength(fileName);
+        char line[FILE_MAX_PATH_LENGTH+256];
+        char name[FILE_MAX_PATH_LENGTH];
+        size_t n0 = stringLength(fileName);
         while (fgets(line,sizeof(line),handle) != NULL)
         {
           if (parseMountListEntry(name,sizeof(name),line,NULL))
           {
-            n1 = stringLength(name);
+            size_t n1 = stringLength(name);
             if (   (n0 > n1)
                 && stringEqualsPrefix(fileName,name,n1)
                 && (   (n1 == n0)
@@ -1460,7 +1450,7 @@ String File_getDeviceNameCString(String deviceName, const char *fileName)
         }
       }
     #elif defined(PLATFORM_WINDOWS)
-      n = stringLength(fileName);
+      size_t n = stringLength(fileName);
       if      (   (n >= 2)
                && (toupper(fileName[0]) >= 'A') && (toupper(fileName[0]) <= 'Z')
                && (fileName[1] == ':')
@@ -1494,11 +1484,9 @@ bool File_isAbsoluteFileName(ConstString fileName)
 
 bool File_isAbsoluteFileNameCString(const char *fileName)
 {
-  size_t n;
-
   assert(fileName != NULL);
 
-  n = stringLength(fileName);
+  size_t n = stringLength(fileName);
   #if   defined(PLATFORM_LINUX)
     return ((n >= 1) && (fileName[0] == FILE_PATH_SEPARATOR_CHAR));
   #elif defined(PLATFORM_WINDOWS)
@@ -1517,21 +1505,15 @@ String File_getAbsoluteFileName(String absoluteFileName, ConstString fileName)
 
 String File_getAbsoluteFileNameCString(String absoluteFileName, const char *fileName)
 {
-  #if   defined(PLATFORM_LINUX)
-    char *buffer;
-  #elif defined(PLATFORM_WINDOWS)
-    char *buffer;
-  #endif /* PLATFORM_... */
-
   assert(absoluteFileName != NULL);
   assert(fileName != NULL);
 
   #if   defined(PLATFORM_LINUX)
-    buffer = realpath(fileName,NULL);
+    char *buffer = realpath(fileName,NULL);
     String_setCString(absoluteFileName,buffer);
     free(buffer);
   #elif defined(PLATFORM_WINDOWS)
-    buffer = _fullpath(NULL,fileName,0);
+    char *buffer = _fullpath(NULL,fileName,0);
     String_setCString(absoluteFileName,buffer);
     free(buffer);
   #endif /* PLATFORM_... */
@@ -1700,14 +1682,6 @@ String File_getSystemDirectory(String path, FileSystemPathTypes fileSystemPathTy
 
 String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSystemPathType, const char *subDirectory)
 {
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    int         driveNumber;
-    WCHAR       *data;
-    static char buffer[4*MAX_PATH+1];
-    int         bufferLength;
-  #endif /* PLATFORM_... */
-
   assert(path != NULL);
 
   #if   defined(PLATFORM_LINUX)
@@ -1751,28 +1725,33 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
     switch (fileSystemPathType)
     {
       case FILE_SYSTEM_PATH_ROOT:
-        driveNumber = _getdrive();
-        if (driveNumber > 0)
         {
-          String_format(path,"%c:"FILE_PATH_SEPARATOR_STRING,'A'+driveNumber-1);
-        }
-        else
-        {
-          String_setCString(path,"C:"FILE_PATH_SEPARATOR_STRING);
+          int driveNumber = _getdrive();
+          if (driveNumber > 0)
+          {
+            String_format(path,"%c:"FILE_PATH_SEPARATOR_STRING,'A'+driveNumber-1);
+          }
+          else
+          {
+            String_setCString(path,"C:"FILE_PATH_SEPARATOR_STRING);
+          }
         }
         break;
       case FILE_SYSTEM_PATH_TMP:
-        bufferLength = GetTempPath(sizeof(buffer),buffer);
-        if (bufferLength != 0)
         {
-          String_setBuffer(path,buffer,bufferLength);
-          // discard trailing \ if Windows added it (Note: Windows should not try to be smart - it cannot...)
-          String_trimEnd(path,FILE_PATH_SEPARATOR_CHARS);
-        }
-        else
-        {
-          if (String_isEmpty(path)) String_setCString(path,getenv("TMP"));
-          if (String_isEmpty(path)) String_setCString(path,"C:"FILE_PATH_SEPARATOR_STRING"temp");
+          static char buffer[4*MAX_PATH+1];
+          int bufferLength = GetTempPath(sizeof(buffer),buffer);
+          if (bufferLength != 0)
+          {
+            String_setBuffer(path,buffer,bufferLength);
+            // discard trailing \ if Windows added it (Note: Windows should not try to be smart - it cannot...)
+            String_trimEnd(path,FILE_PATH_SEPARATOR_CHARS);
+          }
+          else
+          {
+            if (String_isEmpty(path)) String_setCString(path,getenv("TMP"));
+            if (String_isEmpty(path)) String_setCString(path,"C:"FILE_PATH_SEPARATOR_STRING"temp");
+          }
         }
         break;
       case FILE_SYSTEM_PATH_CONFIGURATION:
@@ -1781,33 +1760,41 @@ String File_getSystemDirectoryCString(String path, FileSystemPathTypes fileSyste
       case FILE_SYSTEM_PATH_TLS:
       case FILE_SYSTEM_PATH_LOG:
       case FILE_SYSTEM_PATH_USER_CONFIGURATION:
-        /* Note: for some reason SHGetKnownFolderPath() always return a 32bit path even on a 64bit
-                 Windows? Thus construct the path manually on 64bit system
-        */
-        #ifdef __x86_64
-          SHGetKnownFolderPath(&FOLDERID_Windows, 0, NULL, &data);
-          bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
-          CoTaskMemFree(data);
-          String_setBuffer(path,buffer,bufferLength);
-          // discard trailing \ if Windows added it
-          String_trimEnd(path,FILE_PATH_SEPARATOR_CHARS);
-          String_appendCString(path,FILE_PATH_SEPARATOR_STRING"SysWOW64"FILE_PATH_SEPARATOR_STRING"config"FILE_PATH_SEPARATOR_STRING"systemprofile"FILE_PATH_SEPARATOR_STRING"AppData"FILE_PATH_SEPARATOR_STRING"Local");
-        #else
-          SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &data);
-          bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
-          CoTaskMemFree(data);
-          String_setBuffer(path,buffer,bufferLength);
-          // discard trailing \ if Windows added it
-          String_trimEnd(path,FILE_PATH_SEPARATOR_CHARS);
-        #endif
+        {
+          static char buffer[4*MAX_PATH+1];
+          WCHAR       *data;
+          /* Note: for some reason SHGetKnownFolderPath() always return a 32bit path even on a 64bit
+                   Windows? Thus construct the path manually on 64bit system
+          */
+          #ifdef __x86_64
+            SHGetKnownFolderPath(&FOLDERID_Windows, 0, NULL, &data);
+            int bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
+            CoTaskMemFree(data);
+            String_setBuffer(path,buffer,bufferLength);
+            // discard trailing \ if Windows added it
+            String_trimEnd(path,FILE_PATH_SEPARATOR_CHARS);
+            String_appendCString(path,FILE_PATH_SEPARATOR_STRING"SysWOW64"FILE_PATH_SEPARATOR_STRING"config"FILE_PATH_SEPARATOR_STRING"systemprofile"FILE_PATH_SEPARATOR_STRING"AppData"FILE_PATH_SEPARATOR_STRING"Local");
+          #else
+            SHGetKnownFolderPath(&FOLDERID_LocalAppData, 0, NULL, &data);
+            int bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
+            CoTaskMemFree(data);
+            String_setBuffer(path,buffer,bufferLength);
+            // discard trailing \ if Windows added it
+            String_trimEnd(path,FILE_PATH_SEPARATOR_CHARS);
+          #endif
+        }
         break;
       case FILE_SYSTEM_PATH_USER_HOME:
-        SHGetKnownFolderPath(&FOLDERID_Profile, 0, NULL, &data);
-        bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
-        CoTaskMemFree(data);
-        String_setBuffer(path,buffer,bufferLength);
-        // discard trailing \ if Windows added it
-        String_trimEnd(path,"\\");
+        {
+          static char buffer[4*MAX_PATH+1];
+          WCHAR       *data;
+          SHGetKnownFolderPath(&FOLDERID_Profile, 0, NULL, &data);
+          int bufferLength = WideCharToMultiByte(CP_UTF8,0,data,lstrlenW(data),buffer,sizeof(buffer),NULL,NULL);
+          CoTaskMemFree(data);
+          String_setBuffer(path,buffer,bufferLength);
+          // discard trailing \ if Windows added it
+          String_trimEnd(path,"\\");
+        }
         break;
       default:
         #ifndef NDEBUG
@@ -2144,18 +2131,6 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
                                        const char *directory
                                       )
 {
-  #if   defined(PLATFORM_LINUX)
-    char   *name;
-    #ifdef HAVE_MKDTEMP
-    #elif HAVE_MKTEMP
-      #if (MKDIR_ARGUMENTS_COUNT == 2)
-        mode_t currentCreationMask;
-      #endif /* MKDIR_ARGUMENTS_COUNT == 2 */
-    #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
-  #elif defined(PLATFORM_WINDOWS)
-    char     name[MAX_PATH+1];
-    FileStat fileStat;
-  #endif /* PLATFORM_... */
   Errors error;
 
   assert(directoryName != NULL);
@@ -2177,6 +2152,14 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
   }
 
   #if   defined(PLATFORM_LINUX)
+    char   *name;
+    #ifdef HAVE_MKDTEMP
+    #elif HAVE_MKTEMP
+      #if (MKDIR_ARGUMENTS_COUNT == 2)
+        mode_t currentCreationMask;
+      #endif /* MKDIR_ARGUMENTS_COUNT == 2 */
+    #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
+
     // get temporary directory template name
     if (!String_isEmpty(directoryName))
     {
@@ -2236,6 +2219,9 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
     String_setBuffer(directoryName,name,stringLength(name));
     free(name);
   #elif defined(PLATFORM_WINDOWS)
+    char     name[MAX_PATH+1];
+    FileStat fileStat;
+
     // get temporary directory template name
     if (!String_isEmpty(directoryName))
     {
@@ -2288,12 +2274,10 @@ const char *File_fileTypeToString(FileTypes fileType, const char *defaultValue)
 
 bool File_parseFileType(const char *name, FileTypes *fileType)
 {
-  uint i;
-
   assert(name != NULL);
   assert(fileType != NULL);
 
-  i = 0;
+  size_t i = 0;
   while (   (i < SIZE_OF_ARRAY(FILE_TYPES))
          && !stringEqualsIgnoreCase(FILE_TYPES[i].name,name)
         )
@@ -2320,12 +2304,10 @@ const char *File_fileSpecialTypeToString(FileSpecialTypes fileSpecialType, const
 
 bool File_parseFileSpecialType(const char *name, FileSpecialTypes *fileSpecialType)
 {
-  uint i;
-
   assert(name != NULL);
   assert(fileSpecialType != NULL);
 
-  i = 0;
+  size_t i = 0;
   while (   (i < SIZE_OF_ARRAY(FILE_SPECIAL_TYPES))
          && !stringEqualsIgnoreCase(FILE_SPECIAL_TYPES[i].name,name)
         )
@@ -2350,12 +2332,7 @@ FilePermissions File_getDefaultFilePermissions(void)
   FilePermissions filePermissions;
 
   #if   defined(PLATFORM_LINUX)
-    mode_t mask;
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
-  #if   defined(PLATFORM_LINUX)
-    mask = umask(0);
+    mode_t mask = umask(0);
     umask(mask);
 
     filePermissions = (FilePermissions)(0666 & ~mask);
@@ -2371,12 +2348,7 @@ FilePermissions File_getDefaultDirectoryPermissions(void)
   FilePermissions filePermissions;
 
   #if   defined(PLATFORM_LINUX)
-    mode_t mask;
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
-  #if   defined(PLATFORM_LINUX)
-    mask = umask(0);
+    mode_t mask = umask(0);
     umask(mask);
 
     filePermissions = (FilePermissions)(0777 & ~mask);
@@ -2433,12 +2405,6 @@ Errors __File_openCString(const char *__fileName__,
   int    fileDescriptor;
   Errors error;
   String directoryName;
-  #if   defined(PLATFORM_LINUX)
-    #ifndef HAVE_O_NOATIME
-      FileStat fileStat;
-    #endif /* not HAVE_O_NOATIME */
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
 
   assert(fileHandle != NULL);
   assert(fileName != NULL);
@@ -2535,6 +2501,7 @@ Errors __File_openCString(const char *__fileName__,
           // store atime
           if ((fileMode & FILE_OPEN_NO_ATIME) != 0)
           {
+            FileStat fileStat;
             if (FSTAT(fileDescriptor,&fileStat) == 0)
             {
               fileHandle->atime.tv_sec  = fileStat.st_atime;
@@ -3291,28 +3258,31 @@ Errors File_dropCaches(FileHandle *fileHandle,
                        bool       syncFlag
                       )
 {
-  #if defined(HAVE_FDATASYNC) || defined(HAVE_POSIX_FADVISE)
-    int handle;
-  #endif /* defined(HAVE_FDATASYNC) || defined(HAVE_POSIX_FADVISE) */
-
   FILE_CHECK_VALID(fileHandle);
 
   (void)fflush(fileHandle->file);
   #if defined(HAVE_FDATASYNC) || defined(HAVE_POSIX_FADVISE)
-    handle = fileno(fileHandle->file);
+    int handle = fileno(fileHandle->file);
   #else
     UNUSED_VARIABLE(fileHandle);
   #endif /* defined(HAVE_FDATASYNC) || defined(HAVE_POSIX_FADVISE) */
 
-  #ifdef HAVE_FDATASYNC
+  #if   defined(PLATFORM_LINUX)
+    #ifdef HAVE_FDATASYNC
+      if (syncFlag)
+      {
+        (void)fdatasync(handle);
+      }
+    #else
+      UNUSED_VARIABLE(syncFlag);
+    #endif /* HAVE_FDATASYNC */
+  #elif defined(PLATFORM_WINDOWS)
     if (syncFlag)
     {
-      // Note: postgresql define fdatasync() on Windows!
-      (void)fdatasync(handle);
+      intptr_t osHandle = _get_osfhandle(handle);
+      (void)FlushFileBuffers((HANDLE)osHandle);
     }
-  #else
-    UNUSED_VARIABLE(syncFlag);
-  #endif /* HAVE_FDATASYNC */
+  #endif /* PLATFORM_... */
 
 //TODO: use mincore() and only drop pages which are not used by other processes?
   #ifdef HAVE_POSIX_FADVISE
@@ -3354,13 +3324,6 @@ Errors File_touch(ConstString fileName)
 
 Errors File_openRootList(RootListHandle *rootListHandle, bool allMountsFlag)
 {
-  #if   defined(PLATFORM_LINUX)
-    FILE *handle;
-    char line[1024];
-    char *s,*t;
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
   assert(rootListHandle != NULL);
 
   #if   defined(PLATFORM_LINUX)
@@ -3371,19 +3334,20 @@ Errors File_openRootList(RootListHandle *rootListHandle, bool allMountsFlag)
     if (allMountsFlag)
     {
       // get file system names
-      handle = FOPEN(FILESYSMTES_FILENAME,"r");
+      FILE *handle = FOPEN(FILESYSMTES_FILENAME,"r");
       if (handle != NULL)
       {
+        char line[1024];
         while (fgets(line,sizeof(line),handle) != NULL)
         {
-          s = line;
+          char *s = line;
           if (isspace(*s))
           {
             while (isspace(*s))
             {
               s++;
             }
-            t = s;
+            char *t = s;
             while (!isspace(*t))
             {
               t++;
@@ -3513,28 +3477,16 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
                                     )
 {
   Errors error;
-  #if   defined(PLATFORM_LINUX)
-    #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
-      const char *s;
-      #ifdef HAVE_O_NOATIME
-        int    handle;
-      #else /* not HAVE_O_NOATIME */
-        struct stat fileStat;
-      #endif /* HAVE_O_NOATIME */
-    #endif /* defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY) */
-  #elif defined(PLATFORM_WINDOWS)
-    String s;
-  #endif /* PLATFORM_... */
 
   assert(directoryListHandle != NULL);
   assert(directoryName != NULL);
 
   #if   defined(PLATFORM_LINUX)
     #if defined(HAVE_FDOPENDIR) && defined(HAVE_O_DIRECTORY)
-      s = !stringIsEmpty(directoryName) ? directoryName : ".";
+      const char *s = !stringIsEmpty(directoryName) ? directoryName : ".";
       #ifdef HAVE_O_NOATIME
         // open directory (try first with O_NOATIME)
-        handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
+        int handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY|O_NOATIME,0);
         if (handle == -1)
         {
           handle = open(s,O_RDONLY|O_BINARY|O_NOCTTY|O_DIRECTORY,0);
@@ -3554,6 +3506,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
         if (directoryListHandle->handle != -1)
         {
           // store atime
+          FileStat fileStat;
           if (STAT(directoryListHandle->handle,&stat) == 0)
           {
             directoryListHandle->atime.tv_sec  = stat.st_atime;
@@ -3578,7 +3531,7 @@ Errors File_openDirectoryListCString(DirectoryListHandle *directoryListHandle,
     #endif /* HAVE_FDOPENDIR && HAVE_O_DIRECTORY */
   #elif defined(PLATFORM_WINDOWS)
     // Note: on Windows <drive>: and <drive>:/ are different, but <path> and <path>/ are the same...
-    s = !stringIsEmpty(directoryName) ? String_newCString(directoryName) : String_newCString(".");
+    String s = !stringIsEmpty(directoryName) ? String_newCString(directoryName) : String_newCString(".");
     if (!String_endsWithChar(s,FILE_PATH_SEPARATOR_CHAR)) String_appendChar(s,FILE_PATH_SEPARATOR_CHAR);
     directoryListHandle->dir = opendir(String_cString(s));
     String_delete(s);
@@ -3797,10 +3750,9 @@ const char *File_permissionToString(char *string, uint stringSize, FilePermissio
 
 FileTypes File_getType(ConstString fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
+  FileStat fileStat;
   if (LSTAT(String_cString(fileName),&fileStat) == 0)
   {
     return getFileType(&fileStat);
@@ -3813,10 +3765,9 @@ FileTypes File_getType(ConstString fileName)
 
 FileTypes File_getRealType(ConstString fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
+  FileStat fileStat;
   if (STAT(String_cString(fileName),&fileStat) == 0)
   {
     return getFileType(&fileStat);
@@ -3901,17 +3852,11 @@ Errors File_delete(ConstString fileName, bool recursiveFlag)
 
 Errors File_deleteCString(const char *fileName, bool recursiveFlag)
 {
-  FileStat      fileStat;
   Errors        error;
-  StringList    directoryList;
-  DIR           *dir;
-  struct dirent *entry;
-  String        directoryName;
-  bool          emptyFlag;
-  String        name;
 
   assert(fileName != NULL);
 
+  FileStat      fileStat;
   if (LSTAT(fileName,&fileStat) != 0)
   {
     return getLastError(ERROR_CODE_IO,fileName);
@@ -3934,18 +3879,20 @@ Errors File_deleteCString(const char *fileName, bool recursiveFlag)
     if (recursiveFlag)
     {
       // delete entries in directory
+      StringList    directoryList;
       StringList_init(&directoryList);
       StringList_appendCString(&directoryList,fileName);
-      directoryName = File_newFileName();
-      name = File_newFileName();
+      String directoryName = File_newFileName();
+      String name = File_newFileName();
       while (!StringList_isEmpty(&directoryList) && (error == ERROR_NONE))
       {
         StringList_removeFirst(&directoryList,directoryName);
 
-        dir = opendir(String_cString(directoryName));
+        DIR *dir = opendir(String_cString(directoryName));
         if (dir != NULL)
         {
-          emptyFlag = TRUE;
+          bool          emptyFlag = TRUE;
+          struct dirent *entry;
           while (((entry = readdir(dir)) != NULL) && (error == ERROR_NONE))
           {
             if (   !stringEquals(entry->d_name,"." )
@@ -4028,17 +3975,15 @@ Errors File_renameCString(const char *oldFileName,
                           const char *newBackupFileName
                          )
 {
-  char       *fileName;
-  const char *tmpFileName;
-  FileStat   fileStat;
-  int        handle;
-  Errors     error;
+  Errors error;
 
   assert(oldFileName != NULL);
   assert(newFileName != NULL);
 
-  fileName = NULL;
+  char *fileName = NULL;
 
+  const char *tmpFileName;
+  FileStat   fileStat;
   if (LSTAT(newFileName,&fileStat) == 0)
   {
     // get temporary filename
@@ -4050,7 +3995,7 @@ Errors File_renameCString(const char *oldFileName,
     else
     {
       // create temporary file
-      uint n = stringLength(newFileName)+7+1;
+      size_t n = stringLength(newFileName)+7+1;
       fileName = (char*)malloc(n);
       if (fileName == NULL)
       {
@@ -4060,7 +4005,7 @@ Errors File_renameCString(const char *oldFileName,
       stringAppend(fileName,n,"-XXXXXX");
 
       #ifdef HAVE_MKSTEMP
-        handle = mkstemp(fileName);
+        int handle = mkstemp(fileName);
         if (handle == -1)
         {
           error = getLastError(ERROR_CODE_IO,fileName);
@@ -4186,31 +4131,27 @@ Errors File_copyCString(const char *sourceFileName,
 {
   #define BUFFER_SIZE (1024*1024)
 
-  byte     *buffer;
-  Errors   error;
-  FILE     *sourceFile,*destinationFile;
-  size_t   n;
-  FileStat fileStat;
+  Errors error;
 
   assert(sourceFileName != NULL);
   assert(destinationFileName != NULL);
 
   // allocate buffer
-  buffer = (byte*)malloc(BUFFER_SIZE);
+  byte *buffer = (byte*)malloc(BUFFER_SIZE);
   if (buffer == NULL)
   {
     return ERROR_INSUFFICIENT_MEMORY;
   }
 
   // open files
-  sourceFile = FOPEN(sourceFileName,"rb");
+  FILE *sourceFile = FOPEN(sourceFileName,"rb");
   if (sourceFile == NULL)
   {
     error = getLastError(ERROR_CODE_IO,sourceFileName);
     free(buffer);
     return error;
   }
-  destinationFile = FOPEN(destinationFileName,"wb");
+  FILE *destinationFile = FOPEN(destinationFileName,"wb");
   if (destinationFile == NULL)
   {
     error = getLastError(ERROR_CODE_IO,destinationFileName);
@@ -4220,6 +4161,7 @@ Errors File_copyCString(const char *sourceFileName,
   }
 
   // copy data
+  size_t n;
   do
   {
     n = fread(buffer,1,BUFFER_SIZE,sourceFile);
@@ -4256,6 +4198,7 @@ Errors File_copyCString(const char *sourceFileName,
   free(buffer);
 
   // copy permissions
+  FileStat fileStat;
   if (LSTAT(sourceFileName,&fileStat) != 0)
   {
     return getLastError(ERROR_CODE_IO,sourceFileName);
@@ -4287,10 +4230,9 @@ bool File_exists(ConstString fileName)
 
 bool File_existsCString(const char *fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
+  FileStat fileStat;
   return !stringIsEmpty(fileName) && (LSTAT(fileName,&fileStat) == 0);
 }
 
@@ -4303,10 +4245,9 @@ bool File_isFile(ConstString fileName)
 
 bool File_isFileCString(const char *fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
+  FileStat fileStat;
   return (   (STAT(fileName,&fileStat) == 0)
           && S_ISREG(fileStat.st_mode)
          );
@@ -4321,10 +4262,9 @@ bool File_isDirectory(ConstString fileName)
 
 bool File_isDirectoryCString(const char *fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
+  FileStat fileStat;
   return (   (STAT(fileName,&fileStat) == 0)
           && S_ISDIR(fileStat.st_mode)
          );
@@ -4339,11 +4279,10 @@ bool File_isLink(ConstString fileName)
 
 bool File_isLinkCString(const char *fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
   #ifdef S_ISLNK
+    FileStat fileStat;
     return    (LSTAT(fileName,&fileStat) == 0)
            && (   S_ISLNK(fileStat.st_mode)
                || (   S_ISREG(fileStat.st_mode)
@@ -4351,6 +4290,8 @@ bool File_isLinkCString(const char *fileName)
                   )
               );
   #else
+    UNUSED_VARIABLE(fileName);
+
     return FALSE;
   #endif
 }
@@ -4364,15 +4305,16 @@ bool File_isSymbolicLink(ConstString fileName)
 
 bool File_isSymbolicLinkCString(const char *fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
   #ifdef S_ISLNK
+    FileStat fileStat;
     return (   (LSTAT(fileName,&fileStat) == 0)
             && S_ISLNK(fileStat.st_mode)
            );
   #else
+    UNUSED_VARIABLE(fileName);
+
     return FALSE;
   #endif
 }
@@ -4386,10 +4328,9 @@ bool File_isHardLink(ConstString fileName)
 
 bool File_isHardLinkCString(const char *fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
+  FileStat fileStat;
   return (   (STAT(fileName,&fileStat) == 0)
           && S_ISREG(fileStat.st_mode)
           && (fileStat.st_nlink > 1)
@@ -4405,10 +4346,9 @@ bool File_isCharacterDevice(ConstString fileName)
 
 bool File_isCharacterDeviceCString(const char *fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
 
+  FileStat fileStat;
   return (   (STAT(fileName,&fileStat) == 0)
           && S_ISCHR(fileStat.st_mode)
          );
@@ -4423,20 +4363,15 @@ bool File_isBlockDevice(ConstString fileName)
 
 bool File_isBlockDeviceCString(const char *fileName)
 {
-  bool     isDevice;
-  FileStat fileStat;
-  #ifndef NDEBUG
-    const char       *debugEmulateBlockDevice;
-    CStringTokenizer stringTokenizer;
-    const char       *emulateDeviceName;
-  #endif /* not NDEBUG */
-
   assert(fileName != NULL);
 
+  bool isDevice;
   #ifndef NDEBUG
-    debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
     if (debugEmulateBlockDevice != NULL)
     {
+      CStringTokenizer stringTokenizer;
+      const char       *emulateDeviceName;
       stringTokenizerInit(&stringTokenizer,debugEmulateBlockDevice,",");
       if (   stringGetNextToken(&stringTokenizer,&emulateDeviceName)
           && stringEquals(fileName,emulateDeviceName)
@@ -4448,6 +4383,7 @@ bool File_isBlockDeviceCString(const char *fileName)
       else
       {
         // use block device
+        FileStat fileStat;
         isDevice = (   (STAT(fileName,&fileStat) == 0)
                     && S_ISBLK(fileStat.st_mode)
                    );
@@ -4456,11 +4392,13 @@ bool File_isBlockDeviceCString(const char *fileName)
     }
     else
     {
+      FileStat fileStat;
       isDevice = (   (STAT(fileName,&fileStat) == 0)
                   && S_ISBLK(fileStat.st_mode)
                  );
     }
   #else /* NDEBUG */
+    FileStat fileStat;
     isDevice = (   (STAT(fileName,&fileStat) == 0)
                 && S_ISBLK(fileStat.st_mode)
               );
@@ -4478,18 +4416,13 @@ bool File_isReadable(ConstString fileName)
 
 bool File_isReadableCString(const char *fileName)
 {
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    int fileDescriptor;
-  #endif /* PLATFORM_... */
-
   assert(fileName != NULL);
 
   #if   defined(PLATFORM_LINUX)
     return access(fileName,F_OK|R_OK) == 0;
   #elif defined(PLATFORM_WINDOWS)
     // Note: access() does not return correct values on MinGW
-    fileDescriptor = open(fileName,O_RDONLY,0);
+    int fileDescriptor = open(fileName,O_RDONLY,0);
     if (fileDescriptor != -1)
     {
       close(fileDescriptor);
@@ -4511,18 +4444,13 @@ bool File_isWritable(ConstString fileName)
 
 bool File_isWritableCString(const char *fileName)
 {
-  bool   isWriteable;
-  String directoryPath;
-  #if   defined(PLATFORM_LINUX)
-  #elif defined(PLATFORM_WINDOWS)
-    DWORD fileAttributes;
-  #endif /* PLATFORM_... */
+  bool isWriteable;
 
   assert(fileName != NULL);
 
   isWriteable = FALSE;
 
-  directoryPath = String_new();
+  String directoryPath = String_new();
   if (!stringIsEmpty(fileName))
   {
     File_getDirectoryNameCString(directoryPath,fileName);
@@ -4537,6 +4465,7 @@ bool File_isWritableCString(const char *fileName)
                   || (access(String_cString(directoryPath),W_OK) == 0);
   #elif defined(PLATFORM_WINDOWS)
     // Note: access() does not return correct values on MinGW
+    DWORD fileAttributes;
     if (File_existsCString(fileName))
     {
       fileAttributes = GetFileAttributes(fileName);
@@ -4572,15 +4501,12 @@ bool File_isHidden(ConstString fileName)
 
 bool File_isHiddenCString(const char *fileName)
 {
-  long       i;
-  const char *s;
-
   assert(fileName != NULL);
 
-  i = stringFindReverseChar(fileName,FILE_PATH_SEPARATOR_CHAR);
-  s = (i >= 0L)
-        ? &fileName[i+1]
-        : fileName;
+  long i = stringFindReverseChar(fileName,FILE_PATH_SEPARATOR_CHAR);
+  const char *s = (i >= 0L)
+                    ? &fileName[i+1]
+                    : fileName;
 
   return    !stringEquals(s,".")
          && !stringEquals(s,"..")
@@ -4589,17 +4515,11 @@ bool File_isHiddenCString(const char *fileName)
 
 bool File_isNetworkFileSystemCString(const char *fileName)
 {
-  bool isNetworkFileSystem;
-  #if   defined(PLATFORM_LINUX)
-    struct statfs fileSystemStat;
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
   assert(fileName != NULL);
 
-  isNetworkFileSystem = FALSE;
-
+  bool isNetworkFileSystem = FALSE;
   #if   defined(PLATFORM_LINUX)
+    struct statfs fileSystemStat;
     if (statfs(fileName,&fileSystemStat) == 0)
     {
       #ifdef HAVE_AFS_SUPER_MAGIC
@@ -4660,13 +4580,12 @@ Errors File_setInfoCString(const FileInfo *fileInfo,
                            const char     *fileName
                           )
 {
-  struct utimbuf utimeBuffer;
-
   assert(fileInfo != NULL);
   assert(fileName != NULL);
   assert(!stringIsEmpty(fileName));
 
   // set meta data
+  struct utimbuf utimeBuffer;
   switch (fileInfo->type)
   {
     case FILE_TYPE_FILE:
@@ -4735,24 +4654,14 @@ Errors File_getAttributesCString(FileAttributes *fileAttributes,
                                  const char     *fileName
                                 )
 {
-  long   attributes;
-  #ifdef FS_IOC_GETFLAGS
-    int    handle;
-    Errors error;
-  #endif /* FS_IOC_GETFLAGS */
-  #if defined(FS_IOC_GETFLAGS) && !defined(HAVE_O_NOATIME)
-    struct stat     fileStat;
-    bool            atimeFlag;
-    struct timespec atime;
-  #endif /* defined(FS_IOC_GETFLAGS) && !defined(HAVE_O_NOATIME) */
-
   assert(fileAttributes != NULL);
   assert(fileName != NULL);
   assert(!stringIsEmpty(fileName));
 
-  attributes = 0LL;
+  long attributes = 0LL;
   #ifdef FS_IOC_GETFLAGS
     // open file (first try with O_NOATIME)
+    int handle;
     #ifdef HAVE_O_NOATIME
       handle = open(fileName,O_RDONLY|O_NONBLOCK|O_BINARY|O_NOATIME);
       if (handle == -1)
@@ -4769,6 +4678,10 @@ Errors File_getAttributesCString(FileAttributes *fileAttributes,
 
     #ifndef HAVE_O_NOATIME
       // store atime
+      FileStat        fileStat;
+      bool            atimeFlag;
+      struct timespec atime;
+// TODO:
       if (fstat(handle,&fileStat) == 0)
       {
         atime.tv_sec    = fileStat.st_atime;
@@ -4788,7 +4701,7 @@ Errors File_getAttributesCString(FileAttributes *fileAttributes,
     // get attributes
     if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
     {
-      error = getLastError(ERROR_CODE_IO,fileName);
+      Errors error = getLastError(ERROR_CODE_IO,fileName);
       #ifndef HAVE_O_NOATIME
         if (atimeFlag)
         {
@@ -4837,25 +4750,12 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
                                  const char     *fileName
                                 )
 {
-  #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
-    long   attributes;
-    int    handle;
-    Errors error;
-  #endif /* FS_IOC_GETFLAGS && FS_IOC_SETFLAGS */
-  #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
-    #ifndef HAVE_O_NOATIME
-//TODO: remove
-//      struct stat     fileStat;
-//      bool            atimeFlag;
-//      struct timespec atime;
-    #endif /* not HAVE_O_NOATIME */
-  #endif /* defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS) */
-
   assert(fileName != NULL);
   assert(!stringIsEmpty(fileName));
 
   #if defined(FS_IOC_GETFLAGS) && defined(FS_IOC_SETFLAGS)
     // open file (first try with O_NOATIME)
+    int handle;
     #ifdef HAVE_O_NOATIME
       handle = open(fileName,O_RDONLY|O_NONBLOCK|O_BINARY|O_NOATIME);
       if (handle == -1)
@@ -4871,9 +4771,10 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
     }
 
     // update attributes
+    long attributes;
     if (ioctl(handle,FS_IOC_GETFLAGS,&attributes) != 0)
     {
-      error = getLastError(ERROR_CODE_IO,fileName);
+      Errors error = getLastError(ERROR_CODE_IO,fileName);
       close(handle);
       return error;
     }
@@ -4885,7 +4786,7 @@ Errors File_setAttributesCString(FileAttributes fileAttributes,
     if ((fileAttributes & FILE_ATTRIBUTE_NO_DUMP    ) != 0LL) attributes |= FILE_ATTRIBUTE_NO_DUMP;
     if (ioctl(handle,FS_IOC_SETFLAGS,&attributes) != 0)
     {
-      error = getLastError(ERROR_CODE_IO,fileName);
+      Errors error = getLastError(ERROR_CODE_IO,fileName);
       close(handle);
       return error;
     }
@@ -4956,14 +4857,12 @@ void File_addExtendedAttributeCString(FileExtendedAttributeList *fileExtendedAtt
                                       uint                      dataLength
                                      )
 {
-  FileExtendedAttributeNode *fileExtendedAttributeNode;
-
   assert(fileExtendedAttributeList != NULL);
   assert(name != NULL);
   assert(data != NULL);
 
   // allocate file extended attribute node
-  fileExtendedAttributeNode = LIST_NEW_NODE(FileExtendedAttributeNode);
+  FileExtendedAttributeNode *fileExtendedAttributeNode = LIST_NEW_NODE(FileExtendedAttributeNode);
   if (fileExtendedAttributeNode == NULL)
   {
     HALT_INSUFFICIENT_MEMORY();
@@ -4985,17 +4884,6 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
                                   ConstString               fileName
                                  )
 {
-  #ifdef HAVE_LLISTXATTR
-    int                       n;
-    char                      *names;
-    int                       namesLength;
-    Errors                    error;
-    const char                *name;
-    void                      *data;
-    int                       dataLength;
-    FileExtendedAttributeNode *fileExtendedAttributeNode;
-  #endif
-
   assert(fileExtendedAttributeList != NULL);
   assert(fileName != NULL);
   assert(!String_isEmpty(fileName));
@@ -5005,10 +4893,10 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
 
   #ifdef HAVE_LLISTXATTR
     // allocate buffer for attribute names (Note: it is possible a value > 0 is returned here, but later 0 is returned)
-    n = llistxattr(String_cString(fileName),NULL,0);
+    int n = llistxattr(String_cString(fileName),NULL,0);
     if (n >= 0)
     {
-      names = (char*)malloc(n);
+      char *names = (char*)malloc(n);
       if (names == NULL)
       {
         List_done(fileExtendedAttributeList);
@@ -5016,29 +4904,29 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
       }
 
       // get attribute names
-      namesLength = llistxattr(String_cString(fileName),names,n);
+      int namesLength = llistxattr(String_cString(fileName),names,n);
       if (namesLength < 0)
       {
-        error = getLastError(ERROR_CODE_IO,String_cString(fileName));
+        Errors error = getLastError(ERROR_CODE_IO,String_cString(fileName));
         free(names);
         List_done(fileExtendedAttributeList);
         return error;
       }
 
       // get attributes
-      name = names;
+      const char *name = names;
       while ((name-names) < namesLength)
       {
         // allocate buffer for data
         n = lgetxattr(String_cString(fileName),name,NULL,0);
         if (n < 0)
         {
-          error = getLastError(ERROR_CODE_IO,String_cString(fileName));
+          Errors error = getLastError(ERROR_CODE_IO,String_cString(fileName));
           free(names);
           List_done(fileExtendedAttributeList);
           return error;
         }
-        data = malloc(n);
+        void *data = malloc(n);
         if (data == NULL)
         {
           free(names);
@@ -5047,10 +4935,10 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
         }
 
         // get extended attribute
-        dataLength = lgetxattr(String_cString(fileName),name,data,n);
+        int dataLength = lgetxattr(String_cString(fileName),name,data,n);
         if (dataLength < 0)
         {
-          error = getLastError(ERROR_CODE_IO,String_cString(fileName));
+          Errors error = getLastError(ERROR_CODE_IO,String_cString(fileName));
           free(data);
           free(names);
           List_done(fileExtendedAttributeList);
@@ -5058,7 +4946,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
         }
 
         // store in attribute list
-        fileExtendedAttributeNode = LIST_NEW_NODE(FileExtendedAttributeNode);
+        FileExtendedAttributeNode *fileExtendedAttributeNode = LIST_NEW_NODE(FileExtendedAttributeNode);
         if (fileExtendedAttributeNode == NULL)
         {
           free(data);
@@ -5084,7 +4972,7 @@ Errors File_getExtendedAttributes(FileExtendedAttributeList *fileExtendedAttribu
     }
     else
     {
-      error = getLastError(ERROR_CODE_IO,String_cString(fileName));
+      Errors error = getLastError(ERROR_CODE_IO,String_cString(fileName));
       List_done(fileExtendedAttributeList);
       return error;
     }
@@ -5100,15 +4988,12 @@ Errors File_setExtendedAttributes(ConstString                     fileName,
                                   const FileExtendedAttributeList *fileExtendedAttributeList
                                  )
 {
-  #ifdef HAVE_LSETXATTR
-    FileExtendedAttributeNode *fileExtendedAttributeNode;
-  #endif /* HAVE_LSETXATTR */
-
   assert(fileName != NULL);
   assert(!String_isEmpty(fileName));
   assert(fileExtendedAttributeList != NULL);
 
   #ifdef HAVE_LSETXATTR
+    FileExtendedAttributeNode *fileExtendedAttributeNode;
     LIST_ITERATE(fileExtendedAttributeList,fileExtendedAttributeNode)
     {
       if (lsetxattr(String_cString(fileName),
@@ -5132,11 +5017,10 @@ Errors File_setExtendedAttributes(ConstString                     fileName,
 
 uint64 File_getFileTimeModified(ConstString fileName)
 {
-  FileStat fileStat;
-
   assert(fileName != NULL);
   assert(!String_isEmpty(fileName));
 
+  FileStat fileStat;
   if (LSTAT(String_cString(fileName),&fileStat) != 0)
   {
     return 0LL;
@@ -5165,19 +5049,13 @@ Errors File_setOwner(ConstString fileName,
                      uint32      groupId
                     )
 {
-  #if   defined(PLATFORM_LINUX)
-    #ifdef HAVE_CHOWN
-      uid_t uid;
-      gid_t gid;
-    #endif /* HAVE_CHOWN */
-  #elif defined(PLATFORM_WINDOWS)
-  #endif /* PLATFORM_... */
-
   assert(fileName != NULL);
   assert(!String_isEmpty(fileName));
 
   #if   defined(PLATFORM_LINUX)
     #ifdef HAVE_CHOWN
+      uid_t uid;
+      gid_t gid;
       if      (userId == FILE_OWN_USER_ID     ) uid = getuid();
       else if (userId == FILE_DEFAULT_USER_ID ) uid = -1;
       else                                      uid = (uid_t)userId;
@@ -5222,32 +5100,24 @@ Errors File_makeDirectory(ConstString     pathName,
                           bool            ignoreExistingFlag
                          )
 {
-  String          directoryName;
-  String          parentDirectoryName;
-  mode_t          currentCreationMask;
-  StringTokenizer pathNameTokenizer;
-  ConstString     token;
-  FileStat        fileStat;
-  #ifdef HAVE_CHOWN
-    uid_t           uid;
-    gid_t           gid;
-  #endif /* HAVE_CHOWN */
-  Errors          error;
+  Errors error;
 
   assert(pathName != NULL);
   assert(!String_isEmpty(pathName));
 
   // initialize variables
-  directoryName       = File_newFileName();
-  parentDirectoryName = File_newFileName();
+  String directoryName       = File_newFileName();
+  String parentDirectoryName = File_newFileName();
 
   // get current umask (get and restore current value)
-  currentCreationMask = umask(0);
+  mode_t currentCreationMask = umask(0);
   umask(currentCreationMask);
 
+  StringTokenizer pathNameTokenizer;
   File_initSplitFileName(&pathNameTokenizer,pathName);
 
   // get root directory
+  ConstString token;
   if (File_getNextSplitFileName(&pathNameTokenizer,&token))
   {
     if (!String_isEmpty(token))
@@ -5271,6 +5141,8 @@ Errors File_makeDirectory(ConstString     pathName,
        )
     {
       #ifdef HAVE_CHOWN
+        uid_t  uid;
+        gid_t  gid;
         if      (userId == FILE_OWN_USER_ID     ) uid = getuid();
         else if (userId == FILE_DEFAULT_USER_ID ) uid = -1;
         else                                      uid = (uid_t)userId;
@@ -5330,6 +5202,7 @@ Errors File_makeDirectory(ConstString     pathName,
       if      (!File_exists(directoryName))
       {
         // set read/write/execute-access in parent directory
+        FileStat fileStat;
         if (LSTAT(String_cString(parentDirectoryName),&fileStat) != 0)
         {
           error = getLastError(ERROR_CODE_IO,String_cString(parentDirectoryName));
@@ -5386,6 +5259,8 @@ Errors File_makeDirectory(ConstString     pathName,
         {
           // set owner
           #ifdef HAVE_CHOWN
+            uid_t  uid;
+            gid_t  gid;
             if      (userId == FILE_OWN_USER_ID     ) uid = getuid();
             else if (userId == FILE_DEFAULT_USER_ID ) uid = -1;
             else                                      uid = (uid_t)userId;
@@ -5449,14 +5324,13 @@ Errors File_makeDirectoryCString(const char      *pathName,
                                  bool            ignoreExistingFlag
                                 )
 {
-  String string;
   Errors error;
 
   assert(pathName != NULL);
   assert(!stringIsEmpty(pathName));
 
 // TODO: move code from File_makeDirectory and call in File_makeDirectory this function
-  string = File_setFileNameCString(File_newFileName(),pathName);
+  String string = File_setFileNameCString(File_newFileName(),pathName);
   error = File_makeDirectory(string,userId,groupId,permissions,ignoreExistingFlag);
   File_deleteFileName(string);
 
@@ -5483,81 +5357,178 @@ Errors File_readLinkCString(String     fileName,
   #define BUFFER_SIZE  256
   #define BUFFER_DELTA 128
 
-  #ifdef HAVE_READLINK
-    char    *buffer;
-    ssize_t bufferSize;
-    int     result;
-    Errors  error;
-  #endif /* HAVE_READLINK */
-
   assert(linkName != NULL);
   assert(!stringIsEmpty(linkName));
   assert(fileName != NULL);
 
-  #ifdef HAVE_READLINK
-    // allocate initial buffer for name
-    buffer = (char*)malloc(BUFFER_SIZE);
-    if (buffer == NULL)
-    {
-      HALT_INSUFFICIENT_MEMORY();
-    }
-    bufferSize = BUFFER_SIZE;
-
-    // try to read link, increase buffer if needed
-    // Note: postgresql define readlink() on Windows!
-    while ((result = readlink(linkName,buffer,bufferSize)) == bufferSize)
-    {
-      bufferSize += BUFFER_DELTA;
-      buffer = realloc(buffer,bufferSize);
+  #if   defined(PLATFORM_LINUX)
+    #ifdef HAVE_READLINK
+      // allocate initial buffer for name
+      char *buffer = (char*)malloc(BUFFER_SIZE);
       if (buffer == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
       }
-    }
-    if (result == -1)
-    {
-      error = getLastError(ERROR_CODE_IO,linkName);
+      ssize_t bufferSize = BUFFER_SIZE;
+
+      // try to read link, increase buffer if needed
+      int result;
+      while ((result = readlink(linkName,buffer,bufferSize)) == bufferSize)
+      {
+        bufferSize += BUFFER_DELTA;
+        buffer = realloc(buffer,bufferSize);
+        if (buffer == NULL)
+        {
+          HALT_INSUFFICIENT_MEMORY();
+        }
+      }
+      if (result == -1)
+      {
+        Errors error = getLastError(ERROR_CODE_IO,linkName);
+        free(buffer);
+        return error;
+      }
+
+      if (absolutePathFlag && !File_isAbsoluteFileName(fileName))
+      {
+        // absolute name
+        File_getDirectoryNameCString(fileName,linkName);
+        File_appendFileNameBuffer(fileName,buffer,result);
+      }
+      else
+      {
+        // absolute or relative name
+        String_setBuffer(fileName,buffer,result);
+      }
+
+      // free resources
       free(buffer);
-      return error;
-    }
 
-    if (absolutePathFlag && !File_isAbsoluteFileName(fileName))
+      return ERROR_NONE;
+    #else /* not HAVE_READLINK */
+      UNUSED_VARIABLE(absolutePathFlag);
+
+      String_setCString(fileName,linkName);
+
+      return ERROR_NONE;
+    #endif /* HAVE_READLINK */
+  #elif defined(PLATFORM_WINDOWS)
+    // Win32 is broken: need to define this by ourselfs :-(
+    #ifndef MAXIMUM_REPARSE_DATA_BUFFER_SIZE
+      #define MAXIMUM_REPARSE_DATA_BUFFER_SIZE 16384
+    #endif
+
+    typedef struct
     {
-      // absolute name
-      File_getDirectoryNameCString(fileName,linkName);
-      File_appendFileNameBuffer(fileName,buffer,result);
-    }
-    else
-    {
-      // absolute or relative name
-      String_setBuffer(fileName,buffer,result);
-    }
+      ULONG  ReparseTag;
+      USHORT ReparseDataLength;
+      USHORT Reserved;
+      union {
+        struct
+        {
+          USHORT SubstituteNameOffset;
+          USHORT SubstituteNameLength;
+          USHORT PrintNameOffset;
+          USHORT PrintNameLength;
+          ULONG  Flags;
+          WCHAR  PathBuffer[1];
+        } SymbolicLinkReparseBuffer;
 
-    // free resources
-    free(buffer);
+        struct
+        {
+          USHORT SubstituteNameOffset;
+          USHORT SubstituteNameLength;
+          USHORT PrintNameOffset;
+          USHORT PrintNameLength;
+          WCHAR  PathBuffer[1];
+        } MountPointReparseBuffer;
 
-    return ERROR_NONE;
-  #else /* not HAVE_READLINK */
+        struct
+        {
+          UCHAR DataBuffer[1];
+        } GenericReparseBuffer;
+      };
+    } *PREPARSE_DATA_BUFFER;
+
     UNUSED_VARIABLE(absolutePathFlag);
 
-    String_setCString(fileName,linkName);
+    HANDLE handle = CreateFileA(linkName,
+                                0,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                FILE_FLAG_OPEN_REPARSE_POINT |
+                                FILE_FLAG_BACKUP_SEMANTICS,
+                                NULL
+                               );
+    if (handle == INVALID_HANDLE_VALUE)
+    {
+        return getLastError(ERROR_CODE_IO, linkName);
+    }
+
+    BYTE buffer[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+    DWORD bytesReturned;
+    if (!DeviceIoControl(handle,
+                         FSCTL_GET_REPARSE_POINT,
+                         NULL,
+                         0,
+                         buffer,
+                         sizeof(buffer),
+                         &bytesReturned,
+                         NULL))
+    {
+        CloseHandle(handle);
+        return getLastError(ERROR_CODE_IO, linkName);
+    }
+    CloseHandle(handle);
+
+    PREPARSE_DATA_BUFFER reparseDataBuffer = (PREPARSE_DATA_BUFFER)buffer;
+    if (reparseDataBuffer->ReparseTag != IO_REPARSE_TAG_SYMLINK)
+    {
+        return ERRORX_(IO,EINVAL,"'%s' not a link", fileName);
+    }
+
+    WCHAR *target =   (WCHAR *)(  (BYTE *)reparseDataBuffer->SymbolicLinkReparseBuffer.PathBuffer
+                                + reparseDataBuffer->SymbolicLinkReparseBuffer.PrintNameOffset
+                               );
+    DWORD targetLength = reparseDataBuffer->SymbolicLinkReparseBuffer.PrintNameLength / sizeof(WCHAR);
+
+    int length = WideCharToMultiByte(CP_UTF8,
+                                     0,
+                                     target,
+                                     targetLength,
+                                     NULL,
+                                     0,
+                                     NULL,
+                                     NULL
+                                    );
+
+    char *utf8Buffer = (char*)malloc(length);
+    if (utf8Buffer == NULL)
+    {
+        HALT_INSUFFICIENT_MEMORY();
+    }
+    WideCharToMultiByte(CP_UTF8,
+                        0,
+                        target,
+                        targetLength,
+                        utf8Buffer,
+                        length,
+                        NULL,
+                        NULL);
+    String_setBuffer(fileName, utf8Buffer, length);
+    free(utf8Buffer);
 
     return ERROR_NONE;
-  #endif /* HAVE_READLINK */
+  #endif /* PLATFORM_... */
 }
 
 String File_getCurrentDirectory(String pathName)
 {
-  #ifdef HAVE_GET_CURRENT_DIR_NAME
-    char *currentDirectory;
-  #else
-    char currentDirectory[PATH_MAX];
-  #endif
-
   assert(pathName != NULL);
 
   #ifdef HAVE_GET_CURRENT_DIR_NAME
-    currentDirectory = get_current_dir_name();
+    char *currentDirectory = get_current_dir_name();
     if (currentDirectory != NULL)
     {
       String_setBuffer(pathName,currentDirectory,stringLength(currentDirectory));
@@ -5568,6 +5539,7 @@ String File_getCurrentDirectory(String pathName)
       String_clear(pathName);
     }
   #else
+    char currentDirectory[PATH_MAX];
     if (getcwd(currentDirectory,sizeof(currentDirectory)) != NULL)
     {
       String_setBuffer(pathName,currentDirectory,stringLength(currentDirectory));
@@ -5665,21 +5637,27 @@ Errors File_makeHardLinkCString(const char *linkName,
   assert(linkName != NULL);
   assert(fileName != NULL);
 
-  #ifdef HAVE_LINK
-    unlink(linkName);
-    // Note: postgresql define link() on Windows!
-    if (link(fileName,linkName) != 0)
-    {
-      return getLastError(ERROR_CODE_IO,fileName);
-    }
+  #if   defined(PLATFORM_LINUX)
+    #ifdef HAVE_LINK
+      unlink(linkName);
+      if (link(fileName,linkName) != 0)
+      {
+        return getLastError(ERROR_CODE_IO,fileName);
+      }
 
-    return ERROR_NONE;
-  #else /* not HAVE_LINK */
+      return ERROR_NONE;
+    #else /* not HAVE_LINK */
+      UNUSED_VARIABLE(linkName);
+      UNUSED_VARIABLE(fileName);
+
+      return ERROR_FUNCTION_NOT_SUPPORTED;
+    #endif /* HAVE_LINK */
+  #elif defined(PLATFORM_WINDOWS)
     UNUSED_VARIABLE(linkName);
     UNUSED_VARIABLE(fileName);
 
     return ERROR_FUNCTION_NOT_SUPPORTED;
-  #endif /* HAVE_LINK */
+  #endif /* PLATFORM_... */
 }
 
 Errors File_makeSpecial(ConstString      name,
@@ -5704,28 +5682,20 @@ Errors File_makeSpecialCString(const char       *name,
                                ulong            minor
                               )
 {
-  #ifdef HAVE_MKNOD
-    Errors error;
-    String directoryName;
-    #ifndef NDEBUG
-      int fileDescriptor;
-    #endif
-  #endif /* HAVE_MKNOD */
-
   assert(name != NULL);
   assert(!stringIsEmpty(name));
 
   #ifdef HAVE_MKNOD
     // create directory if needed
-    directoryName = File_getDirectoryNameCString(File_newFileName(),name);
+    String directoryName = File_getDirectoryNameCString(File_newFileName(),name);
     if (!String_isEmpty(directoryName) && !File_exists(directoryName))
     {
-      error = File_makeDirectory(directoryName,
-                                 FILE_DEFAULT_USER_ID,
-                                 FILE_DEFAULT_GROUP_ID,
-                                 FILE_DEFAULT_PERMISSIONS,
-                                 TRUE
-                                );
+      Errors error = File_makeDirectory(directoryName,
+                                        FILE_DEFAULT_USER_ID,
+                                        FILE_DEFAULT_GROUP_ID,
+                                        FILE_DEFAULT_PERMISSIONS,
+                                        TRUE
+                                       );
       if (error != ERROR_NONE)
       {
         File_deleteFileName(directoryName);
@@ -5742,7 +5712,7 @@ Errors File_makeSpecialCString(const char       *name,
           if (debugIsEmulateMknod())
           {
             // create simple file
-            fileDescriptor = open(name,O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0666);
+            int fileDescriptor = open(name,O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0666);
             if (fileDescriptor == -1)
             {
               return getLastError(ERROR_CODE_IO,name);
@@ -5768,7 +5738,7 @@ Errors File_makeSpecialCString(const char       *name,
           if (debugIsEmulateMknod())
           {
             // create simple file
-            fileDescriptor = open(name,O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0666);
+            int fileDescriptor = open(name,O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0666);
             if (fileDescriptor == -1)
             {
               return getLastError(ERROR_CODE_IO,name);
@@ -5825,15 +5795,12 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
                               ConstString    pathName
                              )
 {
-  #ifdef HAVE_STATVFS
-    struct statvfs fileSystemStat;
-  #endif /* HAVE_STATVFS */
-
   assert(pathName != NULL);
   assert(!String_isEmpty(pathName));
   assert(fileSystemInfo != NULL);
 
   #ifdef HAVE_STATVFS
+    struct statvfs fileSystemStat;
     if (statvfs(String_cString(pathName),&fileSystemStat) != 0)
     {
       return getLastError(ERROR_CODE_IO,String_cString(pathName));
@@ -5857,23 +5824,18 @@ Errors File_getFileSystemInfo(FileSystemInfo *fileSystemInfo,
 
 String File_castToString(String string, const FileCast *fileCast)
 {
-  char      s[64];
-  #ifdef HAVE_LOCALTIME_R
-    struct tm tm;
-  #else
-    struct tm *tm;
-  #endif
-
-  assert(s != NULL);
+  assert(string != NULL);
   assert(fileCast != NULL);
 
   String_clear(string);
 
+  char s[64];
   #ifdef HAVE_LOCALTIME_R
+    struct tm tm;
     localtime_r(&fileCast->mtime,&tm);
     strftime(s,sizeof(s),"%F %T",&tm);
   #else
-    tm = localtime(&fileCast->mtime);
+    struct tm *tm = localtime(&fileCast->mtime);
     assert(tm != NULL);
     strftime(s,sizeof(s),"%F %T",tm);
   #endif
@@ -5927,7 +5889,7 @@ void File_debugDumpInfo(FILE                 *handle,
 
   pthread_mutex_lock(&debugFileLock);
   {
-    ulong         n = 0L;
+    size_t        n = 0L;
     DebugFileNode *debugFileNode;
     LIST_ITERATE(&debugOpenFileList,debugFileNode)
     {

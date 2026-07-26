@@ -9401,7 +9401,7 @@ case $host_os in
   darwin*)
     ;;
   windows*|mingw*)
-    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600 _POSIX_C_SOURCE"
+    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600 SECURITY_WIN32 _POSIX_C_SOURCE"
     ;;
 esac
 
@@ -10177,14 +10177,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in m ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10217,7 +10224,8 @@ else $as_nop
   ac_cv_search_libraries_round=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10241,14 +10249,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in dl ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10281,7 +10296,8 @@ else $as_nop
   ac_cv_search_libraries_dlopen=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10303,14 +10319,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in rt ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10343,7 +10366,8 @@ else $as_nop
   ac_cv_search_libraries_clock_gettime=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10367,14 +10391,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pthread ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10407,7 +10438,8 @@ else $as_nop
   ac_cv_search_libraries_pthread_create=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10431,14 +10463,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in resolv ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10471,7 +10510,8 @@ else $as_nop
   ac_cv_search_libraries_ns_initparse=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10495,14 +10535,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in m ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10535,7 +10582,8 @@ else $as_nop
   ac_cv_search_libraries_round=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10559,14 +10607,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in dl ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10599,7 +10654,8 @@ else $as_nop
   ac_cv_search_libraries_dlopen=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10621,14 +10677,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in rt ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10661,7 +10724,8 @@ else $as_nop
   ac_cv_search_libraries_clock_gettime=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10685,14 +10749,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pthread ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10725,7 +10796,8 @@ else $as_nop
   ac_cv_search_libraries_pthread_create=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10749,14 +10821,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in resolv ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10789,7 +10868,8 @@ else $as_nop
   ac_cv_search_libraries_ns_initparse=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10813,14 +10893,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in m ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10853,7 +10940,8 @@ else $as_nop
   ac_cv_search_libraries_round=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10877,14 +10965,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in dl ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10917,7 +11012,8 @@ else $as_nop
   ac_cv_search_libraries_dlopen=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -10939,14 +11035,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in rt ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -10979,7 +11082,8 @@ else $as_nop
   ac_cv_search_libraries_clock_gettime=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -11003,14 +11107,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pthread ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -11043,7 +11154,8 @@ else $as_nop
   ac_cv_search_libraries_pthread_create=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -11067,14 +11179,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in resolv ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -11107,7 +11226,8 @@ else $as_nop
   ac_cv_search_libraries_ns_initparse=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -11130,10 +11250,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in pthreadGC2; do
         if test -n "$ac_libraries"; then
@@ -11142,7 +11267,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -11177,8 +11302,8 @@ else $as_nop
   ac_cv_search_static_pthread_create=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -11190,110 +11315,42 @@ then :
   test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"
 fi
 
+    # Note: do not link Windows libraries static
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing WSAStartup" >&5
-printf %s "checking for static library containing WSAStartup... " >&6; }
-if test ${ac_cv_search_static_WSAStartup+y}
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing getaddrinfo" >&5
+printf %s "checking for library containing getaddrinfo... " >&6; }
+if test ${ac_cv_search_libraries_getaddrinfo+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in wsock32; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo winsock2.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z "winsock2.h"; then echo "extern void WSAStartup();"; fi`
-                                       return (int)WSAStartup;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_static_WSAStartup=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_WSAStartup+y}
-then :
-
-else $as_nop
-  ac_cv_search_static_WSAStartup=no
-fi
-
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_WSAStartup" >&5
-printf "%s\n" "$ac_cv_search_static_WSAStartup" >&6; }
-  ac_result=$ac_cv_search_static_WSAStartup
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"
-fi
-
-
-
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing getaddrinfo" >&5
-printf %s "checking for static library containing getaddrinfo... " >&6; }
-if test ${ac_cv_search_static_getaddrinfo+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
-
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in ws2_32; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
+      for ac_library in ws2_32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
         else
-          ac_libraries="-l$ac_library"
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
-      done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo ws2tcpip.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "ws2tcpip.h"; then echo "extern void getaddrinfo();"; fi`
-                                       return (int)getaddrinfo;
+                                         return (int)getaddrinfo;
 
 
   ;
@@ -11303,66 +11360,137 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_static_getaddrinfo=$ac_result; break
+  ac_cv_search_libraries_getaddrinfo=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_getaddrinfo+y}
+      done
+      if test ${ac_cv_search_libraries_getaddrinfo+y}
 then :
 
 else $as_nop
-  ac_cv_search_static_getaddrinfo=no
+  ac_cv_search_libraries_getaddrinfo=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_getaddrinfo" >&5
-printf "%s\n" "$ac_cv_search_static_getaddrinfo" >&6; }
-  ac_result=$ac_cv_search_static_getaddrinfo
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_getaddrinfo" >&5
+printf "%s\n" "$ac_cv_search_libraries_getaddrinfo" >&6; }
+  ac_result=$ac_cv_search_libraries_getaddrinfo
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES ws2_32"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES ws2_32"
 fi
 
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing UuidCreate" >&5
-printf %s "checking for static library containing UuidCreate... " >&6; }
-if test ${ac_cv_search_static_UuidCreate+y}
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing WSAStartup" >&5
+printf %s "checking for library containing WSAStartup... " >&6; }
+if test ${ac_cv_search_libraries_WSAStartup+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in rpcrt4; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      for ac_library in wsock32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo winsock2.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z "winsock2.h"; then echo "extern void WSAStartup();"; fi`
+                                         return (int)WSAStartup;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_WSAStartup=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_WSAStartup+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_WSAStartup=no
+fi
+
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_WSAStartup" >&5
+printf "%s\n" "$ac_cv_search_libraries_WSAStartup" >&6; }
+  ac_result=$ac_cv_search_libraries_WSAStartup
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES wsock32"
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing UuidCreate" >&5
+printf %s "checking for library containing UuidCreate... " >&6; }
+if test ${ac_cv_search_libraries_UuidCreate+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
+
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
+      for ac_library in rpcrt4 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo windows.h rpcdce.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "windows.h rpcdce.h"; then echo "extern void UuidCreate();"; fi`
-                                       return (int)UuidCreate;
+                                         return (int)UuidCreate;
 
 
   ;
@@ -11372,66 +11500,67 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_static_UuidCreate=$ac_result; break
+  ac_cv_search_libraries_UuidCreate=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_UuidCreate+y}
+      done
+      if test ${ac_cv_search_libraries_UuidCreate+y}
 then :
 
 else $as_nop
-  ac_cv_search_static_UuidCreate=no
+  ac_cv_search_libraries_UuidCreate=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_UuidCreate" >&5
-printf "%s\n" "$ac_cv_search_static_UuidCreate" >&6; }
-  ac_result=$ac_cv_search_static_UuidCreate
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_UuidCreate" >&5
+printf "%s\n" "$ac_cv_search_libraries_UuidCreate" >&6; }
+  ac_result=$ac_cv_search_libraries_UuidCreate
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES rpcrt4"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES rpcrt4"
 fi
 
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing SHGetFolderPath" >&5
-printf %s "checking for static library containing SHGetFolderPath... " >&6; }
-if test ${ac_cv_search_static_SHGetFolderPath+y}
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing SHGetFolderPath" >&5
+printf %s "checking for library containing SHGetFolderPath... " >&6; }
+if test ${ac_cv_search_libraries_SHGetFolderPath+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in shell32; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      for ac_library in shell32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo shlobj.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "shlobj.h"; then echo "extern void SHGetFolderPath();"; fi`
-                                       return (int)SHGetFolderPath;
+                                         return (int)SHGetFolderPath;
 
 
   ;
@@ -11441,66 +11570,67 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_static_SHGetFolderPath=$ac_result; break
+  ac_cv_search_libraries_SHGetFolderPath=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_SHGetFolderPath+y}
+      done
+      if test ${ac_cv_search_libraries_SHGetFolderPath+y}
 then :
 
 else $as_nop
-  ac_cv_search_static_SHGetFolderPath=no
+  ac_cv_search_libraries_SHGetFolderPath=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_SHGetFolderPath" >&5
-printf "%s\n" "$ac_cv_search_static_SHGetFolderPath" >&6; }
-  ac_result=$ac_cv_search_static_SHGetFolderPath
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_SHGetFolderPath" >&5
+printf "%s\n" "$ac_cv_search_libraries_SHGetFolderPath" >&6; }
+  ac_result=$ac_cv_search_libraries_SHGetFolderPath
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES shell32"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES shell32"
 fi
 
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing CoTaskMemFree" >&5
-printf %s "checking for static library containing CoTaskMemFree... " >&6; }
-if test ${ac_cv_search_static_CoTaskMemFree+y}
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing CoTaskMemFree" >&5
+printf %s "checking for library containing CoTaskMemFree... " >&6; }
+if test ${ac_cv_search_libraries_CoTaskMemFree+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in ole32; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      for ac_library in ole32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo combaseapi.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "combaseapi.h"; then echo "extern void CoTaskMemFree();"; fi`
-                                       return (int)CoTaskMemFree;
+                                         return (int)CoTaskMemFree;
 
 
   ;
@@ -11510,66 +11640,67 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_static_CoTaskMemFree=$ac_result; break
+  ac_cv_search_libraries_CoTaskMemFree=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_CoTaskMemFree+y}
+      done
+      if test ${ac_cv_search_libraries_CoTaskMemFree+y}
 then :
 
 else $as_nop
-  ac_cv_search_static_CoTaskMemFree=no
+  ac_cv_search_libraries_CoTaskMemFree=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_CoTaskMemFree" >&5
-printf "%s\n" "$ac_cv_search_static_CoTaskMemFree" >&6; }
-  ac_result=$ac_cv_search_static_CoTaskMemFree
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_CoTaskMemFree" >&5
+printf "%s\n" "$ac_cv_search_libraries_CoTaskMemFree" >&6; }
+  ac_result=$ac_cv_search_libraries_CoTaskMemFree
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES ole32"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES ole32"
 fi
 
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing FOLDERID_LocalAppData" >&5
-printf %s "checking for static library containing FOLDERID_LocalAppData... " >&6; }
-if test ${ac_cv_search_static_FOLDERID_LocalAppData+y}
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing FOLDERID_LocalAppData" >&5
+printf %s "checking for library containing FOLDERID_LocalAppData... " >&6; }
+if test ${ac_cv_search_libraries_FOLDERID_LocalAppData+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in uuid; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      for ac_library in uuid ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z ""; then echo "extern void FOLDERID_LocalAppData();"; fi`
-                                       return (int)FOLDERID_LocalAppData;
+                                         return (int)FOLDERID_LocalAppData;
 
 
   ;
@@ -11579,66 +11710,67 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_static_FOLDERID_LocalAppData=$ac_result; break
+  ac_cv_search_libraries_FOLDERID_LocalAppData=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_FOLDERID_LocalAppData+y}
+      done
+      if test ${ac_cv_search_libraries_FOLDERID_LocalAppData+y}
 then :
 
 else $as_nop
-  ac_cv_search_static_FOLDERID_LocalAppData=no
+  ac_cv_search_libraries_FOLDERID_LocalAppData=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_FOLDERID_LocalAppData" >&5
-printf "%s\n" "$ac_cv_search_static_FOLDERID_LocalAppData" >&6; }
-  ac_result=$ac_cv_search_static_FOLDERID_LocalAppData
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_FOLDERID_LocalAppData" >&5
+printf "%s\n" "$ac_cv_search_libraries_FOLDERID_LocalAppData" >&6; }
+  ac_result=$ac_cv_search_libraries_FOLDERID_LocalAppData
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES uuid"
 fi
 
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing PathRemoveFileSpec" >&5
-printf %s "checking for static library containing PathRemoveFileSpec... " >&6; }
-if test ${ac_cv_search_static_PathRemoveFileSpec+y}
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing PathRemoveFileSpec" >&5
+printf %s "checking for library containing PathRemoveFileSpec... " >&6; }
+if test ${ac_cv_search_libraries_PathRemoveFileSpec+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in shlwapi; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      for ac_library in shlwapi ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo shlwapi.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "shlwapi.h"; then echo "extern void PathRemoveFileSpec();"; fi`
-                                       return (int)PathRemoveFileSpec;
+                                         return (int)PathRemoveFileSpec;
 
 
   ;
@@ -11648,66 +11780,67 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_static_PathRemoveFileSpec=$ac_result; break
+  ac_cv_search_libraries_PathRemoveFileSpec=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_PathRemoveFileSpec+y}
+      done
+      if test ${ac_cv_search_libraries_PathRemoveFileSpec+y}
 then :
 
 else $as_nop
-  ac_cv_search_static_PathRemoveFileSpec=no
+  ac_cv_search_libraries_PathRemoveFileSpec=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_PathRemoveFileSpec" >&5
-printf "%s\n" "$ac_cv_search_static_PathRemoveFileSpec" >&6; }
-  ac_result=$ac_cv_search_static_PathRemoveFileSpec
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_PathRemoveFileSpec" >&5
+printf "%s\n" "$ac_cv_search_libraries_PathRemoveFileSpec" >&6; }
+  ac_result=$ac_cv_search_libraries_PathRemoveFileSpec
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES shlwapi"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES shlwapi"
 fi
 
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing GetUnicastIpAddressTable" >&5
-printf %s "checking for static library containing GetUnicastIpAddressTable... " >&6; }
-if test ${ac_cv_search_static_GetUnicastIpAddressTable+y}
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing GetUnicastIpAddressTable" >&5
+printf %s "checking for library containing GetUnicastIpAddressTable... " >&6; }
+if test ${ac_cv_search_libraries_GetUnicastIpAddressTable+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in iphlpapi ssp; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      for ac_library in iphlpapi ssp ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo winsock2.h netioapi.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "winsock2.h netioapi.h"; then echo "extern void GetUnicastIpAddressTable();"; fi`
-                                       return (int)GetUnicastIpAddressTable;
+                                         return (int)GetUnicastIpAddressTable;
 
 
   ;
@@ -11717,66 +11850,67 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_static_GetUnicastIpAddressTable=$ac_result; break
+  ac_cv_search_libraries_GetUnicastIpAddressTable=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_GetUnicastIpAddressTable+y}
+      done
+      if test ${ac_cv_search_libraries_GetUnicastIpAddressTable+y}
 then :
 
 else $as_nop
-  ac_cv_search_static_GetUnicastIpAddressTable=no
+  ac_cv_search_libraries_GetUnicastIpAddressTable=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_GetUnicastIpAddressTable" >&5
-printf "%s\n" "$ac_cv_search_static_GetUnicastIpAddressTable" >&6; }
-  ac_result=$ac_cv_search_static_GetUnicastIpAddressTable
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_GetUnicastIpAddressTable" >&5
+printf "%s\n" "$ac_cv_search_libraries_GetUnicastIpAddressTable" >&6; }
+  ac_result=$ac_cv_search_libraries_GetUnicastIpAddressTable
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES iphlpapi ssp"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES iphlpapi ssp"
 fi
 
 
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing NCryptOpenKey" >&5
-printf %s "checking for static library containing NCryptOpenKey... " >&6; }
-if test ${ac_cv_search_static_NCryptOpenKey+y}
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing NCryptOpenKey" >&5
+printf %s "checking for library containing NCryptOpenKey... " >&6; }
+if test ${ac_cv_search_libraries_NCryptOpenKey+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
-            CFLAGS="$CFLAGS"
-      ac_libraries=""
-      for ac_library in ncrypt; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
-        else
-          ac_libraries="-l$ac_library"
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+      for ac_library in ncrypt ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 `echo windows.h ncrypt.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
 int
 main (void)
 {
 `if test -z "windows.h ncrypt.h"; then echo "extern void NCryptOpenKey();"; fi`
-                                       return (int)NCryptOpenKey;
+                                         return (int)NCryptOpenKey;
 
 
   ;
@@ -11786,29 +11920,100 @@ main (void)
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_search_static_NCryptOpenKey=$ac_result; break
+  ac_cv_search_libraries_NCryptOpenKey=$ac_result; break
 
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
-      if test ${ac_cv_search_static_NCryptOpenKey+y}
+      done
+      if test ${ac_cv_search_libraries_NCryptOpenKey+y}
 then :
 
 else $as_nop
-  ac_cv_search_static_NCryptOpenKey=no
+  ac_cv_search_libraries_NCryptOpenKey=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_NCryptOpenKey" >&5
-printf "%s\n" "$ac_cv_search_static_NCryptOpenKey" >&6; }
-  ac_result=$ac_cv_search_static_NCryptOpenKey
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_NCryptOpenKey" >&5
+printf "%s\n" "$ac_cv_search_libraries_NCryptOpenKey" >&6; }
+  ac_result=$ac_cv_search_libraries_NCryptOpenKey
   if test "$ac_result" != no
 then :
-  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES ncrypt"
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES ncrypt"
+fi
+
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing InitializeSecurityContext" >&5
+printf %s "checking for library containing InitializeSecurityContext... " >&6; }
+if test ${ac_cv_search_libraries_InitializeSecurityContext+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
+
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
+      for ac_library in secur32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo windows.h sspi.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z "windows.h sspi.h"; then echo "extern void InitializeSecurityContext();"; fi`
+                                         return (int)InitializeSecurityContext;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_InitializeSecurityContext=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_InitializeSecurityContext+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_InitializeSecurityContext=no
+fi
+
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_InitializeSecurityContext" >&5
+printf "%s\n" "$ac_cv_search_libraries_InitializeSecurityContext" >&6; }
+  ac_result=$ac_cv_search_libraries_InitializeSecurityContext
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES secur32"
 fi
 
 
@@ -11821,14 +12026,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in resolv ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -11861,7 +12073,8 @@ else $as_nop
   ac_cv_search_libraries_ns_initparse=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -11895,43 +12108,43 @@ LIBRARY_PATHS="$cwd/extern/lib $cwd/extern/lib/mariadb $LIBRARY_PATHS"
   CPPFLAGS="$CPP_FLAGS"
   CFLAGS="$CC_FLAGS -v"
   CXXFLAGS="$CXX_FLAGS -v"
-  for z in $CC_DEFINES ""; do
-    if test -n "$z"; then
-      CPPFLAGS="$CPPFLAGS -D$z"
-      CFLAGS="$CFLAGS -D$z"
+  for define in $CC_DEFINES ""; do
+    if test -n "$define"; then
+      CPPFLAGS="$CPPFLAGS -D$define"
+      CFLAGS="$CFLAGS -D$define"
     fi
   done
-  for z in $CC_INCLUDES ""; do
-    if test -n "$z"; then
-      CPPFLAGS="$CPPFLAGS -I$z"
-      CFLAGS="$CFLAGS -I$z"
+  for library in $CC_INCLUDES ""; do
+    if test -n "$library"; then
+      CPPFLAGS="$CPPFLAGS -I$library"
+      CFLAGS="$CFLAGS -I$library"
     fi
   done
   LDFLAGS="$LD_FLAGS"
-  for z in $LIBRARY_PATHS ""; do
-    if test -n "$z"; then
-      LDFLAGS="$LDFLAGS -L$z"
+  for ldflag in $LIBRARY_PATHS ""; do
+    if test -n "$ldflag"; then
+      LDFLAGS="$LDFLAGS -L$ldflag"
     fi
   done
   LIBS=""
-  for z in $STATIC_LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $STATIC_LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $STATIC_LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $STATIC_LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
 
@@ -12110,14 +12323,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in icuuc ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -12150,7 +12370,8 @@ else $as_nop
   ac_cv_search_libraries_u_strToUpper=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -12175,10 +12396,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in icuuc; do
         if test -n "$ac_libraries"; then
@@ -12187,7 +12413,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -12222,8 +12448,8 @@ else $as_nop
   ac_cv_search_static_u_strToUpper=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -12249,14 +12475,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in icuuc ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -12289,7 +12522,8 @@ else $as_nop
   ac_cv_search_libraries_u_strToUpper=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -12316,14 +12550,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in icui18n ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -12356,7 +12597,8 @@ else $as_nop
   ac_cv_search_libraries_uregex_open=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -12381,10 +12623,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in icui18n; do
         if test -n "$ac_libraries"; then
@@ -12393,7 +12640,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -12428,8 +12675,8 @@ else $as_nop
   ac_cv_search_static_uregex_open=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -12455,14 +12702,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in icui18n ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -12495,7 +12749,8 @@ else $as_nop
   ac_cv_search_libraries_uregex_open=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -12522,14 +12777,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in icudata ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -12562,7 +12824,8 @@ else $as_nop
   ac_cv_search_libraries_icudt=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -12587,10 +12850,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in icudata; do
         if test -n "$ac_libraries"; then
@@ -12599,7 +12867,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -12634,8 +12902,8 @@ else $as_nop
   ac_cv_search_static_icudt=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -12661,14 +12929,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in icudata ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -12701,7 +12976,8 @@ else $as_nop
   ac_cv_search_libraries_icudt=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -12802,14 +13078,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in z ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -12842,7 +13125,8 @@ else $as_nop
   ac_cv_search_libraries_zlibVersion=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -12867,10 +13151,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in z; do
         if test -n "$ac_libraries"; then
@@ -12879,7 +13168,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -12914,8 +13203,8 @@ else $as_nop
   ac_cv_search_static_zlibVersion=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -12941,14 +13230,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in z ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -12981,7 +13277,8 @@ else $as_nop
   ac_cv_search_libraries_zlibVersion=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -13094,14 +13391,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in bz2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -13134,7 +13438,8 @@ else $as_nop
   ac_cv_search_libraries_BZ2_bzCompressInit=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -13159,10 +13464,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in bz2; do
         if test -n "$ac_libraries"; then
@@ -13171,7 +13481,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -13206,8 +13516,8 @@ else $as_nop
   ac_cv_search_static_BZ2_bzCompressInit=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -13233,14 +13543,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in bz2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -13273,7 +13590,8 @@ else $as_nop
   ac_cv_search_libraries_BZ2_bzCompressInit=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -13427,14 +13745,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in lzma ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -13467,7 +13792,8 @@ else $as_nop
   ac_cv_search_libraries_lzma_easy_encoder=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -13492,10 +13818,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in lzma; do
         if test -n "$ac_libraries"; then
@@ -13504,7 +13835,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -13539,8 +13870,8 @@ else $as_nop
   ac_cv_search_static_lzma_easy_encoder=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -13566,14 +13897,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in lzma ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -13606,7 +13944,8 @@ else $as_nop
   ac_cv_search_libraries_lzma_easy_encoder=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -13754,14 +14093,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in lzo ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -13794,7 +14140,8 @@ else $as_nop
   ac_cv_search_libraries_lzo1x_1_compress=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -13819,10 +14166,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in lzo; do
         if test -n "$ac_libraries"; then
@@ -13831,7 +14183,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -13866,8 +14218,8 @@ else $as_nop
   ac_cv_search_static_lzo1x_1_compress=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -13893,14 +14245,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in lzo ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -13933,7 +14292,8 @@ else $as_nop
   ac_cv_search_libraries_lzo1x_1_compress=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -14046,14 +14406,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in lz4 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -14086,7 +14453,8 @@ else $as_nop
   ac_cv_search_libraries_LZ4_compress=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -14111,10 +14479,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in lz4; do
         if test -n "$ac_libraries"; then
@@ -14123,7 +14496,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -14158,8 +14531,8 @@ else $as_nop
   ac_cv_search_static_LZ4_compress=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -14185,14 +14558,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in lz4 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -14225,7 +14605,8 @@ else $as_nop
   ac_cv_search_libraries_LZ4_compress=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -14347,14 +14728,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in zstd ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -14387,7 +14775,8 @@ else $as_nop
   ac_cv_search_libraries_ZSTD_compress=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -14412,10 +14801,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in zstd; do
         if test -n "$ac_libraries"; then
@@ -14424,7 +14818,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -14459,8 +14853,8 @@ else $as_nop
   ac_cv_search_static_ZSTD_compress=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -14486,14 +14880,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in zstd ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -14526,7 +14927,8 @@ else $as_nop
   ac_cv_search_libraries_ZSTD_compress=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -14820,14 +15222,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in gpg-error ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -14860,7 +15269,8 @@ else $as_nop
   ac_cv_search_libraries_gpg_strerror=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -14884,14 +15294,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in gcrypt ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -14924,7 +15341,8 @@ else $as_nop
   ac_cv_search_libraries_gcry_check_version=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -14949,10 +15367,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in gpg-error; do
         if test -n "$ac_libraries"; then
@@ -14961,7 +15384,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -14996,8 +15419,8 @@ else $as_nop
   ac_cv_search_static_gpg_strerror=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -15023,14 +15446,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in gpg-error ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -15063,7 +15493,8 @@ else $as_nop
   ac_cv_search_libraries_gpg_strerror=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -15088,10 +15519,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in gcrypt; do
         if test -n "$ac_libraries"; then
@@ -15100,7 +15536,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -15135,8 +15571,8 @@ else $as_nop
   ac_cv_search_static_gcry_check_version=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -15162,14 +15598,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in gcrypt ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -15202,7 +15645,8 @@ else $as_nop
   ac_cv_search_libraries_gcry_check_version=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -15524,14 +15968,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in ssh2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -15564,7 +16015,8 @@ else $as_nop
   ac_cv_search_libraries_libssh2_session_init_ex=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -15589,10 +16041,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in ssh2; do
         if test -n "$ac_libraries"; then
@@ -15601,7 +16058,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -15636,8 +16093,8 @@ else $as_nop
   ac_cv_search_static_libssh2_session_init_ex=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -15663,14 +16120,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in ssh2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -15703,7 +16167,8 @@ else $as_nop
   ac_cv_search_libraries_libssh2_session_init_ex=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -15734,14 +16199,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in crypto ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -15774,7 +16246,8 @@ else $as_nop
   ac_cv_search_libraries_MD5_Init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -15799,10 +16272,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in crypto; do
         if test -n "$ac_libraries"; then
@@ -15811,7 +16289,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -15846,8 +16324,8 @@ else $as_nop
   ac_cv_search_static_MD5_Init=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -15873,14 +16351,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in crypto ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -15913,7 +16398,8 @@ else $as_nop
   ac_cv_search_libraries_MD5_Init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -15942,14 +16428,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in crypt32 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -15982,7 +16475,8 @@ else $as_nop
   ac_cv_search_libraries_CertGetCertificateContextProperty=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -16004,14 +16498,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in crypto ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -16044,7 +16545,8 @@ else $as_nop
   ac_cv_search_libraries_MD5_Init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -16068,10 +16570,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in crypt32; do
         if test -n "$ac_libraries"; then
@@ -16080,7 +16587,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -16115,8 +16622,8 @@ else $as_nop
   ac_cv_search_static_CertGetCertificateContextProperty=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -16138,10 +16645,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in crypto; do
         if test -n "$ac_libraries"; then
@@ -16150,7 +16662,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -16185,8 +16697,8 @@ else $as_nop
   ac_cv_search_static_MD5_Init=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -16212,14 +16724,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in crypto ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -16252,7 +16771,8 @@ else $as_nop
   ac_cv_search_libraries_MD5_Init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -16374,14 +16894,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in idn2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -16414,7 +16941,8 @@ else $as_nop
   ac_cv_search_libraries_idn2_check_version=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -16439,10 +16967,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in idn2; do
         if test -n "$ac_libraries"; then
@@ -16451,7 +16984,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -16486,8 +17019,8 @@ else $as_nop
   ac_cv_search_static_idn2_check_version=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -16789,14 +17322,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in gnutls ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -16829,7 +17369,8 @@ else $as_nop
   ac_cv_search_libraries_gnutls_global_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -16853,14 +17394,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in tasn1 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -16893,7 +17441,8 @@ else $as_nop
   ac_cv_search_libraries_asn1_length_der=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -16918,10 +17467,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in gnutls; do
         if test -n "$ac_libraries"; then
@@ -16930,7 +17484,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -16965,8 +17519,8 @@ else $as_nop
   ac_cv_search_static_gnutls_global_init=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -16992,14 +17546,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in gnutls ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -17032,7 +17593,8 @@ else $as_nop
   ac_cv_search_libraries_gnutls_global_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -17058,10 +17620,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in tasn1; do
         if test -n "$ac_libraries"; then
@@ -17070,7 +17637,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -17105,8 +17672,8 @@ else $as_nop
   ac_cv_search_static_asn1_length_der=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -17132,14 +17699,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in tasn1 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -17172,7 +17746,8 @@ else $as_nop
   ac_cv_search_libraries_asn1_length_der=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -17198,6 +17773,153 @@ fi
     darwin*)
       ;;
     windows*|mingw*)
+            if test $ENABLE_LINK_DYNAMIC = "yes"; then
+
+
+    ac_result=""
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing CertFreeCertificateContext" >&5
+printf %s "checking for library containing CertFreeCertificateContext... " >&6; }
+if test ${ac_cv_search_libraries_CertFreeCertificateContext+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
+
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
+      for ac_library in crypt32 ""; do
+        if test -z "$ac_library"; then
+          ac_result="none required"
+        else
+          ac_result=-l$ac_library
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+        fi
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo windows.h wincrypt.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z "windows.h wincrypt.h"; then echo "extern void CertFreeCertificateContext();"; fi`
+                                         return (int)CertFreeCertificateContext;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_libraries_CertFreeCertificateContext=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+      if test ${ac_cv_search_libraries_CertFreeCertificateContext+y}
+then :
+
+else $as_nop
+  ac_cv_search_libraries_CertFreeCertificateContext=no
+fi
+
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_CertFreeCertificateContext" >&5
+printf "%s\n" "$ac_cv_search_libraries_CertFreeCertificateContext" >&6; }
+  ac_result=$ac_cv_search_libraries_CertFreeCertificateContext
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES crypt32"
+fi
+
+      else
+
+
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for static library containing CertFreeCertificateContext" >&5
+printf %s "checking for static library containing CertFreeCertificateContext... " >&6; }
+if test ${ac_cv_search_static_CertFreeCertificateContext+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
+
+            CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
+      ac_libraries=""
+      for ac_library in crypt32; do
+        if test -n "$ac_libraries"; then
+          ac_libraries="$ac_libraries -l$ac_library"
+        else
+          ac_libraries="-l$ac_library"
+        fi
+      done
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
+      if test -z "$ac_libraries"; then
+        ac_result="none required"
+      else
+        ac_result=$ac_libraries
+      fi
+      cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+`echo windows.h wincrypt.h|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+int
+main (void)
+{
+`if test -z "windows.h wincrypt.h"; then echo "extern void CertFreeCertificateContext();"; fi`
+                                       return (int)CertFreeCertificateContext;
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_search_static_CertFreeCertificateContext=$ac_result; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      if test ${ac_cv_search_static_CertFreeCertificateContext+y}
+then :
+
+else $as_nop
+  ac_cv_search_static_CertFreeCertificateContext=no
+fi
+
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_static_CertFreeCertificateContext" >&5
+printf "%s\n" "$ac_cv_search_static_CertFreeCertificateContext" >&6; }
+  ac_result=$ac_cv_search_static_CertFreeCertificateContext
+  if test "$ac_result" != no
+then :
+  test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"
+fi
+
+      fi
       ;;
   esac
 
@@ -17503,12 +18225,13 @@ printf "%s\n" "fail (patch)" >&6; }
             --disable-ldap \
             --disable-rtsp \
             --without-librtmp \
+            --without-libpsl \
             --enable-ares=$cwd/extern \
             --with-zlib=$cwd/extern \
-            `if test $HAVE_ZSTD; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
-            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
-            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
-            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
+            `if test $HAVE_ZSTD = 1; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
+            `if test $HAVE_GNU_TLS = 1; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL = 1; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
+            `if test $HAVE_SSH2 = 1; then echo --with-libssh2=$cwd/extern; fi` \
 --without-brotli \
 --without-libpsl \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
@@ -17534,12 +18257,13 @@ printf "%s\n" "fail (configure)" >&6; }
             --disable-ldap \
             --disable-rtsp \
             --without-librtmp \
+            --without-libpsl \
             --enable-ares=$cwd/extern \
             --with-zlib=$cwd/extern \
-            `if test $HAVE_ZSTD; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
-            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
-            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
-            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
+            `if test $HAVE_ZSTD = 1; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
+            `if test $HAVE_GNU_TLS = 1; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL = 1; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
+            `if test $HAVE_SSH2 = 1; then echo --with-libssh2=$cwd/extern; fi` \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
           ) 1>$tmpFile 2>&1
           if test $? -ne 0; then
@@ -17640,14 +18364,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in curl ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -17680,7 +18411,8 @@ else $as_nop
   ac_cv_search_libraries_curl_global_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -17704,14 +18436,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in cares ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -17744,7 +18483,8 @@ else $as_nop
   ac_cv_search_libraries_ares_library_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -17768,14 +18508,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in mxml ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -17808,7 +18555,8 @@ else $as_nop
   ac_cv_search_libraries_mxmlNewXML=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -17833,10 +18581,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in curl; do
         if test -n "$ac_libraries"; then
@@ -17845,7 +18598,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -17880,8 +18633,8 @@ else $as_nop
   ac_cv_search_static_curl_global_init=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -17907,14 +18660,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in curl ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -17947,7 +18707,8 @@ else $as_nop
   ac_cv_search_libraries_curl_global_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -17972,10 +18733,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in cares; do
         if test -n "$ac_libraries"; then
@@ -17984,7 +18750,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -18019,8 +18785,8 @@ else $as_nop
   ac_cv_search_static_ares_library_init=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -18046,14 +18812,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in cares ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -18086,7 +18859,8 @@ else $as_nop
   ac_cv_search_libraries_ares_library_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -18111,10 +18885,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in mxml; do
         if test -n "$ac_libraries"; then
@@ -18123,7 +18902,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -18158,8 +18937,8 @@ else $as_nop
   ac_cv_search_static_mxmlNewXML=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -18185,14 +18964,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in mxml ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -18225,7 +19011,8 @@ else $as_nop
   ac_cv_search_libraries_mxmlNewXML=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -18291,14 +19078,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in ssl ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -18331,7 +19125,8 @@ else $as_nop
   ac_cv_search_libraries_SSL_new=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -18355,10 +19150,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in ssl; do
         if test -n "$ac_libraries"; then
@@ -18367,7 +19167,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -18402,8 +19202,8 @@ else $as_nop
   ac_cv_search_static_SSL_new=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -18523,7 +19323,7 @@ printf "%s\n" "fail (patch)" >&6; }
               -DWITH_EXTERNAL_ZLIB=ON \
               -DZLIB_INCLUDE_DIR=$cwd/extern/include \
               -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              `if test $HAVE_SSL = 1; then echo -DWITH_SSL=OPENSSL; fi` \
               -DWITH_CURL=OFF \
               -DWITH_UNIT_TESTS=OFF \
               `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
@@ -18539,7 +19339,7 @@ printf "%s\n" "fail (patch)" >&6; }
               -DWITH_EXTERNAL_ZLIB=ON \
               -DZLIB_INCLUDE_DIR=$cwd/extern/include \
               -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-              -DWITH_SSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              `if test $HAVE_SSL = 1; then echo -DWITH_SSL=OPENSSL; fi` \
               -DWITH_CURL=OFF \
               -DWITH_UNIT_TESTS=OFF \
               `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
@@ -18621,14 +19421,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in mariadb ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -18661,7 +19468,8 @@ else $as_nop
   ac_cv_search_libraries_mysql_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -18686,10 +19494,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in mariadb; do
         if test -n "$ac_libraries"; then
@@ -18698,7 +19511,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -18733,8 +19546,8 @@ else $as_nop
   ac_cv_search_static_mysql_init=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -18760,14 +19573,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in mariadb ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -18800,7 +19620,8 @@ else $as_nop
   ac_cv_search_libraries_mysql_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -18860,7 +19681,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               --prefix=$cwd/extern \
               --with-includes=$cwd/extern/include \
               --with-libraries=$cwd/extern/lib \
-              `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
+              `if test $HAVE_SSL = 1; then echo --with-ssl=openssl; fi` \
               --without-readline \
               `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
             ) 1>$tmpFile 2>&1
@@ -18872,7 +19693,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               --prefix=$cwd/extern \
               --with-includes=$cwd/extern/include \
               --with-libraries=$cwd/extern/lib \
-              `if test "$HAVE_SSL"; then echo --with-openssl; else echo --without-openssl; fi` \
+              `if test $HAVE_SSL = 1; then echo --with-ssl=openssl; fi` \
               --without-readline \
               `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
             ) 1>$tmpFile 2>&1
@@ -18958,14 +19779,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pq ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -18998,7 +19826,8 @@ else $as_nop
   ac_cv_search_libraries_pq_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -19022,14 +19851,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pgport ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -19062,7 +19898,8 @@ else $as_nop
   ac_cv_search_libraries_pg_printf=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -19086,14 +19923,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pgcommon ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -19126,7 +19970,8 @@ else $as_nop
   ac_cv_search_libraries_scram_HMAC_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -19150,14 +19995,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pgcommon_shlib ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -19190,7 +20042,8 @@ else $as_nop
   ac_cv_search_libraries_pg_encoding_to_char=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -19214,14 +20067,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pgtypes ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -19254,7 +20114,8 @@ else $as_nop
   ac_cv_search_libraries_PGTYPESnumeric_to_long=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -19279,10 +20140,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in pq; do
         if test -n "$ac_libraries"; then
@@ -19291,7 +20157,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -19326,8 +20192,8 @@ else $as_nop
   ac_cv_search_static_pq_init=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -19350,10 +20216,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in pgport; do
         if test -n "$ac_libraries"; then
@@ -19362,7 +20233,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -19397,8 +20268,8 @@ else $as_nop
   ac_cv_search_static_pg_printf=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -19421,10 +20292,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in pgcommon; do
         if test -n "$ac_libraries"; then
@@ -19433,7 +20309,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -19468,8 +20344,8 @@ else $as_nop
   ac_cv_search_static_scram_HMAC_init=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -19492,10 +20368,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in pgcommon_shlib; do
         if test -n "$ac_libraries"; then
@@ -19504,7 +20385,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -19539,8 +20420,8 @@ else $as_nop
   ac_cv_search_static_pg_encoding_to_char=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -19563,10 +20444,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in pgtypes; do
         if test -n "$ac_libraries"; then
@@ -19575,7 +20461,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -19610,8 +20496,8 @@ else $as_nop
   ac_cv_search_static_PGTYPESnumeric_to_long=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -19637,14 +20523,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pq ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -19677,7 +20570,8 @@ else $as_nop
   ac_cv_search_libraries_pq_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -19701,14 +20595,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pgport ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -19741,7 +20642,8 @@ else $as_nop
   ac_cv_search_libraries_pg_printf=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -19765,14 +20667,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pgcommon ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -19805,7 +20714,8 @@ else $as_nop
   ac_cv_search_libraries_scram_HMAC_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -19829,14 +20739,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pgcommon_shlib ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -19869,7 +20786,8 @@ else $as_nop
   ac_cv_search_libraries_pg_encoding_to_char=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -19893,14 +20811,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pgtypes ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -19933,7 +20858,8 @@ else $as_nop
   ac_cv_search_libraries_PGTYPESnumeric_to_long=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -20171,14 +21097,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in iso9660 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -20211,7 +21144,8 @@ else $as_nop
   ac_cv_search_libraries_iso9660_open=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -20236,10 +21170,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in iso9660; do
         if test -n "$ac_libraries"; then
@@ -20248,7 +21187,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -20283,8 +21222,8 @@ else $as_nop
   ac_cv_search_static_iso9660_open=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -20310,14 +21249,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in iso9660 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -20350,7 +21296,8 @@ else $as_nop
   ac_cv_search_libraries_iso9660_open=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -20501,7 +21448,6 @@ printf "%s\n" "done" >&6; }
           ;;
         windows*|mingw*)
           # not supported on Windows
-# TODO
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: skipped" >&5
 printf "%s\n" "skipped" >&6; }
           ;;
@@ -20535,24 +21481,23 @@ printf "%s\n" "fail (patch)" >&6; }
       if test $result2 -eq 1; then
         case $host_os in
           linux-* | sunos | solaris* | darwin*)
-            # Note: use configure, because with cmake the external Kerberos libraries are not used
             if test "$ENABLE_DEBUG" = "yes"; then
-              (cd libsmb2; sh -x ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
-                --prefix=$cwd/extern \
-                --host=$host \
-                --build=$build \
-                --enable-static \
-                --disable-shared \
-                --disable-werror \
+              (cd libsmb2; $CMAKE \
+                -DCMAKE_BUILD_TYPE=Debug \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DLibKrb5_INCLUDE_DIR=$cwd/extern/include \
+                -DLibKrb5_LIBRARY=$cwd/extern/lib/libkrb5.a \
+                -DBUILD_SHARED_LIBS=0 \
+                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; sh -x ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
-                --prefix=$cwd/extern \
-                --host=$host \
-                --build=$build \
-                --enable-static \
-                --disable-shared \
-                --disable-werror \
+              (cd libsmb2; $CMAKE \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DLibKrb5_INCLUDE_DIR=$cwd/extern/include \
+                -DLibKrb5_LIBRARY=$cwd/extern/lib/libkrb5.a \
+                -DBUILD_SHARED_LIBS=0 \
+                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               ) 1>$tmpFile 2>&1
             fi
             if test $? -ne 0; then
@@ -20568,7 +21513,7 @@ printf "%s\n" "fail (configure)" >&6; }
             ;;
           windows*|mingw*)
             if test "$ENABLE_DEBUG" = "yes"; then
-              (cd libsmb2; cmake \
+              (cd libsmb2; pwd; $CMAKE \
                 -DCMAKE_BUILD_TYPE=Debug \
                 -DCMAKE_SYSTEM_NAME=Windows \
                 -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
@@ -20577,14 +21522,14 @@ printf "%s\n" "fail (configure)" >&6; }
                 -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
                 -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
                 -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600" \
+                -DCMAKE_C_FLAGS="-D_WINDOWS -D_WIN32_WINNT=0x0600" \
                 -DCMAKE_INSTALL_PREFIX=$cwd/extern \
                 \
                 -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
                 -DBUILD_SHARED_LIBS=OFF
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; cmake \
+              (cd libsmb2; pwd; $CMAKE \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_SYSTEM_NAME=Windows \
                 -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
@@ -20593,7 +21538,7 @@ printf "%s\n" "fail (configure)" >&6; }
                 -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
                 -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
                 -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600" \
+                -DCMAKE_C_FLAGS="-D_WINDOWS -D_WIN32_WINNT=0x0600" \
                 -DCMAKE_INSTALL_PREFIX=$cwd/extern \
                 \
                 -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
@@ -20616,8 +21561,7 @@ printf "%s\n" "fail (configure)" >&6; }
       if test $result2 -eq 1; then
         (cd libsmb2; \
          make clean; \
-         make -C include -j$CPU_CORES; \
-         make -C lib -j$CPU_CORES; \
+         make -j$CPU_CORES; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
@@ -20632,8 +21576,7 @@ printf "%s\n" "fail (make)" >&6; }
       fi
       if test $result2 -eq 1; then
         (cd libsmb2; \
-         make -C include install PREFIX=$cwd/extern; \
-         make -C lib install PREFIX=$cwd/extern; \
+         make install PREFIX=$cwd/extern; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
@@ -20693,14 +21636,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in smb2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -20733,7 +21683,8 @@ else $as_nop
   ac_cv_search_libraries_smb2_init_context=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -20758,10 +21709,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in smb2; do
         if test -n "$ac_libraries"; then
@@ -20770,7 +21726,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -20805,8 +21761,8 @@ else $as_nop
   ac_cv_search_static_smb2_init_context=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -20832,14 +21788,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in smb2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -20872,7 +21835,8 @@ else $as_nop
   ac_cv_search_libraries_smb2_init_context=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -21047,14 +22011,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pcre_compile ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -21087,7 +22058,8 @@ else $as_nop
   ac_cv_search_libraries_pcre=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -21112,10 +22084,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in pcre_compile; do
         if test -n "$ac_libraries"; then
@@ -21124,7 +22101,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -21159,8 +22136,8 @@ else $as_nop
   ac_cv_search_static_pcre=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -21186,14 +22163,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in pcre_compile ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -21226,7 +22210,8 @@ else $as_nop
   ac_cv_search_libraries_pcre=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -21318,7 +22303,7 @@ printf "%s\n" "fail (configure)" >&6; }
       fi
       if test $result -eq 1; then
         (cd par2cmdline; \
-         make -j$CPU_CORES; \
+         make -j$CPU_CORES libpar2.a; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (make)" >&5
@@ -21379,14 +22364,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in par2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -21419,7 +22411,8 @@ else $as_nop
   ac_cv_search_libraries_par2create=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -21444,10 +22437,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in par2; do
         if test -n "$ac_libraries"; then
@@ -21456,7 +22454,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -21491,8 +22489,8 @@ else $as_nop
   ac_cv_search_static_par2create=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -21518,14 +22516,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in par2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -21558,7 +22563,8 @@ else $as_nop
   ac_cv_search_libraries_par2create=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -21706,14 +22712,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in isofs ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -21746,7 +22759,8 @@ else $as_nop
   ac_cv_search_libraries_iso_image_new=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -21771,10 +22785,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in isofs; do
         if test -n "$ac_libraries"; then
@@ -21783,7 +22802,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -21818,8 +22837,8 @@ else $as_nop
   ac_cv_search_static_iso_image_new=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -21845,14 +22864,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in isofs ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -21885,7 +22911,8 @@ else $as_nop
   ac_cv_search_libraries_iso_image_new=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -22220,14 +23247,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in xfs ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -22260,7 +23294,8 @@ else $as_nop
   ac_cv_search_libraries_libxfs_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -22285,10 +23320,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in xfs; do
         if test -n "$ac_libraries"; then
@@ -22297,7 +23337,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -22332,8 +23372,8 @@ else $as_nop
   ac_cv_search_static_libxfs_init=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -22359,14 +23399,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in xfs ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -22399,7 +23446,8 @@ else $as_nop
   ac_cv_search_libraries_libxfs_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -22555,14 +23603,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in burn ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -22595,7 +23650,8 @@ else $as_nop
   ac_cv_search_libraries_burn_disc_write=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -22620,10 +23676,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in burn; do
         if test -n "$ac_libraries"; then
@@ -22632,7 +23693,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -22667,8 +23728,8 @@ else $as_nop
   ac_cv_search_static_burn_disc_write=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -22694,14 +23755,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in burn ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -22734,7 +23802,8 @@ else $as_nop
   ac_cv_search_libraries_burn_disc_write=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -22878,14 +23947,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in mount ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -22918,7 +23994,8 @@ else $as_nop
   ac_cv_search_libraries_mnt_new_table_from_file=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -22943,10 +24020,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in mount; do
         if test -n "$ac_libraries"; then
@@ -22955,7 +24037,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -22990,8 +24072,8 @@ else $as_nop
   ac_cv_search_static_mnt_new_table_from_file=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -23017,14 +24099,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in mount ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -23057,7 +24146,8 @@ else $as_nop
   ac_cv_search_libraries_mnt_new_table_from_file=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -23349,14 +24439,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in bfd ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -23389,7 +24486,8 @@ else $as_nop
   ac_cv_search_libraries_bfd_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -23414,10 +24512,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in bfd; do
         if test -n "$ac_libraries"; then
@@ -23426,7 +24529,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -23461,8 +24564,8 @@ else $as_nop
   ac_cv_search_static_bfd_init=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -23488,14 +24591,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in bfd ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -23528,7 +24638,8 @@ else $as_nop
   ac_cv_search_libraries_bfd_init=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -23720,43 +24831,43 @@ fi
   CPPFLAGS="$CPP_FLAGS"
   CFLAGS="$CC_FLAGS -v"
   CXXFLAGS="$CXX_FLAGS -v"
-  for z in $CC_DEFINES ""; do
-    if test -n "$z"; then
-      CPPFLAGS="$CPPFLAGS -D$z"
-      CFLAGS="$CFLAGS -D$z"
+  for define in $CC_DEFINES ""; do
+    if test -n "$define"; then
+      CPPFLAGS="$CPPFLAGS -D$define"
+      CFLAGS="$CFLAGS -D$define"
     fi
   done
-  for z in $CC_INCLUDES ""; do
-    if test -n "$z"; then
-      CPPFLAGS="$CPPFLAGS -I$z"
-      CFLAGS="$CFLAGS -I$z"
+  for library in $CC_INCLUDES ""; do
+    if test -n "$library"; then
+      CPPFLAGS="$CPPFLAGS -I$library"
+      CFLAGS="$CFLAGS -I$library"
     fi
   done
   LDFLAGS="$LD_FLAGS"
-  for z in $LIBRARY_PATHS ""; do
-    if test -n "$z"; then
-      LDFLAGS="$LDFLAGS -L$z"
+  for ldflag in $LIBRARY_PATHS ""; do
+    if test -n "$ldflag"; then
+      LDFLAGS="$LDFLAGS -L$ldflag"
     fi
   done
   LIBS=""
-  for z in $STATIC_LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $STATIC_LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $STATIC_LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $STATIC_LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
 
@@ -24457,14 +25568,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in uuid ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -24497,7 +25615,8 @@ else $as_nop
   ac_cv_search_libraries_uuid_generate=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -24519,10 +25638,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in uuid; do
         if test -n "$ac_libraries"; then
@@ -24531,7 +25655,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -24566,8 +25690,8 @@ else $as_nop
   ac_cv_search_static_uuid_generate=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -24593,14 +25717,21 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_libraries_save_LIBS=$LIBS
+            ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in idn2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -24633,7 +25764,8 @@ else $as_nop
   ac_cv_search_libraries_idn_free=no
 fi
 
-            LIBS=$ac_func_search_libraries_save_LIBS
+            LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
 
 
 fi
@@ -24655,10 +25787,15 @@ then :
   printf %s "(cached) " >&6
 else $as_nop
 
-            ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+            ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
             CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in idn2; do
         if test -n "$ac_libraries"; then
@@ -24667,7 +25804,7 @@ else $as_nop
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -24702,8 +25839,8 @@ else $as_nop
   ac_cv_search_static_idn_free=no
 fi
 
-            LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+            LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
 
 
 fi
@@ -24731,43 +25868,43 @@ esac
   CPPFLAGS="$CPP_FLAGS"
   CFLAGS="$CC_FLAGS -v"
   CXXFLAGS="$CXX_FLAGS -v"
-  for z in $CC_DEFINES ""; do
-    if test -n "$z"; then
-      CPPFLAGS="$CPPFLAGS -D$z"
-      CFLAGS="$CFLAGS -D$z"
+  for define in $CC_DEFINES ""; do
+    if test -n "$define"; then
+      CPPFLAGS="$CPPFLAGS -D$define"
+      CFLAGS="$CFLAGS -D$define"
     fi
   done
-  for z in $CC_INCLUDES ""; do
-    if test -n "$z"; then
-      CPPFLAGS="$CPPFLAGS -I$z"
-      CFLAGS="$CFLAGS -I$z"
+  for library in $CC_INCLUDES ""; do
+    if test -n "$library"; then
+      CPPFLAGS="$CPPFLAGS -I$library"
+      CFLAGS="$CFLAGS -I$library"
     fi
   done
   LDFLAGS="$LD_FLAGS"
-  for z in $LIBRARY_PATHS ""; do
-    if test -n "$z"; then
-      LDFLAGS="$LDFLAGS -L$z"
+  for ldflag in $LIBRARY_PATHS ""; do
+    if test -n "$ldflag"; then
+      LDFLAGS="$LDFLAGS -L$ldflag"
     fi
   done
   LIBS=""
-  for z in $STATIC_LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $STATIC_LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $STATIC_LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $STATIC_LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $LIBRARIES ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $LIBRARIES ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
 
@@ -30390,7 +31527,7 @@ printf "%s\n" "$ac_cv_func_usleep" >&6; }
 then :
 
 printf "%s\n" "#define HAVE_USLEEP 1" >>confdefs.h
-]
+
 elif :
 then :
 

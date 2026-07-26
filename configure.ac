@@ -31,43 +31,43 @@ AC_DEFUN([AC_SET_TOOLCHAIN_SETTINGS],
   CPPFLAGS="$1"
   CFLAGS="$2 -v"
   CXXFLAGS="$3 -v"
-  for z in $4 ""; do
-    if test -n "$z"; then
-      CPPFLAGS="$CPPFLAGS -D$z"
-      CFLAGS="$CFLAGS -D$z"
+  for define in $4 ""; do
+    if test -n "$define"; then
+      CPPFLAGS="$CPPFLAGS -D$define"
+      CFLAGS="$CFLAGS -D$define"
     fi
   done
-  for z in $5 ""; do
-    if test -n "$z"; then
-      CPPFLAGS="$CPPFLAGS -I$z"
-      CFLAGS="$CFLAGS -I$z"
+  for library in $5 ""; do
+    if test -n "$library"; then
+      CPPFLAGS="$CPPFLAGS -I$library"
+      CFLAGS="$CFLAGS -I$library"
     fi
   done
   LDFLAGS="$6"
-  for z in $7 ""; do
-    if test -n "$z"; then
-      LDFLAGS="$LDFLAGS -L$z"
+  for ldflag in $7 ""; do
+    if test -n "$ldflag"; then
+      LDFLAGS="$LDFLAGS -L$ldflag"
     fi
   done
   LIBS=""
-  for z in $8 ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $8 ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $9 ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $9 ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $8 ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $8 ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
-  for z in $9 ""; do
-    if test -n "$z"; then
-      LIBS="$LIBS -l$z"
+  for lib in $9 ""; do
+    if test -n "$lib"; then
+      LIBS="$LIBS -l$lib"
     fi
   done
 
@@ -330,14 +330,21 @@ AC_DEFUN([AC_SEARCH_LIBRARIES],
     ac_search_libraries,
     [
       dnl save C compiler settings
-      ac_func_search_libraries_save_LIBS=$LIBS
+      ac_search_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_libraries_save_LIBS="$LIBS"
 
+      CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       for ac_library in $2 ""; do
         if test -z "$ac_library"; then
           ac_result="none required"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_func_search_libraries_save_LIBS"
+          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
         fi
 
         AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
@@ -352,7 +359,8 @@ AC_DEFUN([AC_SEARCH_LIBRARIES],
       AS_VAR_SET_IF([ac_search_libraries],,[AS_VAR_SET([ac_search_libraries],[no])])
 
       dnl restore C compiler settings
-      LIBS=$ac_func_search_libraries_save_LIBS
+      LIBS=$ac_search_libraries_save_LIBS
+      CFLAGS=$ac_search_libraries_save_CFLAGS
     ]
   )
   AS_VAR_COPY([ac_result],[ac_search_libraries])
@@ -371,11 +379,16 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
     [ac_search_static_libraries],
     [
       dnl save C compiler settings
-      ac_func_search_static_libraries_save_CFLAGS="$CFLAGS"
-      ac_func_search_static_libraries_save_LIBS="$LIBS"
+      ac_search_static_libraries_save_CFLAGS="$CFLAGS"
+      ac_search_static_libraries_save_LIBS="$LIBS"
 
       dnl test static linkage
       CFLAGS="$CFLAGS"
+      for define in $CC_DEFINES ""; do
+        if test -n "$define"; then
+          CFLAGS="$CFLAGS -D$define"
+        fi
+      done
       ac_libraries=""
       for ac_library in $2; do
         if test -n "$ac_libraries"; then
@@ -384,7 +397,7 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
           ac_libraries="-l$ac_library"
         fi
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_func_search_static_libraries_save_LIBS"
+      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
       if test -z "$ac_libraries"; then
         ac_result="none required"
       else
@@ -401,8 +414,8 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
       AS_VAR_SET_IF([ac_search_static_libraries],,[AS_VAR_SET([ac_search_static_libraries],[no])])
 
       dnl restore C compiler settings
-      LIBS=$ac_func_search_static_libraries_save_LIBS
-      CFLAGS=$ac_func_search_static_libraries_save_CFLAGS
+      LIBS=$ac_search_static_libraries_save_LIBS
+      CFLAGS=$ac_search_static_libraries_save_CFLAGS
     ]
   )
   AS_VAR_COPY([ac_result],[ac_search_static_libraries])
@@ -1693,7 +1706,7 @@ case $host_os in
   darwin*)
     ;;
   windows*|mingw*)
-    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600 _POSIX_C_SOURCE"
+    CC_DEFINES="$CC_DEFINES _WIN32_WINNT=0x0600 SECURITY_WIN32 _POSIX_C_SOURCE"
     ;;
 esac
 
@@ -1794,15 +1807,17 @@ case $host_os in
     ;;
   windows*|mingw*)
     AC_SEARCH_STATIC_LIBRARIES(pthread_create,pthreadGC2,[STATIC_LIBRARIES="$STATIC_LIBRARIES pthreadGC2"],,pthread.h)
-    AC_SEARCH_STATIC_LIBRARIES(WSAStartup,wsock32,[STATIC_LIBRARIES="$STATIC_LIBRARIES wsock32"],,winsock2.h)
-    AC_SEARCH_STATIC_LIBRARIES(getaddrinfo,ws2_32,[STATIC_LIBRARIES="$STATIC_LIBRARIES ws2_32"],,ws2tcpip.h)
-    AC_SEARCH_STATIC_LIBRARIES(UuidCreate,rpcrt4,[STATIC_LIBRARIES="$STATIC_LIBRARIES rpcrt4"],,windows.h rpcdce.h)
-    AC_SEARCH_STATIC_LIBRARIES(SHGetFolderPath,shell32,[STATIC_LIBRARIES="$STATIC_LIBRARIES shell32"],,shlobj.h)
-    AC_SEARCH_STATIC_LIBRARIES(CoTaskMemFree,ole32,[STATIC_LIBRARIES="$STATIC_LIBRARIES ole32"],,combaseapi.h)
-    AC_SEARCH_STATIC_LIBRARIES(FOLDERID_LocalAppData,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"])
-    AC_SEARCH_STATIC_LIBRARIES(PathRemoveFileSpec,shlwapi,[STATIC_LIBRARIES="$STATIC_LIBRARIES shlwapi"],,shlwapi.h)
-    AC_SEARCH_STATIC_LIBRARIES(GetUnicastIpAddressTable,iphlpapi ssp,[STATIC_LIBRARIES="$STATIC_LIBRARIES iphlpapi ssp"],,winsock2.h netioapi.h)
-    AC_SEARCH_STATIC_LIBRARIES(NCryptOpenKey,ncrypt,[STATIC_LIBRARIES="$STATIC_LIBRARIES ncrypt"],,windows.h ncrypt.h)
+    # Note: do not link Windows libraries static
+    AC_SEARCH_LIBRARIES(getaddrinfo,ws2_32,[LIBRARIES="$LIBRARIES ws2_32"],,ws2tcpip.h)
+    AC_SEARCH_LIBRARIES(WSAStartup,wsock32,[LIBRARIES="$LIBRARIES wsock32"],,winsock2.h)
+    AC_SEARCH_LIBRARIES(UuidCreate,rpcrt4,[LIBRARIES="$LIBRARIES rpcrt4"],,windows.h rpcdce.h)
+    AC_SEARCH_LIBRARIES(SHGetFolderPath,shell32,[LIBRARIES="$LIBRARIES shell32"],,shlobj.h)
+    AC_SEARCH_LIBRARIES(CoTaskMemFree,ole32,[LIBRARIES="$LIBRARIES ole32"],,combaseapi.h)
+    AC_SEARCH_LIBRARIES(FOLDERID_LocalAppData,uuid,[LIBRARIES="$LIBRARIES uuid"])
+    AC_SEARCH_LIBRARIES(PathRemoveFileSpec,shlwapi,[LIBRARIES="$LIBRARIES shlwapi"],,shlwapi.h)
+    AC_SEARCH_LIBRARIES(GetUnicastIpAddressTable,iphlpapi ssp,[LIBRARIES="$LIBRARIES iphlpapi ssp"],,winsock2.h netioapi.h)
+    AC_SEARCH_LIBRARIES(NCryptOpenKey,ncrypt,[LIBRARIES="$LIBRARIES ncrypt"],,windows.h ncrypt.h)
+    AC_SEARCH_LIBRARIES(InitializeSecurityContext,secur32,[LIBRARIES="$LIBRARIES secur32"],,windows.h sspi.h)
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     ;;
 esac
@@ -3351,6 +3366,12 @@ if test $ENABLE_TLS = "yes"; then
     darwin*)
       ;;
     windows*|mingw*)
+      dnl link crypt32, too, if available (may be needed by some gnutls implementations)
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        AC_SEARCH_LIBRARIES(CertFreeCertificateContext,crypt32,[LIBRARIES="$LIBRARIES crypt32"],,windows.h wincrypt.h)
+      else
+        AC_SEARCH_STATIC_LIBRARIES(CertFreeCertificateContext,crypt32,[STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"],,windows.h wincrypt.h)
+      fi
       ;;
   esac
 
@@ -3595,12 +3616,13 @@ if test $ENABLE_CURL = "yes"; then
             --disable-ldap \
             --disable-rtsp \
             --without-librtmp \
+            --without-libpsl \
             --enable-ares=$cwd/extern \
             --with-zlib=$cwd/extern \
-            `if test $HAVE_ZSTD; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
-            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
-            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
-            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
+            `if test $HAVE_ZSTD = 1; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
+            `if test $HAVE_GNU_TLS = 1; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL = 1; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
+            `if test $HAVE_SSH2 = 1; then echo --with-libssh2=$cwd/extern; fi` \
 --without-brotli \
 --without-libpsl \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
@@ -3621,12 +3643,13 @@ if test $ENABLE_CURL = "yes"; then
             --disable-ldap \
             --disable-rtsp \
             --without-librtmp \
+            --without-libpsl \
             --enable-ares=$cwd/extern \
             --with-zlib=$cwd/extern \
-            `if test $HAVE_ZSTD; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
-            `if test $HAVE_GNU_TLS; then echo --with-gnutls=$cwd/extern; fi` \
-            `if test $HAVE_SSL; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
-            `if test $HAVE_SSH2; then echo --with-libssh2=$cwd/extern; fi` \
+            `if test $HAVE_ZSTD = 1; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
+            `if test $HAVE_GNU_TLS = 1; then echo --with-gnutls=$cwd/extern; fi` \
+            `if test $HAVE_SSL = 1; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
+            `if test $HAVE_SSH2 = 1; then echo --with-libssh2=$cwd/extern; fi` \
             `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
           ) 1>$tmpFile 2>&1
           if test $? -ne 0; then
@@ -3846,7 +3869,7 @@ if test $ENABLE_MARIADB = "yes"; then
               -DWITH_EXTERNAL_ZLIB=ON \
               -DZLIB_INCLUDE_DIR=$cwd/extern/include \
               -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-              -DWITHSSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              `if test $HAVE_SSL = 1; then echo -DWITH_SSL=OPENSSL; fi` \
               -DWITH_CURL=OFF \
               -DWITH_UNIT_TESTS=OFF \
               `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
@@ -3862,7 +3885,7 @@ if test $ENABLE_MARIADB = "yes"; then
               -DWITH_EXTERNAL_ZLIB=ON \
               -DZLIB_INCLUDE_DIR=$cwd/extern/include \
               -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-              -DWITH_SSL=`if test "$HAVE_SSL" = "yes"; then echo GNUTLS; else echo OFF; fi` \
+              `if test $HAVE_SSL = 1; then echo -DWITH_SSL=OPENSSL; fi` \
               -DWITH_CURL=OFF \
               -DWITH_UNIT_TESTS=OFF \
               `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
@@ -3967,7 +3990,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               --prefix=$cwd/extern \
               --with-includes=$cwd/extern/include \
               --with-libraries=$cwd/extern/lib \
-              `if test "$HAVE_SSL"; then echo --with-ssl=openssl; fi` \
+              `if test $HAVE_SSL = 1; then echo --with-ssl=openssl; fi` \
               --without-readline \
               `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
             ) 1>$tmpFile 2>&1
@@ -3979,7 +4002,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
               --prefix=$cwd/extern \
               --with-includes=$cwd/extern/include \
               --with-libraries=$cwd/extern/lib \
-              `if test "$HAVE_SSL"; then echo --with-ssl=openssl; fi` \
+              `if test $HAVE_SSL = 1; then echo --with-ssl=openssl; fi` \
               --without-readline \
               `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
             ) 1>$tmpFile 2>&1
@@ -4326,7 +4349,6 @@ if test $ENABLE_SMBCLIENT = "yes"; then
           ;;
         windows*|mingw*)
           # not supported on Windows
-# TODO
           AC_MSG_RESULT([skipped])
           ;;
       esac
@@ -4352,24 +4374,23 @@ if test $ENABLE_SMBCLIENT = "yes"; then
       if test $result2 -eq 1; then
         case $host_os in
           linux-* | sunos | solaris* | darwin*)
-            # Note: use configure, because with cmake the external Kerberos libraries are not used
             if test "$ENABLE_DEBUG" = "yes"; then
-              (cd libsmb2; sh -x ./bootstrap && CFLAGS="-g -O0 -I$cwd/extern/include" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
-                --prefix=$cwd/extern \
-                --host=$host \
-                --build=$build \
-                --enable-static \
-                --disable-shared \
-                --disable-werror \
+              (cd libsmb2; $CMAKE \
+                -DCMAKE_BUILD_TYPE=Debug \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DLibKrb5_INCLUDE_DIR=$cwd/extern/include \
+                -DLibKrb5_LIBRARY=$cwd/extern/lib/libkrb5.a \
+                -DBUILD_SHARED_LIBS=0 \
+                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; sh -x ./bootstrap && CFLAGS="-I$cwd/extern/include" CXXFLAGS="" ./configure \
-                --prefix=$cwd/extern \
-                --host=$host \
-                --build=$build \
-                --enable-static \
-                --disable-shared \
-                --disable-werror \
+              (cd libsmb2; $CMAKE \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_SYSTEM_NAME=Linux \
+                -DLibKrb5_INCLUDE_DIR=$cwd/extern/include \
+                -DLibKrb5_LIBRARY=$cwd/extern/lib/libkrb5.a \
+                -DBUILD_SHARED_LIBS=0 \
+                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
               ) 1>$tmpFile 2>&1
             fi
             if test $? -ne 0; then
@@ -4380,7 +4401,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
             ;;
           windows*|mingw*)
             if test "$ENABLE_DEBUG" = "yes"; then
-              (cd libsmb2; cmake \
+              (cd libsmb2; pwd; $CMAKE \
                 -DCMAKE_BUILD_TYPE=Debug \
                 -DCMAKE_SYSTEM_NAME=Windows \
                 -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
@@ -4389,14 +4410,14 @@ if test $ENABLE_SMBCLIENT = "yes"; then
                 -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
                 -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
                 -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600" \
+                -DCMAKE_C_FLAGS="-D_WINDOWS -D_WIN32_WINNT=0x0600" \
                 -DCMAKE_INSTALL_PREFIX=$cwd/extern \
                 \
                 -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
                 -DBUILD_SHARED_LIBS=OFF
               ) 1>$tmpFile 2>&1
             else
-              (cd libsmb2; cmake \
+              (cd libsmb2; pwd; $CMAKE \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_SYSTEM_NAME=Windows \
                 -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
@@ -4405,7 +4426,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
                 -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
                 -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
                 -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-                -DCMAKE_C_FLAGS="-D_WIN32_WINNT=0x0600" \
+                -DCMAKE_C_FLAGS="-D_WINDOWS -D_WIN32_WINNT=0x0600" \
                 -DCMAKE_INSTALL_PREFIX=$cwd/extern \
                 \
                 -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
@@ -4423,8 +4444,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
       if test $result2 -eq 1; then
         (cd libsmb2; \
          make clean; \
-         make -C include -j$CPU_CORES; \
-         make -C lib -j$CPU_CORES; \
+         make -j$CPU_CORES; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
@@ -4434,8 +4454,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
       fi
       if test $result2 -eq 1; then
         (cd libsmb2; \
-         make -C include install PREFIX=$cwd/extern; \
-         make -C lib install PREFIX=$cwd/extern; \
+         make install PREFIX=$cwd/extern; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (install)])
@@ -4684,7 +4703,7 @@ if test $ENABLE_PAR2 = "yes"; then
       fi
       if test $result -eq 1; then
         (cd par2cmdline; \
-         make -j$CPU_CORES; \
+         make -j$CPU_CORES libpar2.a; \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
@@ -5798,7 +5817,7 @@ AC_CHECK_FUNCTION(inotify_rm_watch, AC_DEFINE(HAVE_INOTIFY_RM_WATCH, 1,[inotify_
 AC_CHECK_FUNCTION(gmtime_r,   AC_DEFINE(HAVE_GMTIME_R,   1,[gmtime_r() available]))
 AC_CHECK_FUNCTION(localtime_r,AC_DEFINE(HAVE_LOCALTIME_R,1,[localtime_r() available]))
 AC_CHECK_FUNCTION(getdate_r,  AC_DEFINE(HAVE_GETDATE_R,  1,[getdate_r() available]))
-AC_CHECK_FUNCTION(usleep,     AC_DEFINE(HAVE_USLEEP,     1,[usleep() available])])
+AC_CHECK_FUNCTION(usleep,     AC_DEFINE(HAVE_USLEEP,     1,[usleep() available]))
 AC_CHECK_FUNCTION(nanosleep,  AC_DEFINE(HAVE_NANOSLEEP,  1,[nanosleep() available]))
 AC_CHECK_FUNCTION(timegm,     AC_DEFINE(HAVE_TIMEGM,     1,[timegm() available]))
 AC_CHECK_FUNCTION(strptime,   AC_DEFINE(HAVE_STRPTIME,   1,[strptime() available]))

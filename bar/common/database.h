@@ -2249,7 +2249,7 @@ char *Database_filterTimeString(const DatabaseHandle *databaseHandle,
 \***********************************************************************/
 
 Errors Database_execute(DatabaseHandle *databaseHandle,
-                        ulong          *changedRowCount,
+                        size_t         *changedRowCount,
                         uint           flags,
                         const char     *sqlCommand
                        );
@@ -2312,7 +2312,7 @@ Errors Database_insert(DatabaseHandle       *databaseHandle,
 \***********************************************************************/
 
 Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
-                             ulong                *changedRowCount,
+                             size_t               *changedRowCount,
                              const char           *tableName,
                              uint                 flags,
                              const DatabaseColumn toColumns[],
@@ -2347,7 +2347,7 @@ Errors Database_insertSelect(DatabaseHandle       *databaseHandle,
 \***********************************************************************/
 
 Errors Database_update(DatabaseHandle       *databaseHandle,
-                       ulong                *changedRowCount,
+                       size_t               *changedRowCount,
                        const char           *tableName,
                        uint                 flags,
                        const DatabaseValue  values[],
@@ -2374,7 +2374,7 @@ Errors Database_update(DatabaseHandle       *databaseHandle,
 \***********************************************************************/
 
 Errors Database_delete(DatabaseHandle       *databaseHandle,
-                       ulong                *changedRowCount,
+                       size_t               *changedRowCount,
                        const char           *tableName,
                        uint                 flags,
                        const char           *filter,
@@ -2401,13 +2401,13 @@ Errors Database_delete(DatabaseHandle       *databaseHandle,
 \***********************************************************************/
 
 Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
-                            ulong                *changedRowCount,
+                            size_t               *changedRowCount,
                             const char           *tableName,
                             uint                 flags,
                             const char           *filter,
                             DatabaseDataTypes    filterDataType,
                             const void           *filterArrayData,
-                            ulong                filterArrayLength,
+                            size_t               filterArrayLength,
                             uint64               limit
                            );
 
@@ -2427,12 +2427,12 @@ Errors Database_deleteArray(DatabaseHandle       *databaseHandle,
 \***********************************************************************/
 
 Errors Database_deleteByIds(DatabaseHandle   *databaseHandle,
-                            ulong            *changedRowCount,
+                            size_t           *changedRowCount,
                             const char       *tableName,
                             const char       *columnName,
                             uint             flags,
                             const DatabaseId databaseIds[],
-                            ulong            databaseIdCount
+                            size_t           databaseIdCount
                            );
 
 /***********************************************************************\
@@ -2577,7 +2577,7 @@ bool Database_existsValue(DatabaseHandle       *databaseHandle,
 Errors Database_get(DatabaseHandle       *databaseHandle,
                     DatabaseRowFunction  databaseRowFunction,
                     void                 *databaseRowUserData,
-                    ulong                *changedRowCount,
+                    size_t               *changedRowCount,
                     const char           *tableNames[],
                     uint                 tableNameCount,
                     uint                 flags,

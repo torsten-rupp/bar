@@ -243,6 +243,7 @@ fi
     --disable-burn \
     --disable-isofs \
     --disable-mount \
+    --disable-xfs \
     \
     --disable-bfd
   make

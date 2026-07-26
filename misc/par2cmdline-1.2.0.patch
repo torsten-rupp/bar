@@ -1,0 +1,12 @@
+diff --git a/src/utf8.h b/src/utf8.h
+index 53cd0cb..3454caf 100644
+--- a/src/utf8.h
++++ b/src/utf8.h
+@@ -21,6 +21,7 @@
+ #define __UTF8_H__
+ 
+ #include <string>
++#include <locale>
+ #include <codecvt>
+ 
+ namespace utf8

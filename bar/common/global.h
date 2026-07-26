@@ -354,6 +354,13 @@ typedef void(*DebugDumpStackTraceOutputFunction)(const char *text, void *userDat
   #define LOCAL_INLINE static
 #endif /* NDEBUG */
 
+// mark function will not return
+#ifdef __cplusplus
+  #define NORETURN [[noreturn]]
+#else
+  #define NORETURN noreturn
+#endif
+
 #undef ATTRIBUTE_PACKED
 #undef ATTRIBUTE_WARN_UNUSED_RESULT
 #undef ATTRIBUTE_NO_INSTRUMENT_FUNCTION
