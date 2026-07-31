@@ -823,25 +823,17 @@ docker_run_win32-x86_64:
 # RPM
 .PHONY: rpm rpmd clean_rpm
 rpm: \
-  rpm32 \
   rpm64
 rpmd: \
-  rpm32d \
   rpm64d
 
 .PHONY: rpm32 rpm32d rpm64 rpm64d
-rpm32: \
-  $(DISTRIBUTION_NAME).rpm
-rpm32d:
-	$(MAKE) $(DISTRIBUTION_NAME).rpm PACKAGE_DEBUG=1
 rpm64: \
   $(DISTRIBUTION_NAME)-x86_64.rpm
 rpm64d:
 	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm PACKAGE_DEBUG=1
 
 clean_rpm:
-	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm
-	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm.log
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm.log
 
@@ -877,21 +869,11 @@ build_rpm:
 # DEB
 .PHONY: deb debd clean_deb
 deb: \
-  deb32 \
   deb64
 debd: \
-  deb32d \
   deb64d
 
-.PHONY: deb32 deb32d deb-gui32 deb-gui32d deb64 deb64d deb-gui64 deb-gui64d
-deb32: \
-  $(DISTRIBUTION_NAME).deb
-deb32d:
-	$(MAKE) $(DISTRIBUTION_NAME).deb PACKAGE_DEBUG=1
-deb-gui32: \
-  $(DISTRIBUTION_NAME_GUI).deb
-deb-gui32d:
-	$(MAKE) $(DISTRIBUTION_NAME_GUI).deb PACKAGE_DEBUG=1
+.PHONY: deb64 deb64d deb-gui64 deb-gui64d
 deb64: \
   $(DISTRIBUTION_NAME)-x86_64.deb
 deb64d:
@@ -902,9 +884,6 @@ deb-gui64d:
 	$(MAKE) $(DISTRIBUTION_NAME_GUI)-x86_64.deb PACKAGE_DEBUG=1
 
 clean_deb:
-	$(RMF) build/rpm/$(DISTRIBUTION_NAME).deb
-	$(RMF) build/rpm/$(DISTRIBUTION_NAME_GUI).deb
-	$(RMF) build/rpm/$(DISTRIBUTION_NAME).deb.log
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.deb
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME_GUI)-x86_64.deb
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.deb.log
@@ -937,6 +916,7 @@ build_deb:
            $(DISTRIBUTION_NAME)-x86_64.deb \
            $(DISTRIBUTION_NAME_GUI)-x86_64.deb \
            $(if $(PACKAGE_DEBUG),--debug); \
+--link-dynamic \
         )
 
 # Windows setup

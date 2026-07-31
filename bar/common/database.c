@@ -52,7 +52,6 @@
 #endif /* HAVE_MARIADB_MYSQL_H && HAVE_MARIADB_ERRMSG_H */
 #if defined(HAVE_LIBPQ_FE_H)
   #include "libpq-fe.h"
-//  #include "pgtypes_numeric.h"
 #endif /* HAVE_LIBPQ_FE_H */
 
 #include "common/arrays.h"

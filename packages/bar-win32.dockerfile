@@ -50,26 +50,27 @@ RUN apt-get -y install --no-install-recommends --fix-missing \
   xz-utils \
   ;
 RUN apt-get -y install --no-install-recommends --fix-missing \
-  gcc \
+  bison \
+  build-essential \
+  cmake \
+  flex \
   g++ \
+  g++-mingw-w64-i686 \
+  g++-mingw-w64-x86-64 \
+  gcc \
+  gcc-mingw-w64-i686 \
+  gcc-mingw-w64-x86-64 \
   libblkid-dev \
   libc6 \
   libc6-dev \
   libinih-dev \
+  make \
+  mingw-w64-i686-dev \
+  mingw-w64-x86-64-dev \
   openjdk-8-jdk \
   openjdk-8-jre \
-  cmake \
-  make \
-  bison \
-  flex \
-  mingw-w64-i686-dev \
-  gcc-mingw-w64-i686 \
-  g++-mingw-w64-i686 \
-  mingw-w64-x86-64-dev \
-  gcc-mingw-w64-x86-64 \
-  g++-mingw-w64-x86-64 \
-  unoconv \
   txt2man \
+  unoconv \
   valgrind \
   ;
 

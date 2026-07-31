@@ -11,6 +11,7 @@ version=""
 userGroup=""
 debFileName=""
 debFileNameGUI=""
+linkDynamicFlag=0
 testsFlag=0
 debugFlag=0
 helpFlag=0
@@ -19,6 +20,10 @@ while test $# != 0; do
   case $1 in
     -h | --help)
       helpFlag=1
+      shift
+      ;;
+    --link-dynamic)
+      linkDynamicFlag=1
       shift
       ;;
     -t | --tests)
@@ -108,11 +113,14 @@ done
 if test $helpFlag -eq 1; then
   echo "Usage: $0 [options] <source path> <distribution name> <version> <user:group> <package name> [<package name GUI>]"
   echo ""
-  echo "Options:  -t|--test   execute tests"
-  echo "          -d|--debug  enable debug"
-  echo "          -h|--help   print help"
+  echo "Options:  --link-dynamic  build dynamic linked binaries"
+  echo "          -t|--test       execute tests"
+  echo "          -d|--debug      enable debug"
+  echo "          -h|--help       print help"
   exit 0
 fi
+
+linkDynamicFlag=1
 
 # enable tracing
 if test $debugFlag -eq 1; then
@@ -196,15 +204,32 @@ fi
   #  -e testsFlag=$testsFlag \
   #  -us -uc
   #ln -s packages/debian
-  debuild \
-    -e SOURCE_DIR=$sourcePath \
-    -e packageName=$packageName \
-    -e distributionFileName=$distributionFileName \
-    -e version=$version \
-    -e debFileName=$debFileName \
-    -e testsFlag=$testsFlag \
-    -us -uc
-  #  -i -us -uc -b
+  if test $linkDynamicFlag -eq 1; then
+    # Note:
+    #  - libxfs, libpar2 not available as dynamic libraries
+    #  - libpcre not available
+    debuild \
+      -e SOURCE_DIR=$sourcePath \
+-e ADDITIONAL_DOWNLOAD_FLAGS="zlib sqlite3 xfs par2 pcre" \
+      -e ADDITIONAL_CONFIGURE_FLAGS="--enable-link-dynamic" \
+      -e packageName=$packageName \
+      -e distributionFileName=$distributionFileName \
+      -e version=$version \
+      -e debFileName=$debFileName \
+      -e testsFlag=$testsFlag \
+      -us -uc
+    #  -i -us -uc -b
+  else
+    debuild \
+      -e SOURCE_DIR=$sourcePath \
+      -e packageName=$packageName \
+      -e distributionFileName=$distributionFileName \
+      -e version=$version \
+      -e debFileName=$debFileName \
+      -e testsFlag=$testsFlag \
+      -us -uc
+    #  -i -us -uc -b
+  fi
 
   # get result
   cp -f $tmpDir/${packageName}_[0-9]*.deb $sourcePath/$debFileName

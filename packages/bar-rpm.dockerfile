@@ -33,6 +33,7 @@ RUN yum -y install --allowerasing \
 RUN yum -y install --allowerasing \
   automake \
   bison \
+  build-essential \
   bzip2 \
   curl \
   e2fsprogs \
@@ -44,10 +45,9 @@ RUN yum -y install --allowerasing \
   git \
   java-1.8.0-openjdk-devel \
   libblkid-devel \
+  libcap-devel \
   libtool \
   libuuid-devel \
-  systemd-devel \
-  libcap-devel \
   m4 \
   make \
   mariadb \
@@ -56,6 +56,7 @@ RUN yum -y install --allowerasing \
   postgresql \
   rpm-build \
   sqlite \
+  systemd-devel \
   tar \
   tcl \
   unzip \

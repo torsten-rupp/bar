@@ -120,9 +120,9 @@ ssh2Flag=0
 gnutlsFlag=0
 cdioFlag=0
 smb2Flag=0
-utilLinuxFlag=0
 isofsFlag=0
 rcuFlag=0
+utilLinuxFlag=0
 xfsProgsFlag=0
 burnFlag=0
 pcreFlag=0
@@ -293,18 +293,17 @@ while test $# != 0; do
           allFlag=0
           rcuFlag=1
           ;;
-        xfs | xfsprogs)
+        uuid|blkid|mount|util-linux)
           allFlag=0
           utilLinuxFlag=1
+          ;;
+        xfs | xfsprogs)
+          allFlag=0
           xfsProgsFlag=1
           ;;
         burn)
           allFlag=0
           burnFlag=1
-          ;;
-        uuid|mount|util-linux)
-          allFlag=0
-          utilLinuxFlag=1
           ;;
         binutils|bfd)
           allFlag=0
@@ -433,6 +432,10 @@ while test $# != 0; do
       allFlag=0
       rcuFlag=1
       ;;
+    uuid|blkid|mount|util-linux)
+      allFlag=0
+      utilLinuxFlag=1
+      ;;
     xfs|xfsprogs)
       allFlag=0
       xfsProgsFlag=1
@@ -440,10 +443,6 @@ while test $# != 0; do
     burn)
       allFlag=0
       burnFlag=1
-      ;;
-    uuid|mount|util-linux)
-      allFlag=0
-      utilLinuxFlag=1
       ;;
     binutils|bfd)
       allFlag=0
@@ -2170,7 +2169,7 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $rcuFlag -eq 1 -o $xfsProgsFlag -eq 1; then
+  if test $allFlag -eq 1 -o $rcuFlag -eq 1; then
     (
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
@@ -2222,7 +2221,9 @@ if test $cleanFlag -eq 0; then
       3) $ECHO "ok (cached)"; ;;
       *) exit $result; ;;
     esac
+  fi
 
+  if test $allFlag -eq 1 -o $xfsProgsFlag -eq 1; then
     (
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
@@ -2822,14 +2823,22 @@ else
     $RMF $workingDirectory/libisofs
   fi
 
-  if test $allFlag -eq 1 -o $rcuFlag -eq 1 -o $xfsProgsFlag -eq 1; then
+  if test $allFlag -eq 1 -o $rcuFlag -eq 1; then
     # librcu
     (
       cd "$destinationDirectory"
       $RMRF userspace-rcu-*
-      $RMRF xfsprogs-*
     ) 2>/dev/null
     $RMF $workingDirectory/librcu
+  fi
+
+  if test $allFlag -eq 1 -o $xfsProgsFlag -eq 1; then
+    # librcu
+    (
+      cd "$destinationDirectory"
+      $RMRF xfsprogs-*
+    ) 2>/dev/null
+    $RMF $workingDirectory/xfsprogs
   fi
 
   if test $allFlag -eq 1 -o $burnFlag -eq 1; then

@@ -14,8 +14,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
-// TODO: ifdef
-#include <unicode/ucnv.h>
+#ifdef HAVE_ICU
+  #include <unicode/ucnv.h>
+#endif
 #include <assert.h>
 
 #include "forward.h"         // required for JobOptions

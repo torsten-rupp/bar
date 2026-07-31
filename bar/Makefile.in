@@ -97,6 +97,9 @@ ifneq (@HEAPVIEW_DIR@,)
   LD_LIBRARY_PATHS += @HEAPVIEW_DIR@
 endif
 LD_LIBRARIES               = @LIBRARIES@
+ifeq ($(wildcard $(BUILD_DIR)/extern/include/sqlite3.h),)
+  LD_LIBRARIES += sqlite3
+endif
 LD_STATIC_LIBRARIES        = @STATIC_LIBRARIES@
 ifneq (@HEAPVIEW_DIR@,)
   LD_STATIC_LIBRARIES += HeapView
@@ -551,11 +554,11 @@ COMMON_SOURCES_FILTER       = \
 COMMON_HEADERS              = $(patsubst %.c,  %.h,$(filter %.c,  $(COMMON_SOURCES))) \
                               $(patsubst %.cpp,%.h,$(filter %.cpp,$(COMMON_SOURCES))) \
 
-SQLITE3_SOURCES             = $(if $(wildcard $(BUILD_DIR)/extern/sources/sqlite3.c),$(BUILD_DIR)/extern/sources/sqlite3.c,$(SOURCE_DIR)/sqlite3.c)
+SQLITE3_SOURCES             = $(if $(wildcard $(BUILD_DIR)/extern/sources/sqlite3.c),$(BUILD_DIR)/extern/sources/sqlite3.c,)
 
-SQLITE3_HEADERS             = $(if $(wildcard $(BUILD_DIR)/extern/include/sqlite3.h),$(BUILD_DIR)/extern/include/sqlite3.h,$(SOURCE_DIR)/sqlite3.h)
+SQLITE3_HEADERS             = $(if $(wildcard $(BUILD_DIR)/extern/include/sqlite3.h),$(BUILD_DIR)/extern/include/sqlite3.h,/usr/include/sqlite3.h)
 
-SQLITE3_OBJECTS             = sqlite3.o
+SQLITE3_OBJECTS             = $(if $(wildcard $(BUILD_DIR)/extern/include/sqlite3.h),sqlite3.o,)
 
 XDELTA3_SOURCES             = $(BUILD_DIR)/extern/sources/xdelta3.c
 

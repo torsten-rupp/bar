@@ -4534,13 +4534,6 @@ LOCAL Errors runDebug(int argc, const char *argv[])
 * Notes  : -
 \***********************************************************************/
 
-#include "unicode/utypes.h"
-#include "unicode/ustring.h"
-#include "unicode/uclean.h"
-
-#include "unicode/ucnv.h"
-#include "unicode/udat.h"
-#include "unicode/ucal.h"
 LOCAL Errors bar(int argc, const char *argv[])
 {
   Errors error;

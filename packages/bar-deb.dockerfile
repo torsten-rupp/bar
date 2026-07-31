@@ -37,6 +37,7 @@ RUN apt-get -y install --no-install-recommends --fix-missing \
   autoconf \
   autotools-dev \
   bison \
+  build-essential \
   bzip2 \
   cmake \
   curl \
@@ -53,15 +54,16 @@ RUN apt-get -y install --no-install-recommends --fix-missing \
   libblkid-dev \
   libc6 \
   libc6-dev \
+  libcap-dev \
   libinih-dev \
   libsystemd-dev \
-  libcap-dev \
   m4 \
   make \
   mariadb-client \
   patch \
   pkg-config \
   postgresql \
+  psmisc \
   sqlite3 \
   subversion \
   tar \
@@ -111,3 +113,40 @@ RUN    install -d /media/home \
 VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]
+
+# install packages for dynamic linkage
+RUN apt-get -y install --no-install-recommends --fix-missing \
+libicu-dev \
+libz-dev \
+liblz4-dev \
+liblzma-dev \
+libbz2-dev \
+libzstd-dev \
+libssl-dev \
+libtls-dev \
+nettle-dev \
+libgmp-dev \
+libcurl4-openssl-dev \
+libmxml-dev \
+libc-ares-dev \
+libidn2-dev \
+libgcrypt20-dev \
+libssh2-1-dev \
+libmount-dev \
+libburn-dev \
+libiso9660-dev \
+libisofs-dev \
+libcdio-dev \
+libsmbclient-dev \
+libsmb2-dev \
+libkrb5-dev \
+libsqlite3-dev \
+libmariadb-dev \
+libpq-dev \
+uuid-dev \
+libblkid-dev \
+liburcu-dev \
+libfrog-dev \
+binutils-dev \
+\
+liblzo2-dev \

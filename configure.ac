@@ -1849,34 +1849,61 @@ AC_SET_TOOLCHAIN_SETTINGS($CPP_FLAGS,
                           $LIBRARIES)
 
 # compile/use icu
-if test -d icu -o -d "`readlink icu`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    cwd=`pwd`
+if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d icu -o -d "`readlink icu`" \); then
+  cwd=`pwd`
 
-    AC_MSG_COMPILE([icu])
-    result=1
-    if test $result -eq 1; then
-      case $host_os in
-        linux-*)
-          ;;
-        sunos | solaris*)
-          ;;
-        darwin*)
-          ;;
-        windows*|mingw*)
-          # patch to disable usage of lib-command when RANLIB is set
-          ;;
-      esac
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (patch)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
+  AC_MSG_COMPILE([icu])
+  result=1
+  if test $result -eq 1; then
+    case $host_os in
+      linux-*)
+        ;;
+      sunos | solaris*)
+        ;;
+      darwin*)
+        ;;
+      windows*|mingw*)
+        # patch to disable usage of lib-command when RANLIB is set
+        ;;
+    esac
+    if test $? -ne 0; then
+      AC_MSG_RESULT([fail (patch)])
+      AC_MSG_OUTPUT_LOG($tmpFile)
+      result=0
     fi
+  fi
+  if test $result -eq 1; then
+    install -d icu/build/$build
+    (cd icu/build/$build; CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="" ../../source/configure \
+      --build=$build \
+      --prefix=$cwd/extern \
+      --disable-shared \
+      --enable-static \
+      --disable-tests \
+      --disable-samples \
+      --with-package-data=static \
+    ) 1>$tmpFile 2>&1
+    if test $? -ne 0; then
+      AC_MSG_RESULT([fail (configure host)])
+      AC_MSG_OUTPUT_LOG($tmpFile)
+      result=0
+    fi
+  fi
+  if test $result -eq 1; then
+    (cd icu/build/$build; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+    if test $? -ne 0; then
+      AC_MSG_RESULT([fail (make host)])
+      AC_MSG_OUTPUT_LOG($tmpFile)
+      result=0
+    fi
+  fi
+  if test "$host" != "$build"; then
+    install -d icu/build/$host
     if test $result -eq 1; then
-      install -d icu/build/$build
-      (cd icu/build/$build; CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="" ../../source/configure \
+      (cd icu/build/$host; CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="" ../../source/configure \
+        --host=$host \
         --build=$build \
+        --with-cross-build=$cwd/icu/build/$build \
         --prefix=$cwd/extern \
         --disable-shared \
         --enable-static \
@@ -1885,81 +1912,50 @@ if test -d icu -o -d "`readlink icu`"; then
         --with-package-data=static \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure host)])
+        AC_MSG_RESULT([fail (configure target)])
         AC_MSG_OUTPUT_LOG($tmpFile)
         result=0
       fi
     fi
     if test $result -eq 1; then
-      (cd icu/build/$build; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      (cd icu/build/$host; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
       if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make host)])
+        AC_MSG_RESULT([fail (make target)])
         AC_MSG_OUTPUT_LOG($tmpFile)
         result=0
       fi
     fi
-    if test "$host" != "$build"; then
-      install -d icu/build/$host
-      if test $result -eq 1; then
-        (cd icu/build/$host; CFLAGS="-fPIC" CXXFLAGS="-fPIC" LDFLAGS="" ../../source/configure \
-          --host=$host \
-          --build=$build \
-          --with-cross-build=$cwd/icu/build/$build \
-          --prefix=$cwd/extern \
-          --disable-shared \
-          --enable-static \
-          --disable-tests \
-          --disable-samples \
-          --with-package-data=static \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure target)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd icu/build/$host; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make target)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
+  fi
+  if test $result -eq 1; then
+    (cd icu/build/$host; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+    if test $? -ne 0; then
+      result=0
     fi
-    if test $result -eq 1; then
-      (cd icu/build/$host; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        result=0
-      fi
-      case $host_os in
-        linux-*)
-          ;;
-        sunos | solaris*)
-          ;;
-        darwin*)
-          ;;
-        windows*|mingw*)
-          # Note: bug in library names of older ICU versions?
-          #       https://unicode-org.atlassian.net/browse/ICU-13138
-          (cd extern/lib; ln -s libsicuuc.a libicuuc.a) 1>/dev/null 2>/dev/null
-          (cd extern/lib; ln -s libsicuin.a libicui18n.a) 1>/dev/null 2>/dev/null
-          (cd extern/lib; ln -s sicudt.a libicudata.a) 1>/dev/null 2>/dev/null
-          (cd extern/lib; ln -s libsicuio.a libicuio.a) 1>/dev/null 2>/dev/null
-          (cd extern/lib; ln -s libsicutu.a libicutu.a) 1>/dev/null 2>/dev/null
-          (cd extern/lib; ln -s libsiculx.a libiculx.a) 1>/dev/null 2>/dev/null
-          ;;
-      esac
-      if test $result -ne 1; then
-        AC_MSG_RESULT([fail (install)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-      fi
+    case $host_os in
+      linux-*)
+        ;;
+      sunos | solaris*)
+        ;;
+      darwin*)
+        ;;
+      windows*|mingw*)
+        # Note: bug in library names of older ICU versions?
+        #       https://unicode-org.atlassian.net/browse/ICU-13138
+        (cd extern/lib; ln -s libsicuuc.a libicuuc.a) 1>/dev/null 2>/dev/null
+        (cd extern/lib; ln -s libsicuin.a libicui18n.a) 1>/dev/null 2>/dev/null
+        (cd extern/lib; ln -s sicudt.a libicudata.a) 1>/dev/null 2>/dev/null
+        (cd extern/lib; ln -s libsicuio.a libicuio.a) 1>/dev/null 2>/dev/null
+        (cd extern/lib; ln -s libsicutu.a libicutu.a) 1>/dev/null 2>/dev/null
+        (cd extern/lib; ln -s libsiculx.a libiculx.a) 1>/dev/null 2>/dev/null
+        ;;
+    esac
+    if test $result -ne 1; then
+      AC_MSG_RESULT([fail (install)])
+      AC_MSG_OUTPUT_LOG($tmpFile)
     fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
-  else
-    result=1
+  fi
+  if test $result -eq 1; then
+    AC_MSG_RESULT([done])
   fi
 
   if test $result -eq 1; then
@@ -1972,79 +1968,72 @@ if test -d icu -o -d "`readlink icu`"; then
     AC_DEFINE(HAVE_ICU,1,[icu installed (local)])
   fi
 else
-  dnl search for installed icu library
+  dnl search for installed icu libraries
 
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])])
-  else
     if test -z "$HAVE_ICUUC"; then
-      AC_SEARCH_STATIC_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[static icuuc installed])])
-    fi
-    if test -z "$HAVE_ICUUC"; then
-      AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])])
-    fi
-  fi
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])])
-  else
-    if test -z "$HAVE_ICUI18N"; then
-      AC_SEARCH_STATIC_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[static icui18n installed])])
+      AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICU=1;HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])],,unicode/ustring.h)
     fi
     if test -z "$HAVE_ICUI18N"; then
-      AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])])
+      AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICU=1;HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])],,unicode/uregex.h)
     fi
-  fi
-  if test $ENABLE_LINK_DYNAMIC = "yes"; then
-    AC_SEARCH_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[icudata installed])])
+    # Note: libicudata cannot be searched, because it does not offer any function
+    if test -n "$HAVE_ICU"; then
+      LIBRARIES="$LIBRARIES icudata";
+      HAVE_ICUDATA=1;
+      AC_DEFINE(HAVE_ICUDATA,1,[icudata installed])
+    fi
   else
-    if test -z "$HAVE_ICUDATA"; then
-      AC_SEARCH_STATIC_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[static icudata installed])])
+    if test -z "$HAVE_ICUUC"; then
+      AC_SEARCH_STATIC_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICU=1;HAVE_ICUUC=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[static icuuc installed])],,unicode/ustring.h)
     fi
-    if test -z "$HAVE_ICUDATA"; then
-      AC_SEARCH_LIBRARIES(icudt,icudata,[HAVE_ICUDATA=1;LIBRARIES="$LIBRARIES icudata";AC_DEFINE(HAVE_ICUI18N,1,[icudata installed])])
+    if test -z "$HAVE_ICUI18N"; then
+      AC_SEARCH_STATIC_LIBRARIES(uregex_open,icui18n,[HAVE_ICU=1;HAVE_ICUI18N=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[static icui18n installed])],,unicode/uregex.h)
+    fi
+    # Note: libicudata cannot be searched, because it does not offer any function
+    if test -n "$HAVE_ICU"; then
+      LIBRARIES="$LIBRARIES icudata";
+      HAVE_ICUDATA=1;
+      AC_DEFINE(HAVE_ICUDATA,1,[icudata installed])
     fi
   fi
 fi
 
 # compile/use zlib
-if test -d zlib -o -d "`readlink zlib`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    cwd=`pwd`
+if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d zlib -o -d "`readlink zlib`" \); then
+  cwd=`pwd`
 
-    AC_MSG_COMPILE([zlib])
-    result=1
-    if test $result -eq 1; then
-      (cd zlib; CC="$CC" CPPFLAGS="" CFLAGS="`if test "$ENABLE_DEBUG" = "yes"; then echo -- -O0 -g; fi`" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-        --prefix=$cwd/extern \
-        --static \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
+  AC_MSG_COMPILE([zlib])
+  result=1
+  if test $result -eq 1; then
+    (cd zlib; CC="$CC" CPPFLAGS="" CFLAGS="`if test "$ENABLE_DEBUG" = "yes"; then echo -- -O0 -g; fi`" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+      --prefix=$cwd/extern \
+      --static \
+    ) 1>$tmpFile 2>&1
+    if test $? -ne 0; then
+      AC_MSG_RESULT([fail (configure)])
+      AC_MSG_OUTPUT_LOG($tmpFile)
+      result=0
     fi
-    if test $result -eq 1; then
-      (cd zlib; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
+  fi
+  if test $result -eq 1; then
+    (cd zlib; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+    if test $? -ne 0; then
+      AC_MSG_RESULT([fail (make)])
+      AC_MSG_OUTPUT_LOG($tmpFile)
+      result=0
     fi
-    if test $result -eq 1; then
-      (cd zlib; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (install)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result=0
-      fi
+  fi
+  if test $result -eq 1; then
+    (cd zlib; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+    if test $? -ne 0; then
+      AC_MSG_RESULT([fail (install)])
+      AC_MSG_OUTPUT_LOG($tmpFile)
+      result=0
     fi
-    if test $result -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
-  else
-    result=1
+  fi
+  if test $result -eq 1; then
+    AC_MSG_RESULT([done])
   fi
 
   if test $result -eq 1; then
@@ -2079,48 +2068,44 @@ fi
 
 # compile/use bz2
 if test $ENABLE_BZ2 = "yes"; then
-  if test -d bzip2 -o -d "`readlink bzip2`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d bzip2 -o -d "`readlink bzip2`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([bzip2])
-      result=1
-      if test $result -eq 1; then
-        if test "$build" == "$host"; then
-          (cd bzip2; make clean; make -j$CPU_CORES libbz2.a) 1>$tmpFile 2>&1
-          if test $? -ne 0; then
-            AC_MSG_RESULT([fail (make)])
-            AC_MSG_OUTPUT_LOG($tmpFile)
-            result=0
-          fi
-        else
-          (cd bzip2; make clean; make -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" libbz2.a) 1>$tmpFile 2>&1
-          if test $? -ne 0; then
-            AC_MSG_RESULT([fail (make)])
-            AC_MSG_OUTPUT_LOG($tmpFile)
-            result=0
-          fi
+    AC_MSG_COMPILE([bzip2])
+    result=1
+    if test $result -eq 1; then
+      if test "$build" == "$host"; then
+        (cd bzip2; make clean; make -j$CPU_CORES libbz2.a) 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
         fi
-      fi
-      if test $result -eq 1; then
-        # Note: do not call 'install', it does build additional tools
-        (cd bzip2; \
-         install -d $cwd/extern/include; \
-         install -m 644 bzlib.h $cwd/extern/include; \
-         install -d $cwd/extern/lib; \
-         install -m 644 libbz2.a $cwd/extern/lib; \
-        ) 1>$tmpFile 2>&1
+      else
+        (cd bzip2; make clean; make -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" libbz2.a) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
+    fi
+    if test $result -eq 1; then
+      # Note: do not call 'install', it does build additional tools
+      (cd bzip2; \
+       install -d $cwd/extern/include; \
+       install -m 644 bzlib.h $cwd/extern/include; \
+       install -d $cwd/extern/lib; \
+       install -m 644 libbz2.a $cwd/extern/lib; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-    else
-      result=1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -2168,72 +2153,68 @@ fi
 
 # compile/use lzma
 if test $ENABLE_LZMA = "yes"; then
-  if test -d xz -o -d "`readlink xz`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d xz -o -d "`readlink xz`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([xz utils])
-      result=1
-      if test $result -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            # patch to disable usage of lib-command when RANLIB is set
-            #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
+    AC_MSG_COMPILE([xz utils])
+    result=1
+    if test $result -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          #   diff -u xz-5.0.4.org/m4/libtool.m4 xz-5.0.4/m4/libtool.m4 xz-5.0.4-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/xz-5.0.4; then
 #              (cd extern/xz-5.0.4; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/xz-5.0.4-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([xz-5.0.4 not available - skipped libtool patch!])
 #            fi
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd xz; ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --disable-shared \
-          --enable-static \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd xz; ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --disable-shared \
+        --enable-static \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd xz; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd xz; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd xz; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd xz; make install) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -2281,66 +2262,62 @@ fi
 
 # compile/use lzo
 if test $ENABLE_LZO = "yes"; then
-  if test -d lzo -o -d "`readlink lzo`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d lzo -o -d "`readlink lzo`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([lzo])
-      result=1
-      if test $result -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            # patch to fix missing --tag=CC for in libtool call
-            #   diff -u extern/lzo-2.10.org/Makefile.in extern/lzo-2.10/Makefile.in  > misc/lzo-2.10-libtool.patch
+    AC_MSG_COMPILE([lzo])
+    result=1
+    if test $result -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to fix missing --tag=CC for in libtool call
+          #   diff -u extern/lzo-2.10.org/Makefile.in extern/lzo-2.10/Makefile.in  > misc/lzo-2.10-libtool.patch
 #            (cd lzo; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/lzo-2.10-libtool.patch) 1>$tmpFile 2>&1
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        install -d lzo
-        (cd lzo; ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      install -d lzo
+      (cd lzo; ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd lzo; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd lzo; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd lzo; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd lzo; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -2388,41 +2365,37 @@ fi
 
 # compile/use lz4
 if test $ENABLE_LZ4 = "yes"; then
-  if test -d lz4 -o -d "`readlink lz4`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d lz4 -o -d "`readlink lz4`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([lz4])
-      result=1
-      if test $result -eq 1; then
-        (cd lz4; make clean; make -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" lib) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    AC_MSG_COMPILE([lz4])
+    result=1
+    if test $result -eq 1; then
+      (cd lz4; make clean; make -j$CPU_CORES CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" lib) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        # Note: do not call 'install', it does build additional tools
-        # (cd lz4; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        (cd lz4; \
-         install -d $cwd/extern/include; \
-         install -m 644 lib/lz4.h lib/lz4frame.h lib/lz4hc.h lib/xxhash.h $cwd/extern/include; \
-         install -d $cwd/extern/lib; \
-         install -m 644 lib/liblz4.a $cwd/extern/lib; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-        rm -f $cwd/extern/lib/liblz4*.so*
+    fi
+    if test $result -eq 1; then
+      # Note: do not call 'install', it does build additional tools
+      # (cd lz4; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      (cd lz4; \
+       install -d $cwd/extern/include; \
+       install -m 644 lib/lz4.h lib/lz4frame.h lib/lz4hc.h lib/xxhash.h $cwd/extern/include; \
+       install -d $cwd/extern/lib; \
+       install -m 644 lib/liblz4.a $cwd/extern/lib; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+      rm -f $cwd/extern/lib/liblz4*.so*
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -2470,44 +2443,40 @@ fi
 
 # compile/use zstd
 if test $ENABLE_ZSTD = "yes"; then
-  if test -d zstd -o -d "`readlink zstd`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d zstd -o -d "`readlink zstd`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([zstd])
-      result=1
-      if test $result -eq 1; then
-        if test "$build" == "$host"; then
-          (cd zstd; make clean; make -j$CPU_CORES -C lib) 1>$tmpFile 2>&1
-          if test $? -ne 0; then
-            AC_MSG_RESULT([fail (make)])
-            AC_MSG_OUTPUT_LOG($tmpFile)
-            result=0
-          fi
-        else
-          # Note: do not set LDFLAGS
-          (cd zstd; make clean; make -j$CPU_CORES -C lib CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
-          if test $? -ne 0; then
-            AC_MSG_RESULT([fail (make)])
-            AC_MSG_OUTPUT_LOG($tmpFile)
-            result=0
-          fi
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd zstd; make -C lib install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+    AC_MSG_COMPILE([zstd])
+    result=1
+    if test $result -eq 1; then
+      if test "$build" == "$host"; then
+        (cd zstd; make clean; make -j$CPU_CORES -C lib) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (make)])
           AC_MSG_OUTPUT_LOG($tmpFile)
           result=0
         fi
-        rm -f $cwd/extern/lib/libzstd*.so*
+      else
+        # Note: do not set LDFLAGS
+        (cd zstd; make clean; make -j$CPU_CORES -C lib CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES") 1>$tmpFile 2>&1
+        if test $? -ne 0; then
+          AC_MSG_RESULT([fail (make)])
+          AC_MSG_OUTPUT_LOG($tmpFile)
+          result=0
+        fi
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
+    fi
+    if test $result -eq 1; then
+      (cd zstd; make -C lib install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-    else
-      result=1
+      rm -f $cwd/extern/lib/libzstd*.so*
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -2556,7 +2525,7 @@ fi
 
 # use xdelta3
 if test $ENABLE_XDELTA3 = "yes"; then
-  if test -d xdelta3 -o -d "`readlink xdelta3`"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d xdelta3 -o -d "`readlink xdelta3`" \); then
     dnl compile xdelta sources
 
     cwd=`pwd`
@@ -2592,144 +2561,139 @@ fi
 
 # compile/use gcrypt
 if test $ENABLE_GCRYPT = "yes"; then
-  if test \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d libgpg-error -o -d "`readlink libgpg-error`" \) -a \( -d libgcrypt -o -d "`readlink libgcrypt`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([libgpg-error])
-      result1=1
-      if test $result1 -eq 1; then
-        (cd libgpg-error; ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --disable-shared \
-          --enable-static \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+    AC_MSG_COMPILE([libgpg-error])
+    result1=1
+    if test $result1 -eq 1; then
+      (cd libgpg-error; ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --disable-shared \
+        --enable-static \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
-      if test $result1 -eq 1; then
-        (cd libgpg-error; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+    fi
+    if test $result1 -eq 1; then
+      (cd libgpg-error; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
-      if test $result1 -eq 1; then
-        (cd libgpg-error; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+    fi
+    if test $result1 -eq 1; then
+      (cd libgpg-error; make install) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
-      if test $result1 -eq 1; then
-        AC_MSG_RESULT([done])
-      else
-        AC_MSG_ERROR([fail])
-      fi
+    fi
+    if test $result1 -eq 1; then
+      AC_MSG_RESULT([done])
+    else
+      AC_MSG_ERROR([fail])
+    fi
 
-      AC_MSG_COMPILE([libgcrypt])
-      result2=1
-      if test $result2 -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            # patch to disable usage of lib-command when RANLIB is set
-            #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
-            #   diff -u libgcrypt-1.5.0.org/aclocal.m4 libgcrypt-1.5.0/aclocal.m4       >> libgcrypt-1.5.0-libtool.patch
-            #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
+    AC_MSG_COMPILE([libgcrypt])
+    result2=1
+    if test $result2 -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          #   diff -u libgcrypt-1.5.0.org/m4/libtool.m4 libgcrypt-1.5.0/m4/libtool.m4 >  libgcrypt-1.5.0-libtool.patch
+          #   diff -u libgcrypt-1.5.0.org/aclocal.m4 libgcrypt-1.5.0/aclocal.m4       >> libgcrypt-1.5.0-libtool.patch
+          #   diff -u libgcrypt-1.5.0.org/configure libgcrypt-1.5.0/configure         >> libgcrypt-1.5.0-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/libgcrypt-1.5.0; then
 #              (cd extern/libgcrypt-1.5.0; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libgcrypt-1.5.0-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([libgcrypt-1.5.0 not available - skipped libtool patch!])
 #            fi
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result2 -eq 1; then
-        case $host_cpu in
-          *86*)
-            (cd libgcrypt; LIBS="-L$cwd/extern/lib -lgpg-error" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-              --with-libgpg-error-prefix=$cwd/extern \
-              --enable-maintainer-mode \
-              --disable-shared \
-              --enable-static \
-              `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
-            ) 1>$tmpFile 2>&1
-            ;;
-          arm*)
+    fi
+    if test $result2 -eq 1; then
+      case $host_cpu in
+        *86*)
+          (cd libgcrypt; LIBS="-L$cwd/extern/lib -lgpg-error" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --with-libgpg-error-prefix=$cwd/extern \
+            --enable-maintainer-mode \
+            --disable-shared \
+            --enable-static \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
+          ) 1>$tmpFile 2>&1
+          ;;
+        arm*)
 #TODO: cipher
-            (cd libgcrypt; LIBS="-L$cwd/extern/lib -lgpg-error" ./configure \
-              --host=$build \
-              --prefix=$cwd/extern \
-              --with-libgpg-error-prefix=$cwd/extern \
-              --enable-maintainer-mode \
+          (cd libgcrypt; LIBS="-L$cwd/extern/lib -lgpg-error" ./configure \
+            --host=$build \
+            --prefix=$cwd/extern \
+            --with-libgpg-error-prefix=$cwd/extern \
+            --enable-maintainer-mode \
 --enable-ciphers="blowfish cast5 des twofish serpent camellia" \
-              --disable-shared \
-              --enable-static \
-              `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
-            ) 1>$tmpFile 2>&1
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
+            --disable-shared \
+            --enable-static \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo --disable-optimization; fi` \
+          ) 1>$tmpFile 2>&1
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result2 -eq 1; then
-        (cd libgcrypt; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
+    fi
+    if test $result2 -eq 1; then
+      (cd libgcrypt; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result2 -eq 1; then
-        (cd libgcrypt; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
-            ;;
-        esac
+    fi
+    if test $result2 -eq 1; then
+      (cd libgcrypt; make install) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result2 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result1=1
-      result2=1
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          (cd extern/lib; ln -s libgcrypt.lib libgcrypt.a) 1>/dev/null 2>/dev/null
+          ;;
+      esac
+    fi
+    if test $result2 -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
@@ -2800,90 +2764,86 @@ fi
 
 # compile/use openssl
 if test $ENABLE_SSH = "yes"; then
-  if test -d openssl -o -d "`readlink openssl`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d openssl -o -d "`readlink openssl`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([openssl])
-      result=1
-      if test $result -eq 1; then
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            if test "$host_cpu" = "x86_64"; then
-              (cd openssl; ./Configure \
-                --prefix=$cwd/extern \
-                no-shared \
-                no-tests \
-                linux-x86_64 \
-                -Wa,--noexecstack \
-              ) 1>$tmpFile 2>&1
-              if test $? -ne 0; then
-                AC_MSG_RESULT([fail (configure)])
-                AC_MSG_OUTPUT_LOG($tmpFile)
-                result=0
-              fi
-            else
-              (cd openssl; ./Configure \
-                --prefix=$cwd/extern \
-                linux-generic32 \
-                no-shared \
-                no-tests \
-                -Wa,--noexecstack \
-              ) 1>$tmpFile 2>&1
-              if test $? -ne 0; then
-                AC_MSG_RESULT([fail (configure)])
-                AC_MSG_OUTPUT_LOG($tmpFile)
-                result=0
-              fi
-            fi
-            ;;
-          windows*|mingw*)
-            if test "$host_cpu" = "x86_64"; then
-              (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
-                --prefix=$cwd/extern \
-                --cross-compile-prefix=x86_64-w64-mingw32- \
-                no-shared \
-                no-tests \
-                mingw64 \
-              ) 1>$tmpFile 2>&1
-            else
-              (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
-                --prefix=$cwd/extern \
-                --cross-compile-prefix=x86_64-w64-mingw32- \
-                no-shared \
-                no-tests \
-                mingw \
-              ) 1>$tmpFile 2>&1
-            fi
+    AC_MSG_COMPILE([openssl])
+    result=1
+    if test $result -eq 1; then
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          if test "$host_cpu" = "x86_64"; then
+            (cd openssl; ./Configure \
+              --prefix=$cwd/extern \
+              no-shared \
+              no-tests \
+              linux-x86_64 \
+              -Wa,--noexecstack \
+            ) 1>$tmpFile 2>&1
             if test $? -ne 0; then
               AC_MSG_RESULT([fail (configure)])
               AC_MSG_OUTPUT_LOG($tmpFile)
               result=0
             fi
-            ;;
-        esac
+          else
+            (cd openssl; ./Configure \
+              --prefix=$cwd/extern \
+              linux-generic32 \
+              no-shared \
+              no-tests \
+              -Wa,--noexecstack \
+            ) 1>$tmpFile 2>&1
+            if test $? -ne 0; then
+              AC_MSG_RESULT([fail (configure)])
+              AC_MSG_OUTPUT_LOG($tmpFile)
+              result=0
+            fi
+          fi
+          ;;
+        windows*|mingw*)
+          if test "$host_cpu" = "x86_64"; then
+            (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
+              --prefix=$cwd/extern \
+              --cross-compile-prefix=x86_64-w64-mingw32- \
+              no-shared \
+              no-tests \
+              mingw64 \
+            ) 1>$tmpFile 2>&1
+          else
+            (cd openssl; CFLAGS="" LDFLAGS="" ./Configure \
+              --prefix=$cwd/extern \
+              --cross-compile-prefix=x86_64-w64-mingw32- \
+              no-shared \
+              no-tests \
+              mingw \
+            ) 1>$tmpFile 2>&1
+          fi
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (configure)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result=0
+          fi
+          ;;
+      esac
+    fi
+    if test $result -eq 1; then
+      (cd openssl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd openssl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd openssl; make all install_sw) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd openssl; make all install_sw) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -2907,90 +2867,104 @@ if test $ENABLE_SSH = "yes"; then
         esac
       fi
       HAVE_SSL=1
+      HAVE_CRYPTO=1
       AC_DEFINE(HAVE_SSL,1,[ssl installed (local)])
+      AC_DEFINE(HAVE_CRYPTO,1,[crypto installed (local)])
+    fi
+  else
+    dnl search for installed ssl, crypt libraries
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(SSL_new,ssl,[HAVE_SSL=1;LIBRARIES="$LIBRARIES ssl";AC_DEFINE(HAVE_SSL,1,[SSL installed])])
+      AC_SEARCH_LIBRARIES(OPENSSL_malloc,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+    else
+      if test -z "$HAVE_SSL"; then
+        AC_SEARCH_STATIC_LIBRARIES(SSL_new,crypto,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssl";AC_DEFINE(HAVE_SSL,1,[static SSL installed])])
+        AC_SEARCH_STATIC_LIBRARIES(OPENSSL_malloc,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
+      fi
+      if test -z "$HAVE_SSL"; then
+        AC_SEARCH_LIBRARIES(SSL_new,crypto,[HAVE_SSL=1;LIBRARIES="$LIBRARIES ssl";AC_DEFINE(HAVE_SSL,1,[SSL installed])])
+        AC_SEARCH_LIBRARIES(OPENSSL_malloc,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+      fi
     fi
   fi
 
-  if test -d libssh2 -o -d "`readlink libssh2`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      AC_MSG_COMPILE([libssh2])
-      result=1
-      if test $result -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            # patch to disable usage of lib-command when RANLIB is set
-            #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
-            #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
-            #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d libssh2 -o -d "`readlink libssh2`" \); then
+    AC_MSG_COMPILE([libssh2])
+    result=1
+    if test $result -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          #   diff -u libssh2-1.4.2.org/m4/libtool.m4 libssh2-1.4.2/m4/libtool.m4 >  libssh2-1.4.2-libtool.patch
+          #   diff -u libssh2-1.4.2.org/aclocal.m4 libssh2-1.4.2/aclocal.m4       >> libssh2-1.4.2-libtool.patch
+          #   diff -u libssh2-1.4.2.org/configure libssh2-1.4.2/configure         >> libssh2-1.4.2-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/libssh2-1.4.2; then
 #              (cd extern/libssh2-1.4.2; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/libssh2-1.4.2-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([libssh2-1.4.2 not available - skipped libtool patch!])
 #            fi
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd libssh2; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --with-libssl-prefix=$cwd/extern \
-          --with-libgcrypt-prefix=$cwd/extern \
-          --disable-shared --enable-static \
-          --disable-examples-build \
-          --enable-debug \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd libssh2; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --with-libssl-prefix=$cwd/extern \
+        --with-libgcrypt-prefix=$cwd/extern \
+        --disable-shared --enable-static \
+        --disable-examples-build \
+        --enable-debug \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd libssh2; make clean; make -j$CPU_CORES -C src) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd libssh2; make clean; make -j$CPU_CORES -C src) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd libssh2; make install-exec install-data) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
-            ;;
-        esac
+    fi
+    if test $result -eq 1; then
+      (cd libssh2; make install-exec install-data) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          (cd extern/lib; ln -s libssh2.lib libssh2.a) 1>/dev/null 2>/dev/null
+          ;;
+      esac
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -3049,7 +3023,7 @@ if test $ENABLE_SSH = "yes"; then
       ;;
   esac
 
-  if test -z "$HAVE_SSL"; then
+  if test -z "$HAVE_SSL" -o -z "$HAVE_CRYPTO"; then
     if test ! \( -d openssl -o -d "`readlink openssl`" \); then
       AC_MSG_WARN([openssl not compiled: openssl package missing])
     fi
@@ -3063,49 +3037,45 @@ fi
 
 # compile/use libidn2
 if test \( $ENABLE_TLS = "yes" \) -o \( $ENABLE_CURL = "yes" \); then
-  if test \( -d libidn2 -o -d "`readlink libidn2`" \) ; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d libidn2 -o -d "`readlink libidn2`" \) ; then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([libidn2])
-      result1=1
-      if test $result -eq 1; then
-        (cd libidn2; ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --disable-shared \
-          --enable-static \
-          --disable-doc \
-          --with-included-libunistring \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    AC_MSG_COMPILE([libidn2])
+    result1=1
+    if test $result -eq 1; then
+      (cd libidn2; ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --disable-shared \
+        --enable-static \
+        --disable-doc \
+        --with-included-libunistring \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd libidn2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd libidn2; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd libidn2; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd libidn2; make install) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -3144,186 +3114,180 @@ fi
 
 # compile/use gnutls
 if test $ENABLE_TLS = "yes"; then
-  if test \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \) -a "$HAVE_IDN2"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d gmp -o -d "`readlink gmp`" \) -a \( -d nettle -o -d "`readlink nettle`" \) -a \( -d gnutls -o -d "`readlink gnutls`" \) -a "$HAVE_IDN2"; then
+    cwd=`pwd`
 
-      if test -z "$HAVE_GCRYPT"; then
-        AC_MSG_WARN([gcrypt is missing. Compiling or linking gnutls may fail!])
-      fi
+    if test -z "$HAVE_GCRYPT"; then
+      AC_MSG_WARN([gcrypt is missing. Compiling or linking gnutls may fail!])
+    fi
 
-      AC_MSG_COMPILE([gmp])
-      result1=1
-      if test $result1 -eq 1; then
-        # Note: clean is obviously not enough, try distclean
-        (cd gmp; make distclean) 1>/dev/null 2>&1
-        if test "$host_cpu" = "x86_64"; then
-          case $host_os in
-            linux-*)
-              case $host_cpu in
-                *86*)
-                  (cd gmp; CFLAGS= ./configure \
-                    --host=$host \
-                    --build=$build \
-                    --prefix=$cwd/extern \
-                    --disable-shared \
-                    --enable-static \
-                    --enable-pic \
-                    --enable-fat \
-                    ABI=64 \
-                  ) 1>$tmpFile 2>&1
-                  ;;
-                arm*)
-                  (cd gmp; CFLAGS= ./configure \
-                    --host=$host \
-                    --build=$build \
-                    --prefix=$cwd/extern \
-                    --disable-shared \
-                    --enable-static \
-                    --enable-pic \
-                    --enable-fat \
-                  ) 1>$tmpFile 2>&1
-                  ;;
-              esac
-              ;;
-            sunos | solaris*)
-              ;;
-            darwin*)
-              ;;
-            windows*|mingw*)
-              (cd gmp; CFLAGS= ./configure \
-                --host=$host \
-                --build=$build \
-                --prefix=$cwd/extern \
-                --disable-shared \
-                --enable-static \
-                --enable-pic \
-                --enable-fat \
-              ) 1>$tmpFile 2>&1
-              ;;
-          esac
-        else
-          (cd gmp; CFLAGS= ./configure \
-            --host=$host \
-            --prefix=$cwd/extern \
-            --disable-shared \
-            --enable-static \
-            --enable-pic \
-            --enable-fat \
-            ABI=32 \
-          ) 1>$tmpFile 2>&1
-        fi
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
-      fi
-      if test $result1 -eq 1; then
-        (cd gmp; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
-      fi
-      if test $result1 -eq 1; then
-        (cd gmp; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
-      fi
-      if test $result1 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-
-      AC_MSG_COMPILE([nettle])
-      result2=1
-      if test $result2 -eq 1; then
-        (cd nettle; ./configure \
+    AC_MSG_COMPILE([gmp])
+    result1=1
+    if test $result1 -eq 1; then
+      # Note: clean is obviously not enough, try distclean
+      (cd gmp; make distclean) 1>/dev/null 2>&1
+      if test "$host_cpu" = "x86_64"; then
+        case $host_os in
+          linux-*)
+            case $host_cpu in
+              *86*)
+                (cd gmp; CFLAGS= ./configure \
+                  --host=$host \
+                  --build=$build \
+                  --prefix=$cwd/extern \
+                  --disable-shared \
+                  --enable-static \
+                  --enable-pic \
+                  --enable-fat \
+                  ABI=64 \
+                ) 1>$tmpFile 2>&1
+                ;;
+              arm*)
+                (cd gmp; CFLAGS= ./configure \
+                  --host=$host \
+                  --build=$build \
+                  --prefix=$cwd/extern \
+                  --disable-shared \
+                  --enable-static \
+                  --enable-pic \
+                  --enable-fat \
+                ) 1>$tmpFile 2>&1
+                ;;
+            esac
+            ;;
+          sunos | solaris*)
+            ;;
+          darwin*)
+            ;;
+          windows*|mingw*)
+            (cd gmp; CFLAGS= ./configure \
+              --host=$host \
+              --build=$build \
+              --prefix=$cwd/extern \
+              --disable-shared \
+              --enable-static \
+              --enable-pic \
+              --enable-fat \
+            ) 1>$tmpFile 2>&1
+            ;;
+        esac
+      else
+        (cd gmp; CFLAGS= ./configure \
           --host=$host \
-          --build=$build \
           --prefix=$cwd/extern \
-          --with-include-path=$cwd/extern/include \
-          --with-lib-path=$cwd/extern/lib \
           --disable-shared \
           --enable-static \
+          --enable-pic \
           --enable-fat \
+          ABI=32 \
         ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
       fi
-      if test $result2 -eq 1; then
-        (cd nettle; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
-      if test $result2 -eq 1; then
-        (cd nettle; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
+    fi
+    if test $result1 -eq 1; then
+      (cd gmp; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
-      if test $result2 -eq 1; then
-        AC_MSG_RESULT([done])
+    fi
+    if test $result1 -eq 1; then
+      (cd gmp; make install) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
+    fi
+    if test $result1 -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
 
-      AC_MSG_COMPILE([gnutls])
-      result3=1
-      if test $result3 -eq 1; then
-        (cd gnutls; LDFLAGS=-L$cwd/extern/lib PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --with-libnettle-prefix=$cwd/extern \
-          --with-included-libtasn1 \
-          --with-included-unistring \
-          --disable-shared \
-          --enable-static \
-          --without-p11-kit \
-          --without-tpm \
-          --disable-tools \
-          --disable-doc \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
-        fi
+    AC_MSG_COMPILE([nettle])
+    result2=1
+    if test $result2 -eq 1; then
+      (cd nettle; ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --with-include-path=$cwd/extern/include \
+        --with-lib-path=$cwd/extern/lib \
+        --disable-shared \
+        --enable-static \
+        --enable-fat \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result3 -eq 1; then
-        (cd gnutls; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
-        fi
+    fi
+    if test $result2 -eq 1; then
+      (cd nettle; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result3 -eq 1; then
-        (cd gnutls; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
-        fi
+    fi
+    if test $result2 -eq 1; then
+      (cd nettle; make install) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result3 -eq 1; then
-        AC_MSG_RESULT([done])
+    fi
+    if test $result2 -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    AC_MSG_COMPILE([gnutls])
+    result3=1
+    if test $result3 -eq 1; then
+      (cd gnutls; LDFLAGS=-L$cwd/extern/lib PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --with-libnettle-prefix=$cwd/extern \
+        --with-included-libtasn1 \
+        --with-included-unistring \
+        --disable-shared \
+        --enable-static \
+        --without-p11-kit \
+        --without-tpm \
+        --disable-tools \
+        --disable-doc \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result3=0
       fi
-    else
-      result1=1
-      result2=1
-      result3=1
+    fi
+    if test $result3 -eq 1; then
+      (cd gnutls; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result3=0
+      fi
+    fi
+    if test $result3 -eq 1; then
+      (cd gnutls; make install) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result3=0
+      fi
+    fi
+    if test $result3 -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
@@ -3390,309 +3354,303 @@ fi
 
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
-  if test \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      dnl compile c-ares, curl, mxml libraries
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
+    dnl compile c-ares, curl, mxml libraries
 
-      cwd=`pwd`
+    cwd=`pwd`
 
-      if test -z "$HAVE_Z"; then
-        AC_MSG_WARN([zlib is missing. Compiling or linking curl may fail!])
-      fi
-      if test -z "$HAVE_ZSTD"; then
-        AC_MSG_WARN([zstd is missing. Compiling or linking curl may fail!])
-      fi
-      if test -z "$HAVE_GNU_TLS"; then
-        AC_MSG_WARN([gnutls is missing. Compiling or linking curl may fail!])
-      fi
-      if test -z "$HAVE_SSL"; then
-        AC_MSG_WARN([libssl is missing. Compiling or linking curl may fail!])
-      fi
-      if test -z "$HAVE_SSH2"; then
-        AC_MSG_WARN([libssh2 is missing. Compiling or linking curl may fail!])
-      fi
-      if test -z "$HAVE_IDN2"; then
-        AC_MSG_WARN([libidn2 is missing. Compiling or linking curl may fail!])
-      fi
+    if test -z "$HAVE_Z"; then
+      AC_MSG_WARN([zlib is missing. Compiling or linking curl may fail!])
+    fi
+    if test -z "$HAVE_ZSTD"; then
+      AC_MSG_WARN([zstd is missing. Compiling or linking curl may fail!])
+    fi
+    if test -z "$HAVE_GNU_TLS"; then
+      AC_MSG_WARN([gnutls is missing. Compiling or linking curl may fail!])
+    fi
+    if test -z "$HAVE_SSL"; then
+      AC_MSG_WARN([libssl is missing. Compiling or linking curl may fail!])
+    fi
+    if test -z "$HAVE_SSH2"; then
+      AC_MSG_WARN([libssh2 is missing. Compiling or linking curl may fail!])
+    fi
+    if test -z "$HAVE_IDN2"; then
+      AC_MSG_WARN([libidn2 is missing. Compiling or linking curl may fail!])
+    fi
 
-      AC_MSG_COMPILE([c-ares])
-      result1=1
-      if test $result1 -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            # patch to disable usage of lib-command when RANLIB is set
-            #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
-            #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
-            #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
-            #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
+    AC_MSG_COMPILE([c-ares])
+    result1=1
+    if test $result1 -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/curl-7.28.1; then
 #              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
 #            fi
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
-      if test $result1 -eq 1; then
-        # Note: https://github.com/c-ares/c-ares/blob/cares-1_14_0/README.msvc#L133-L138
-        install -d c-ares
-        (cd c-ares; CPPFLAGS="-DCARES_STATICLIB" CFLAGS="" LDFLAGS="" ./configure \
+    fi
+    if test $result1 -eq 1; then
+      # Note: https://github.com/c-ares/c-ares/blob/cares-1_14_0/README.msvc#L133-L138
+      install -d c-ares
+      (cd c-ares; CPPFLAGS="-DCARES_STATICLIB" CFLAGS="" LDFLAGS="" ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --disable-shared \
+        --enable-static \
+        --disable-tests \
+        `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      (cd c-ares; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      (cd c-ares; make install) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
+      fi
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          (cd extern/lib; ln -s libcares.lib libcares.a) 1>/dev/null 2>/dev/null
+          ;;
+      esac
+    fi
+    if test $result1 -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    AC_MSG_COMPILE([mxml])
+    result2=1
+    if test $result2 -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
+#TODO: windows cross-build
+#            if test -d extern/curl-7.28.1; then
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
+#            else
+#              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+#            fi
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      (cd mxml; ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --disable-shared \
+        --enable-static \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      (cd mxml; make clean; make -j$CPU_CORES libmxml.a) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      # Note: there is no target to install the library and header files only; do it manually
+      (cd mxml; \
+       make install-libmxml.a; \
+       install -m 644 mxml.h $cwd/extern/include; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
+      fi
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
+          ;;
+      esac
+    fi
+    if test $result2 -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    AC_MSG_COMPILE([curl])
+    result3=1
+    if test $result3 -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
+#TODO: windows cross-build
+#            if test -d extern/curl-7.28.1; then
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
+#            else
+#              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+#            fi
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result3=0
+      fi
+    fi
+    if test $result3 -eq 1; then
+      if test "$host" == "$build"; then
+        # compile build
+# TODO: temporary disabled brotli compression, psl
+        (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
           --host=$host \
           --build=$build \
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
-          --disable-tests \
+          --disable-ldap \
+          --disable-rtsp \
+          --without-librtmp \
+          --without-libpsl \
+          --enable-ares=$cwd/extern \
+          --with-zlib=$cwd/extern \
+          `if test $HAVE_ZSTD = 1; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
+          `if test $HAVE_GNU_TLS = 1; then echo --with-gnutls=$cwd/extern; fi` \
+          `if test $HAVE_SSL = 1; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
+          `if test $HAVE_SSH2 = 1; then echo --with-libssh2=$cwd/extern; fi` \
+--without-brotli \
+--without-libpsl \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
+          result3=0
         fi
-      fi
-      if test $result1 -eq 1; then
-        (cd c-ares; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
-      fi
-      if test $result1 -eq 1; then
-        (cd c-ares; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libcares.lib libcares.a) 1>/dev/null 2>/dev/null
-            ;;
-        esac
-      fi
-      if test $result1 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-
-      AC_MSG_COMPILE([mxml])
-      result2=1
-      if test $result2 -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            # patch to disable usage of lib-command when RANLIB is set
-            #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
-            #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
-            #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
-            #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
-#TODO: windows cross-build
-#            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
-#            else
-#              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
-#            fi
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd mxml; ./configure \
+      else
+        # cross-compile host
+        (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CPPFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32 -liphlpapi -lssp" ./configure \
           --host=$host \
           --build=$build \
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
+          --disable-ldap \
+          --disable-rtsp \
+          --without-librtmp \
+          --without-libpsl \
+          --enable-ares=$cwd/extern \
+          --with-zlib=$cwd/extern \
+          `if test $HAVE_ZSTD = 1; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
+          `if test $HAVE_GNU_TLS = 1; then echo --with-gnutls=$cwd/extern; fi` \
+          `if test $HAVE_SSL = 1; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
+          `if test $HAVE_SSH2 = 1; then echo --with-libssh2=$cwd/extern; fi` \
+          `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
         ) 1>$tmpFile 2>&1
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd mxml; make clean; make -j$CPU_CORES libmxml.a) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        # Note: there is no target to install the library and header files only; do it manually
-        (cd mxml; \
-         make install-libmxml.a; \
-         install -m 644 mxml.h $cwd/extern/include; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
-            ;;
-        esac
-      fi
-      if test $result2 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-
-      AC_MSG_COMPILE([curl])
-      result3=1
-      if test $result3 -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            # patch to disable usage of lib-command when RANLIB is set
-            #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
-            #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
-            #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
-            #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
-#TODO: windows cross-build
-#            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
-#            else
-#              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
-#            fi
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
           result3=0
         fi
       fi
-      if test $result3 -eq 1; then
-        if test "$host" == "$build"; then
-          # compile build
-# TODO: temporary disabled brotli compression, psl
-          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-            --disable-shared \
-            --enable-static \
-            --disable-ldap \
-            --disable-rtsp \
-            --without-librtmp \
-            --without-libpsl \
-            --enable-ares=$cwd/extern \
-            --with-zlib=$cwd/extern \
-            `if test $HAVE_ZSTD = 1; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
-            `if test $HAVE_GNU_TLS = 1; then echo --with-gnutls=$cwd/extern; fi` \
-            `if test $HAVE_SSL = 1; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
-            `if test $HAVE_SSH2 = 1; then echo --with-libssh2=$cwd/extern; fi` \
---without-brotli \
---without-libpsl \
-            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-          ) 1>$tmpFile 2>&1
-          if test $? -ne 0; then
-            AC_MSG_RESULT([fail (configure)])
-            AC_MSG_OUTPUT_LOG($tmpFile)
-            result3=0
-          fi
-        else
-          # cross-compile host
-          (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CPPFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32 -liphlpapi -lssp" ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-            --disable-shared \
-            --enable-static \
-            --disable-ldap \
-            --disable-rtsp \
-            --without-librtmp \
-            --without-libpsl \
-            --enable-ares=$cwd/extern \
-            --with-zlib=$cwd/extern \
-            `if test $HAVE_ZSTD = 1; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
-            `if test $HAVE_GNU_TLS = 1; then echo --with-gnutls=$cwd/extern; fi` \
-            `if test $HAVE_SSL = 1; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
-            `if test $HAVE_SSH2 = 1; then echo --with-libssh2=$cwd/extern; fi` \
-            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-          ) 1>$tmpFile 2>&1
-          if test $? -ne 0; then
-            AC_MSG_RESULT([fail (configure)])
-            AC_MSG_OUTPUT_LOG($tmpFile)
-            result3=0
-          fi
-        fi
+    fi
+    if test $result3 -eq 1; then
+      (cd curl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result3=0
       fi
-      if test $result3 -eq 1; then
-        (cd curl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
-        fi
+    fi
+    if test $result3 -eq 1; then
+      (cd curl; make install) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result3=0
       fi
-      if test $result3 -eq 1; then
-        (cd curl; make install) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
-        fi
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
-            ;;
-        esac
-      fi
-      if test $result3 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result1=1
-      result2=1
-      result3=1
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          (cd extern/lib; ln -s libcurl.lib libcurl.a) 1>$tmpFile 2>&1
+          ;;
+      esac
+    fi
+    if test $result3 -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
@@ -3787,21 +3745,120 @@ if test $ENABLE_CURL = "yes"; then
 fi
 
 # create sqlite3.c
-if test -d sqlite -o -d "`readlink sqlite`"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-    dnl create sqlite3.c almagation
+if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d sqlite -o -d "`readlink sqlite`" \); then
+  dnl create sqlite3.c almagation
 
+  cwd=`pwd`
+
+  AC_MSG_CREATE([sqlite3.c])
+  result=1
+  if test $result -eq 1; then
+    # Note: no cross-compile; create source only
+    (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" LDFLAGS="" ./configure \
+      --build=$build \
+      --disable-tcl \
+      --enable-fts4\
+    ) 1>$tmpFile 2>&1
+    if test $? -ne 0; then
+      AC_MSG_RESULT([fail (configure)])
+      AC_MSG_OUTPUT_LOG($tmpFile)
+      result=0
+    fi
+  fi
+  if test $result -eq 1; then
+    (cd sqlite; make clean; make sqlite3.c) 1>$tmpFile 2>&1
+    if test $? -ne 0; then
+      AC_MSG_RESULT([fail (make)])
+      AC_MSG_OUTPUT_LOG($tmpFile)
+      result=0
+    fi
+  fi
+  if test $result -eq 1; then
+    (cd sqlite; \
+     install -d $cwd/extern/sources; \
+     install -d $cwd/extern/include; \
+     install -m 644 sqlite3.c $cwd/extern/sources; \
+     install -m 644 sqlite3.h $cwd/extern/include; \
+    ) 1>$tmpFile 2>&1
+  fi
+  if test $result -eq 1; then
+    AC_MSG_RESULT([done])
+    HAVE_SQLITE3=1
+    AC_DEFINE(HAVE_SQLITE3,1,[sqlite3 installed (local)])
+  else
+    AC_MSG_ERROR([Cannot create sqlite3.c])
+  fi
+else
+  if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(sqlite3_config,sqlite3,[HAVE_SQLITE3=1;LIBRARIES="$LIBRARIES sqlite3";AC_DEFINE(HAVE_SQLITE3,1,[sqlite3 installed])])
+  else
+    AC_SEARCH_STATIC_LIBRARIES(sqlite3_config,sqlite3,[HAVE_SQLITE3=1;STATIC_LIBRARIES="$STATIC_LIBRARIES sqlite3";AC_DEFINE(HAVE_SQLITE3,1,[static sqlite3 installed])])
+  fi
+fi
+
+if test -z "$HAVE_SQLITE3"; then
+  AC_MSG_ERROR([sqlite3 package required])
+fi
+
+# compile MariaDB client
+if test $ENABLE_MARIADB = "yes"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d zlib -o -d "`readlink zlib`" \) -a \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
     cwd=`pwd`
 
-    AC_MSG_CREATE([sqlite3.c])
+    AC_MSG_COMPILE([MariaDB client])
     result=1
     if test $result -eq 1; then
-      # Note: no cross-compile; create source only
-      (cd sqlite; CFLAGS="-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT" LDFLAGS="" ./configure \
-        --build=$build \
-        --disable-tcl \
-        --enable-fts4\
-      ) 1>$tmpFile 2>&1
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
+          #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
+#TODO            (cd mariadb-connector-c; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/mariadb-connector-c-3.1.13.patch) 1>$tmpFile 2>&1
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+            -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+            -DWITH_EXTERNAL_ZLIB=ON \
+            -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+            -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+            `if test $HAVE_SSL = 1; then echo -DWITH_SSL=OPENSSL; fi` \
+            -DWITH_CURL=OFF \
+            -DWITH_UNIT_TESTS=OFF \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+          ) 1>$tmpFile 2>&1
+          ;;
+        windows*|mingw*)
+          (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="-D_WIN32_WINNT=0x0600 -D_POSIX_C_SOURCE" CFLAGS="-D_WIN32_WINNT=0x0600 -D_POSIX_C_SOURCE" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
+            -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
+            -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
+            -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+            -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
+            -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+            -DWITH_EXTERNAL_ZLIB=ON \
+            -DZLIB_INCLUDE_DIR=$cwd/extern/include \
+            -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
+            `if test $HAVE_SSL = 1; then echo -DWITH_SSL=OPENSSL; fi` \
+            -DWITH_CURL=OFF \
+            -DWITH_UNIT_TESTS=OFF \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
+          ) 1>$tmpFile 2>&1
+          ;;
+      esac
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
         AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3809,7 +3866,10 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
       fi
     fi
     if test $result -eq 1; then
-      (cd sqlite; make clean; make sqlite3.c) 1>$tmpFile 2>&1
+      (cd mariadb-connector-c; \
+       make clean; \
+       make -C libmariadb mariadbclient -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         AC_MSG_OUTPUT_LOG($tmpFile)
@@ -3817,114 +3877,18 @@ if test -d sqlite -o -d "`readlink sqlite`"; then
       fi
     fi
     if test $result -eq 1; then
-      (cd sqlite; \
-       install -d $cwd/extern/sources; \
-       install -d $cwd/extern/include; \
-       install -m 644 sqlite3.c $cwd/extern/sources; \
-       install -m 644 sqlite3.h $cwd/extern/include; \
+      (cd mariadb-connector-c; \
+       make -C include install PREFIX=$cwd/extern; \
+       install -t $cwd/extern/lib libmariadb/libmariadbclient.a; \
       ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
     fi
     if test $result -eq 1; then
       AC_MSG_RESULT([done])
-    else
-      AC_MSG_ERROR([Cannot create sqlite3.c])
-    fi
-  fi
-fi
-
-# compile MariaDB client
-if test $ENABLE_MARIADB = "yes"; then
-  if test \( -d zlib -o -d "`readlink zlib`" \) -a \( -d mariadb-connector-c -o -d "`readlink mariadb-connector-c`" \); then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
-
-      AC_MSG_COMPILE([MariaDB client])
-      result=1
-      if test $result -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            # patch to fix compile with GNUTLS, fix signature mysql_load_plugin()
-            #   diff -u -r mariadb-connector-c-3.1.13-src.org mariadb-connector-c-3.1.13-src > misc/mariadb-connector-c-3.1.13.patch
-#TODO            (cd mariadb-connector-c; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/mariadb-connector-c-3.1.13.patch) 1>$tmpFile 2>&1
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
-              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-              -DWITH_EXTERNAL_ZLIB=ON \
-              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-              `if test $HAVE_SSL = 1; then echo -DWITH_SSL=OPENSSL; fi` \
-              -DWITH_CURL=OFF \
-              -DWITH_UNIT_TESTS=OFF \
-              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
-            ) 1>$tmpFile 2>&1
-            ;;
-          windows*|mingw*)
-            (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="-D_WIN32_WINNT=0x0600 -D_POSIX_C_SOURCE" CFLAGS="-D_WIN32_WINNT=0x0600 -D_POSIX_C_SOURCE" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
-              -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
-              -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
-              -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
-              -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
-              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-              -DWITH_EXTERNAL_ZLIB=ON \
-              -DZLIB_INCLUDE_DIR=$cwd/extern/include \
-              -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
-              `if test $HAVE_SSL = 1; then echo -DWITH_SSL=OPENSSL; fi` \
-              -DWITH_CURL=OFF \
-              -DWITH_UNIT_TESTS=OFF \
-              `if test "$ENABLE_DEBUG" = "yes"; then echo -DCMAKE_BUILD_TYPE=Debug; fi` \
-            ) 1>$tmpFile 2>&1
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd mariadb-connector-c; \
-         make clean; \
-         make -C libmariadb mariadbclient -j$CPU_CORES; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        (cd mariadb-connector-c; \
-         make -C include install PREFIX=$cwd/extern; \
-         install -t $cwd/extern/lib libmariadb/libmariadbclient.a; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-      fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
     fi
 
     if test $result -eq 1; then
@@ -3975,77 +3939,73 @@ fi
 
 # compile PostgreSQL client
 if test $ENABLE_POSTGRESQL = "yes"; then
-  if test -d postgresql -o -d "`readlink postgresql`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d postgresql -o -d "`readlink postgresql`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([PostgreSQL connector])
-      result=1
-      if test $result -eq 1; then
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-              --with-includes=$cwd/extern/include \
-              --with-libraries=$cwd/extern/lib \
-              `if test $HAVE_SSL = 1; then echo --with-ssl=openssl; fi` \
-              --without-readline \
-              `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-            ) 1>$tmpFile 2>&1
-            ;;
-          windows*|mingw*)
-            (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-              --with-includes=$cwd/extern/include \
-              --with-libraries=$cwd/extern/lib \
-              `if test $HAVE_SSL = 1; then echo --with-ssl=openssl; fi` \
-              --without-readline \
-              `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
-            ) 1>$tmpFile 2>&1
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    AC_MSG_COMPILE([PostgreSQL connector])
+    result=1
+    if test $result -eq 1; then
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --with-includes=$cwd/extern/include \
+            --with-libraries=$cwd/extern/lib \
+            `if test $HAVE_SSL = 1; then echo --with-ssl=openssl; fi` \
+            --without-readline \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+          ) 1>$tmpFile 2>&1
+          ;;
+        windows*|mingw*)
+          (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --with-includes=$cwd/extern/include \
+            --with-libraries=$cwd/extern/lib \
+            `if test $HAVE_SSL = 1; then echo --with-ssl=openssl; fi` \
+            --without-readline \
+            `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
+          ) 1>$tmpFile 2>&1
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd postgresql; \
-         make -C src/common           MAKELEVEL=0 -j$CPU_CORES; \
-         make -C src/port             MAKELEVEL=0 -j$CPU_CORES; \
-         make -C src/interfaces/libpq MAKELEVEL=0 -j$CPU_CORES; \
-         make -C src/interfaces/ecpg  MAKELEVEL=0 -j$CPU_CORES; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd postgresql; \
+       make -C src/common           MAKELEVEL=0 -j$CPU_CORES; \
+       make -C src/port             MAKELEVEL=0 -j$CPU_CORES; \
+       make -C src/interfaces/libpq MAKELEVEL=0 -j$CPU_CORES; \
+       make -C src/interfaces/ecpg  MAKELEVEL=0 -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd postgresql; \
-         make -C src/include          MAKELEVEL=0 install PREFIX=$cwd/extern; \
-         make -C src/common           MAKELEVEL=0 install PREFIX=$cwd/extern; \
-         make -C src/port             MAKELEVEL=0 install PREFIX=$cwd/extern; \
-         make -C src/interfaces/libpq MAKELEVEL=0 install PREFIX=$cwd/extern; \
-         make -C src/interfaces/ecpg  MAKELEVEL=0 install PREFIX=$cwd/extern; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd postgresql; \
+       make -C src/include          MAKELEVEL=0 install PREFIX=$cwd/extern; \
+       make -C src/common           MAKELEVEL=0 install PREFIX=$cwd/extern; \
+       make -C src/port             MAKELEVEL=0 install PREFIX=$cwd/extern; \
+       make -C src/interfaces/libpq MAKELEVEL=0 install PREFIX=$cwd/extern; \
+       make -C src/interfaces/ecpg  MAKELEVEL=0 install PREFIX=$cwd/extern; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -4061,26 +4021,9 @@ if test $ENABLE_POSTGRESQL = "yes"; then
     dnl search for installed pq library
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-      AC_SEARCH_LIBRARIES(pg_printf,pgport,[HAVE_POSTGRESQL=1;LIBRARIES="pgport $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgport installed])])
-      AC_SEARCH_LIBRARIES(scram_HMAC_init,pgcommon,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon installed])])
-      AC_SEARCH_LIBRARIES(pg_encoding_to_char,pgcommon_shlib,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon_shlib $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon_shlib installed])])
-      AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pqtypes installed])])
+      AC_SEARCH_LIBRARIES(PQconnectdbParams,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
     else
-      if test -z "$HAVE_POSTGRESQL"; then
-        AC_SEARCH_STATIC_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-        AC_SEARCH_STATIC_LIBRARIES(pg_printf,pgport,[HAVE_POSTGRESQL=1;LIBRARIES="pgport $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgport installed])])
-        AC_SEARCH_STATIC_LIBRARIES(scram_HMAC_init,pgcommon,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon installed])])
-        AC_SEARCH_STATIC_LIBRARIES(pg_encoding_to_char,pgcommon_shlib,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon_shlib $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon_shlib installed])])
-        AC_SEARCH_STATIC_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pgtypes";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-      fi
-      if test -z "$HAVE_POSTGRESQL"; then
-        AC_SEARCH_LIBRARIES(pq_init,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-        AC_SEARCH_LIBRARIES(pg_printf,pgport,[HAVE_POSTGRESQL=1;LIBRARIES="pgport $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgport installed])])
-        AC_SEARCH_LIBRARIES(scram_HMAC_init,pgcommon,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon installed])])
-        AC_SEARCH_LIBRARIES(pg_encoding_to_char,pgcommon_shlib,[HAVE_POSTGRESQL=1;LIBRARIES="pgcommon_shlib $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pgcommon_shlib installed])])
-        AC_SEARCH_LIBRARIES(PGTYPESnumeric_to_long,pgtypes,[HAVE_POSTGRESQL=1;LIBRARIES="pgtypes $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
-      fi
+      AC_SEARCH_STATIC_LIBRARIES(PQconnectdbParams,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
     fi
   fi
 
@@ -4105,126 +4048,121 @@ fi
 
 # compile/use cdio
 if test $ENABLE_ISO9660 = "yes"; then
-  if test \( -d libiconv -o -d "`readlink libiconv`" \) -a \( -d libcdio -o -d "`readlink libcdio`" \); then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d libiconv -o -d "`readlink libiconv`" \) -a \( -d libcdio -o -d "`readlink libcdio`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([libiconv])
-      result1=1
-      if test $result1 -eq 1; then
-        (cd libiconv; CFLAGS="-fPIC" LDFLAGS="" ./configure \
+    AC_MSG_COMPILE([libiconv])
+    result1=1
+    if test $result1 -eq 1; then
+      (cd libiconv; CFLAGS="-fPIC" LDFLAGS="" ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --disable-shared \
+        --enable-static \
+        --with-pic \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG(libiconv/config.log)
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      (cd libiconv; make clean; make) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG(libiconv/config.log)
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      (cd libiconv; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG(libiconv/config.log)
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    AC_MSG_COMPILE([libcdio])
+    result2=1
+    if test $result2 -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          ;;
+      esac
+      if test $result2 -ne 1; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+      fi
+    fi
+    if test $result2 -eq 1; then
+      if test "$ENABLE_DEBUG" = "yes"; then
+        (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
           --host=$host \
           --build=$build \
           --prefix=$cwd/extern \
+          --with-libiconv-prefix=$cwd/extern \
+          --disable-cxx \
+          --enable-static=iso9660 \
           --disable-shared \
-          --enable-static \
-          --with-pic \
+          --without-cd-drive \
+          --without-cd-info \
+          --without-cdda-player \
+          --without-iso-info \
+          --without-iso-read \
         ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG(libiconv/config.log)
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+      else
+        (cd libcdio; ./configure \
+          --host=$host \
+          --prefix=$cwd/extern \
+          --disable-cxx \
+          --enable-static=iso9660 \
+          --disable-shared \
+          --without-cd-drive \
+          --without-cd-info \
+          --without-cdda-player \
+          --without-iso-info \
+          --without-iso-read \
+        ) 1>$tmpFile 2>&1
       fi
-      if test $result1 -eq 1; then
-        (cd libiconv; make clean; make) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG(libiconv/config.log)
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result1 -eq 1; then
-        (cd libiconv; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG(libiconv/config.log)
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+    fi
+    if test $result2 -eq 1; then
+      (cd libcdio; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result1 -eq 1; then
-        AC_MSG_RESULT([done])
+    fi
+    if test $result2 -eq 1; then
+      (cd libcdio; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-
-      AC_MSG_COMPILE([libcdio])
-      result2=1
-      if test $result2 -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            ;;
-        esac
-        if test $result2 -ne 1; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-        fi
-      fi
-      if test $result2 -eq 1; then
-        if test "$ENABLE_DEBUG" = "yes"; then
-          (cd libcdio; CFLAGS="-g -O0" CXXFLAGS="-g -O0" LDFLAGS="" ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-            --with-libiconv-prefix=$cwd/extern \
-            --disable-cxx \
-            --enable-static=iso9660 \
-            --disable-shared \
-            --without-cd-drive \
-            --without-cd-info \
-            --without-cdda-player \
-            --without-iso-info \
-            --without-iso-read \
-          ) 1>$tmpFile 2>&1
-        else
-          (cd libcdio; ./configure \
-            --host=$host \
-            --prefix=$cwd/extern \
-            --disable-cxx \
-            --enable-static=iso9660 \
-            --disable-shared \
-            --without-cd-drive \
-            --without-cd-info \
-            --without-cdda-player \
-            --without-iso-info \
-            --without-iso-read \
-          ) 1>$tmpFile 2>&1
-        fi
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd libcdio; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd libcdio; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result1=1
-      result2=1
+    fi
+    if test $result2 -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
@@ -4272,202 +4210,197 @@ fi
 
 # compile/use libsmb2
 if test $ENABLE_SMBCLIENT = "yes"; then
-  if test -d libsmb2 -o -d "`readlink libsmb2`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d libsmb2 -o -d "`readlink libsmb2`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([libkrb5])
-      result1=1
-      if test $result1 -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            ;;
-        esac
-        if test $result1 -ne 1; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-        fi
-      fi
+    AC_MSG_COMPILE([libkrb5])
+    result1=1
+    if test $result1 -eq 1; then
       case $host_os in
-        linux-*| sunos | solaris* | darwin*)
-          if test $result1 -eq 1; then
-            (cd krb5/src; CFLAGS="-fPIC" LDFLAGS="" ./configure \
-              --prefix=$cwd/extern \
-              --host=$host \
-              --build=$build \
-              --enable-static \
-              --disable-shared \
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          ;;
+      esac
+      if test $result1 -ne 1; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+      fi
+    fi
+    case $host_os in
+      linux-*| sunos | solaris* | darwin*)
+        if test $result1 -eq 1; then
+          (cd krb5/src; CFLAGS="-fPIC" LDFLAGS="" ./configure \
+            --prefix=$cwd/extern \
+            --host=$host \
+            --build=$build \
+            --enable-static \
+            --disable-shared \
+          ) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (configure)])
+            AC_MSG_OUTPUT_LOG(krb5/src/config.log)
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result1=0
+          fi
+        fi
+        if test $result1 -eq 1; then
+          # Note: build only lib: tests do not compile with static libraries
+          (   cd krb5/src \
+           && make clean \
+           && make -j$CPU_CORES -C util \
+           && make -j$CPU_CORES -C include \
+           && make -j$CPU_CORES -C lib \
+          ) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (make)])
+            AC_MSG_OUTPUT_LOG(krb5/src/config.log)
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result1=0
+          fi
+        fi
+        if test $result1 -eq 1; then
+          # Note: work-around partial build: create required install directories
+          $INSTALL -d $cwd/extern/include/krb5
+          $INSTALL -d $cwd/extern/include/gssapi
+          $INSTALL -d $cwd/extern/include/gssrpc
+          $INSTALL -d $cwd/extern/include/kadm5
+          $INSTALL -d $cwd/extern/sbin
+          $INSTALL -d $cwd/extern/bin/compute_et
+          $INSTALL -d $cwd/extern/share/man/man1
+          (cd krb5/src;  make -C util install PREFIX=$cwd/extern && make -C include install PREFIX=$cwd/extern && make -C lib install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (install)])
+            AC_MSG_OUTPUT_LOG(krb5/src/config.log)
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result1=0
+          fi
+        fi
+        if test $result1 -eq 1; then
+          AC_MSG_RESULT([done])
+        fi
+        ;;
+      windows*|mingw*)
+        # not supported on Windows
+        AC_MSG_RESULT([skipped])
+        ;;
+    esac
+
+    AC_MSG_COMPILE([libsmb2])
+    result2=1
+    if test $result2 -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          ;;
+      esac
+      if test $result2 -ne 1; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+      fi
+    fi
+    if test $result2 -eq 1; then
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          if test "$ENABLE_DEBUG" = "yes"; then
+            (cd libsmb2; $CMAKE \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DLibKrb5_INCLUDE_DIR=$cwd/extern/include \
+              -DLibKrb5_LIBRARY=$cwd/extern/lib/libkrb5.a \
+              -DBUILD_SHARED_LIBS=0 \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
             ) 1>$tmpFile 2>&1
-            if test $? -ne 0; then
-              AC_MSG_RESULT([fail (configure)])
-              AC_MSG_OUTPUT_LOG(krb5/src/config.log)
-              AC_MSG_OUTPUT_LOG($tmpFile)
-              result1=0
-            fi
-          fi
-          if test $result1 -eq 1; then
-            # Note: build only lib: tests do not compile with static libraries
-            (   cd krb5/src \
-             && make clean \
-             && make -j$CPU_CORES -C util \
-             && make -j$CPU_CORES -C include \
-             && make -j$CPU_CORES -C lib \
+          else
+            (cd libsmb2; $CMAKE \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_SYSTEM_NAME=Linux \
+              -DLibKrb5_INCLUDE_DIR=$cwd/extern/include \
+              -DLibKrb5_LIBRARY=$cwd/extern/lib/libkrb5.a \
+              -DBUILD_SHARED_LIBS=0 \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
             ) 1>$tmpFile 2>&1
-            if test $? -ne 0; then
-              AC_MSG_RESULT([fail (make)])
-              AC_MSG_OUTPUT_LOG(krb5/src/config.log)
-              AC_MSG_OUTPUT_LOG($tmpFile)
-              result1=0
-            fi
           fi
-          if test $result1 -eq 1; then
-            # Note: work-around partial build: create required install directories
-            $INSTALL -d $cwd/extern/include/krb5
-            $INSTALL -d $cwd/extern/include/gssapi
-            $INSTALL -d $cwd/extern/include/gssrpc
-            $INSTALL -d $cwd/extern/include/kadm5
-            $INSTALL -d $cwd/extern/sbin
-            $INSTALL -d $cwd/extern/bin/compute_et
-            $INSTALL -d $cwd/extern/share/man/man1
-            (cd krb5/src;  make -C util install PREFIX=$cwd/extern && make -C include install PREFIX=$cwd/extern && make -C lib install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-            if test $? -ne 0; then
-              AC_MSG_RESULT([fail (install)])
-              AC_MSG_OUTPUT_LOG(krb5/src/config.log)
-              AC_MSG_OUTPUT_LOG($tmpFile)
-              result1=0
-            fi
-          fi
-          if test $result1 -eq 1; then
-            AC_MSG_RESULT([done])
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (configure)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result2=0
           fi
           ;;
         windows*|mingw*)
-          # not supported on Windows
-          AC_MSG_RESULT([skipped])
+          if test "$ENABLE_DEBUG" = "yes"; then
+            (cd libsmb2; pwd; $CMAKE \
+              -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_SYSTEM_NAME=Windows \
+              -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+              -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
+              -DCMAKE_FIND_ROOT_PATH=/usr/x86_64-w64-mingw32 \
+              -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+              -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+              -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+              -DCMAKE_C_FLAGS="-D_WINDOWS -D_WIN32_WINNT=0x0600" \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              \
+              -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
+              -DBUILD_SHARED_LIBS=OFF
+            ) 1>$tmpFile 2>&1
+          else
+            (cd libsmb2; pwd; $CMAKE \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_SYSTEM_NAME=Windows \
+              -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
+              -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
+              -DCMAKE_FIND_ROOT_PATH=/usr/x86_64-w64-mingw32 \
+              -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
+              -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
+              -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
+              -DCMAKE_C_FLAGS="-D_WINDOWS -D_WIN32_WINNT=0x0600" \
+              -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+              \
+              -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
+              -DBUILD_SHARED_LIBS=OFF
+            ) 1>$tmpFile 2>&1
+          fi
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (configure)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result2=0
+          fi
           ;;
       esac
-
-      AC_MSG_COMPILE([libsmb2])
-      result2=1
-      if test $result2 -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            ;;
-        esac
-        if test $result2 -ne 1; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-        fi
+    fi
+    if test $result2 -eq 1; then
+      (cd libsmb2; \
+       make clean; \
+       make -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result2 -eq 1; then
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            if test "$ENABLE_DEBUG" = "yes"; then
-              (cd libsmb2; $CMAKE \
-                -DCMAKE_BUILD_TYPE=Debug \
-                -DCMAKE_SYSTEM_NAME=Linux \
-                -DLibKrb5_INCLUDE_DIR=$cwd/extern/include \
-                -DLibKrb5_LIBRARY=$cwd/extern/lib/libkrb5.a \
-                -DBUILD_SHARED_LIBS=0 \
-                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-              ) 1>$tmpFile 2>&1
-            else
-              (cd libsmb2; $CMAKE \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_SYSTEM_NAME=Linux \
-                -DLibKrb5_INCLUDE_DIR=$cwd/extern/include \
-                -DLibKrb5_LIBRARY=$cwd/extern/lib/libkrb5.a \
-                -DBUILD_SHARED_LIBS=0 \
-                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-              ) 1>$tmpFile 2>&1
-            fi
-            if test $? -ne 0; then
-              AC_MSG_RESULT([fail (configure)])
-              AC_MSG_OUTPUT_LOG($tmpFile)
-              result2=0
-            fi
-            ;;
-          windows*|mingw*)
-            if test "$ENABLE_DEBUG" = "yes"; then
-              (cd libsmb2; pwd; $CMAKE \
-                -DCMAKE_BUILD_TYPE=Debug \
-                -DCMAKE_SYSTEM_NAME=Windows \
-                -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
-                -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
-                -DCMAKE_FIND_ROOT_PATH=/usr/x86_64-w64-mingw32 \
-                -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-                -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-                -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-                -DCMAKE_C_FLAGS="-D_WINDOWS -D_WIN32_WINNT=0x0600" \
-                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-                \
-                -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
-                -DBUILD_SHARED_LIBS=OFF
-              ) 1>$tmpFile 2>&1
-            else
-              (cd libsmb2; pwd; $CMAKE \
-                -DCMAKE_BUILD_TYPE=Release \
-                -DCMAKE_SYSTEM_NAME=Windows \
-                -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
-                -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
-                -DCMAKE_FIND_ROOT_PATH=/usr/x86_64-w64-mingw32 \
-                -DCMAKE_FIND_ROOT_PATH_MODE_PROGRAM=NEVER \
-                -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=ONLY \
-                -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=ONLY \
-                -DCMAKE_C_FLAGS="-D_WINDOWS -D_WIN32_WINNT=0x0600" \
-                -DCMAKE_INSTALL_PREFIX=$cwd/extern \
-                \
-                -DOPENSSL_INCLUDE_DIR=$cwd/extern/include \
-                -DBUILD_SHARED_LIBS=OFF
-              ) 1>$tmpFile 2>&1
-            fi
-            if test $? -ne 0; then
-              AC_MSG_RESULT([fail (configure)])
-              AC_MSG_OUTPUT_LOG($tmpFile)
-              result2=0
-            fi
-            ;;
-        esac
+    fi
+    if test $result2 -eq 1; then
+      (cd libsmb2; \
+       make install PREFIX=$cwd/extern; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
       fi
-      if test $result2 -eq 1; then
-        (cd libsmb2; \
-         make clean; \
-         make -j$CPU_CORES; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd libsmb2; \
-         make install PREFIX=$cwd/extern; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result1=1
-      result2=1
+    fi
+    if test $result2 -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
@@ -4532,88 +4465,84 @@ fi
 
 # compile/use pcre
 if test $ENABLE_PCRE = "yes"; then
-  if test -d pcre -o -d "`readlink pcre`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d pcre -o -d "`readlink pcre`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([pcre])
-      result=1
-      if test $result -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            # patch to disable usage of lib-command when RANLIB is set
-            #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
-            #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
-            #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
-            #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
+    AC_MSG_COMPILE([pcre])
+    result=1
+    if test $result -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          #   diff -u pcre-8.32.org/m4/libtool.m4 pcre-8.32/m4/libtool.m4 >  pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/aclocal.m4 pcre-8.32/aclocal.m4       >> pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/Makefile.in pcre-8.32/Makefile.in     >> pcre-8.32-libtool.patch
+          #   diff -u pcre-8.32.org/configure pcre-8.32/configure         >> pcre-8.32-libtool.patch
 #TODO: windows cross-build
 #            if test -d extern/pcre-8.32; then
 #              (cd extern/pcre-8.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pcre-8.32-libtool.patch) 1>$tmpFile 2>&1
 #            else
 #              AC_MSG_WARN([pcre-8.32 not available - skipped libtool patch!])
 #            fi
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd pcre; ./configure \
-          --host=$host \
-          --build=$build \
-          --prefix=$cwd/extern \
-          --disable-shared \
-          --enable-static \
-          --enable-utf8 \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd pcre; ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --disable-shared \
+        --enable-static \
+        --enable-utf8 \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd pcre; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd pcre; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd pcre; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            (cd extern/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
-            (cd extern/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
-            ;;
-        esac
+    fi
+    if test $result -eq 1; then
+      (cd pcre; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          (cd extern/lib; ln -s libpcre.lib libpcre.a) 1>/dev/null 2>/dev/null
+          (cd extern/lib; ln -s libpcreposix.lib libpcreposix.a) 1>/dev/null 2>/dev/null
+          ;;
+      esac
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -4630,13 +4559,13 @@ if test $ENABLE_PCRE = "yes"; then
     dnl search for installed pcre library
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(pcre,pcre_compile,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
+      AC_SEARCH_LIBRARIES(pcre_compile,pcre,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
     else
       if test -z "$HAVE_PCRE"; then
-        AC_SEARCH_STATIC_LIBRARIES(pcre,pcre_compile,[HAVE_PCRE=1;CC_DEFINES="$CC_DEFINES PCRE_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[static pcre installed])])
+        AC_SEARCH_STATIC_LIBRARIES(pcre_compile,pcre,[HAVE_PCRE=1;CC_DEFINES="$CC_DEFINES PCRE_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[static pcre installed])])
       fi
       if test -z "$HAVE_PCRE"; then
-        AC_SEARCH_LIBRARIES(pcre,pcre_compile,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
+        AC_SEARCH_LIBRARIES(pcre_compile,pcre,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
       fi
     fi
   fi
@@ -4662,71 +4591,67 @@ fi
 
 # compile/use PAR2 library
 if test $ENABLE_PAR2 = "yes"; then
-  if test -d par2cmdline -o -d "`readlink par2cmdline`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d par2cmdline -o -d "`readlink par2cmdline`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([PAR2])
-      result=1
-      if test $result -eq 1; then
-        (cd par2cmdline; ./automake.sh) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (automake)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    AC_MSG_COMPILE([PAR2])
+    result=1
+    if test $result -eq 1; then
+      (cd par2cmdline; ./automake.sh) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (automake)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            (cd par2cmdline; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-              --disable-openmp \
-            ) 1>$tmpFile 2>&1
-            ;;
-          windows*|mingw*)
-            (cd par2cmdline; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-              --disable-openmp \
-            ) 1>$tmpFile 2>&1
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          (cd par2cmdline; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --disable-openmp \
+          ) 1>$tmpFile 2>&1
+          ;;
+        windows*|mingw*)
+          (cd par2cmdline; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --disable-openmp \
+          ) 1>$tmpFile 2>&1
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd par2cmdline; \
-         make -j$CPU_CORES libpar2.a; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd par2cmdline; \
+       make -j$CPU_CORES libpar2.a; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd par2cmdline; \
-         cp src/libpar2.h $cwd/extern/include; \
-         cp libpar2.a $cwd/extern/lib; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd par2cmdline; \
+       cp src/libpar2.h $cwd/extern/include; \
+       cp libpar2.a $cwd/extern/lib; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -4774,66 +4699,62 @@ fi
 
 # compile/use isofs library
 if test $ENABLE_ISOFS = "yes"; then
-  if test -d libisofs -o -d "`readlink libisofs`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d libisofs -o -d "`readlink libisofs`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([libisofs])
-      result=1
-      if test $result -eq 1; then
-        (cd libisofs; ./bootstrap) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (automake)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    AC_MSG_COMPILE([libisofs])
+    result=1
+    if test $result -eq 1; then
+      (cd libisofs; ./bootstrap) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (automake)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            (cd libisofs; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-            ) 1>$tmpFile 2>&1
-            ;;
-          windows*|mingw*)
-            (cd libisofs; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-            ) 1>$tmpFile 2>&1
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          (cd libisofs; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+          ) 1>$tmpFile 2>&1
+          ;;
+        windows*|mingw*)
+          (cd libisofs; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+          ) 1>$tmpFile 2>&1
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd libisofs; \
-         make -j$CPU_CORES; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd libisofs; \
+       make -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd libisofs; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd libisofs; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -4879,233 +4800,233 @@ if test $ENABLE_ISOFS = "yes"; then
   fi
 fi
 
-# compile/use xfsprogrs (libuuid liburcu libxfs)
+# compile/use xfsprogrs (libuuid, libblkid, liburcu, libfrog, libxfs)
 if test $ENABLE_XFS = "yes"; then
-  if test \( -d util-linux -o -d "`readlink util-linux`" \) -a \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \) -a \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d util-linux -o -d "`readlink util-linux`" \) -a \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \); then
+    cwd=`pwd`
 
-      dnl compile libuuid, libblkid from util-linux
-      AC_MSG_COMPILE([libuuid])
-      result1=1
-      if test $result1 -eq 1; then
-        (cd util-linux; ./autogen.sh) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (autogen)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+    dnl compile libuuid, libblkid from util-linux
+    AC_MSG_COMPILE([libuuid+libblkid])
+    result1=1
+    if test $result1 -eq 1; then
+      (cd util-linux; ./autogen.sh) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (autogen)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
-      if test $result1 -eq 1; then
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            (cd util-linux; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-              --disable-all-programs --enable-libuuid --enable-libblkid \
-            ) 1>$tmpFile 2>&1
-            ;;
-          windows*|mingw*)
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+    fi
+    if test $result1 -eq 1; then
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          (cd util-linux; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --disable-all-programs --enable-libuuid --enable-libblkid \
+          ) 1>$tmpFile 2>&1
+          ;;
+        windows*|mingw*)
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
-      if test $result1 -eq 1; then
-        (cd util-linux; \
-         make -j$CPU_CORES; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+    fi
+    if test $result1 -eq 1; then
+      (cd util-linux; \
+       make -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
-      if test $result1 -eq 1; then
-        (cd util-linux; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result1=0
-        fi
+    fi
+    if test $result1 -eq 1; then
+      (cd util-linux; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
       fi
-      if test $result1 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-
-      AC_MSG_COMPILE([userspace-rcu])
-      result2=1
-      if test $result2 -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            (cd userspace-rcu; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-            ) 1>$tmpFile 2>&1
-            ;;
-          windows*|mingw*)
-            (cd userspace-rcu; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-            ) 1>$tmpFile 2>&1
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd userspace-rcu; \
-         make -j$CPU_CORES; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        (cd userspace-rcu; \
-         make install PREFIX=$cwd/extern; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result2=0
-        fi
-      fi
-      if test $result2 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-
-      AC_MSG_COMPILE([xfsprogs])
-      result3=1
-      if test $result3 -eq 1; then
-        case $host_os in
-          linux-*)
-            ;;
-          sunos | solaris*)
-            ;;
-          darwin*)
-            ;;
-          windows*|mingw*)
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
-        fi
-      fi
-      if test $result3 -eq 1; then
-        (cd xfsprogs; make configure) 1>$tmpFile 2>&1
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            (cd xfsprogs; CC="$CC" CPPFLAGS="" CFLAGS="-I$cwd/extern/include" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-            ) 1>$tmpFile 2>&1
-            ;;
-          windows*|mingw*)
-            (cd xfsprogs; CC="$CC" CPPFLAGS="" CFLAGS="-I$cwd/extern/include" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-            ) 1>$tmpFile 2>&1
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
-        fi
-      fi
-
-      if test $result3 -eq 1; then
-        (   cd xfsprogs \
-         && make headers \
-         && make -j$CPU_CORES -C include install-headers \
-         && make -j$CPU_CORES -C libxfs install-headers \
-         && make -j$CPU_CORES -C include \
-         && make -j$CPU_CORES -C libfrog \
-         && make -j$CPU_CORES -C libxfs \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
-        fi
-      fi
-      if test $result3 -eq 1; then
-        (   cd xfsprogs \
-         && make -j$CPU_CORES -C libfrog install-dev \
-         && make -j$CPU_CORES -C libxfs install-dev \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
-        fi
-      fi
-      if test $result3 -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result1=1
-      result2=1
-      result3=1
+    fi
+    if test $result1 -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
-    if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
+    AC_MSG_COMPILE([userspace-rcu])
+    result2=1
+    if test $result2 -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          (cd userspace-rcu; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+          ) 1>$tmpFile 2>&1
+          ;;
+        windows*|mingw*)
+          (cd userspace-rcu; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+          ) 1>$tmpFile 2>&1
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      (cd userspace-rcu; \
+       make -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      (cd userspace-rcu; \
+       make install PREFIX=$cwd/extern; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result2=0
+      fi
+    fi
+    if test $result2 -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    if test $result1 -eq 1 -a $result2 -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES xfs frog urcu uuid blkid"
+        LIBRARIES="$LIBRARIES frog urcu uuid blkid"
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu uuid blkid"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES frog urcu uuid blkid"
       fi
       HAVE_UUID=1
       HAVE_RCU=1
-      HAVE_XFS=1
-      AC_DEFINE(HAVE_XFS,1,[xfs installed (local)])
     fi
   else
-    dnl search for installed libxfs, libfrog, liburcu libraries
+    dnl search for installed libfrog, liburcu, libuuid, libblkid libraries
 
-# TODO: frog, rcu
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu uuid blkid $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
+      AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="frog urcu uuid blkid $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
     else
       if test -z "$HAVE_XFSPROGS"; then
-        AC_SEARCH_STATIC_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES xfs frog urcu uuid blkid";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
+        AC_SEARCH_STATIC_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES frog urcu uuid blkid";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
       fi
       if test -z "$HAVE_XFSPROGS"; then
-        AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="xfs frog urcu uuid blkid $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
+        AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="frog urcu uuid blkid $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
       fi
+    fi
+  fi
+
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
+    AC_MSG_COMPILE([xfsprogs])
+    result1=1
+    if test $result1 -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      (cd xfsprogs; make configure) 1>$tmpFile 2>&1
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          (cd xfsprogs; CC="$CC" CPPFLAGS="" CFLAGS="-I$cwd/extern/include" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+          ) 1>$tmpFile 2>&1
+          ;;
+        windows*|mingw*)
+          (cd xfsprogs; CC="$CC" CPPFLAGS="" CFLAGS="-I$cwd/extern/include" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+          ) 1>$tmpFile 2>&1
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
+      fi
+    fi
+
+    if test $result1 -eq 1; then
+      (   cd xfsprogs \
+       && make headers \
+       && make -j$CPU_CORES -C include install-headers \
+       && make -j$CPU_CORES -C libxfs install-headers \
+       && make -j$CPU_CORES -C include \
+       && make -j$CPU_CORES -C libfrog \
+       && make -j$CPU_CORES -C libxfs \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      (   cd xfsprogs \
+       && make -j$CPU_CORES -C libfrog install-dev \
+       && make -j$CPU_CORES -C libxfs install-dev \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result1=0
+      fi
+    fi
+    if test $result1 -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    if test $result1 -eq 1; then
+      # Note: only static libxfs available
+      STATIC_LIBRARIES="$STATIC_LIBRARIES xfs"
+      HAVE_XFS=1
+      AC_DEFINE(HAVE_XFS,1,[xfs installed (local)])
     fi
   fi
 
@@ -5136,66 +5057,62 @@ fi
 
 # compile/use burn library
 if test $ENABLE_BURN = "yes"; then
-  if test -d libburn -o -d "`readlink libburn`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d libburn -o -d "`readlink libburn`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([libburn])
-      result=1
-      if test $result -eq 1; then
-        (cd libburn; ./bootstrap) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (automake)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    AC_MSG_COMPILE([libburn])
+    result=1
+    if test $result -eq 1; then
+      (cd libburn; ./bootstrap) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (automake)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            (cd libburn; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-            ) 1>$tmpFile 2>&1
-            ;;
-          windows*|mingw*)
-            (cd libburn; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-            ) 1>$tmpFile 2>&1
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          (cd libburn; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+          ) 1>$tmpFile 2>&1
+          ;;
+        windows*|mingw*)
+          (cd libburn; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+          ) 1>$tmpFile 2>&1
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd libburn; \
-         make -j$CPU_CORES; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd libburn; \
+       make -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd libburn; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd libburn; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -5243,63 +5160,59 @@ fi
 
 # compile/use libmount
 if test $ENABLE_MOUNT = "yes"; then
-  if test -d util-linux -o -d "`readlink util-linux`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d util-linux -o -d "`readlink util-linux`" \); then
+    cwd=`pwd`
 
-      dnl compile libmount from util-linux
-      AC_MSG_COMPILE([libmount])
-      result=1
-      if test $result -eq 1; then
-        (cd util-linux; ./autogen.sh) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (autogen)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    dnl compile libmount from util-linux
+    AC_MSG_COMPILE([libmount])
+    result=1
+    if test $result -eq 1; then
+      (cd util-linux; ./autogen.sh) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (autogen)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        case $host_os in
-          linux-* | sunos | solaris* | darwin*)
-            (cd util-linux; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
-              --host=$host \
-              --build=$build \
-              --prefix=$cwd/extern \
-              --disable-all-programs --enable-libmount --enable-libblkid \
-            ) 1>$tmpFile 2>&1
-            ;;
-          windows*|mingw*)
-            ;;
-        esac
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      case $host_os in
+        linux-* | sunos | solaris* | darwin*)
+          (cd util-linux; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+            --host=$host \
+            --build=$build \
+            --prefix=$cwd/extern \
+            --disable-all-programs --enable-libmount --enable-libblkid \
+          ) 1>$tmpFile 2>&1
+          ;;
+        windows*|mingw*)
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd util-linux; \
-         make -j$CPU_CORES; \
-        ) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd util-linux; \
+       make -j$CPU_CORES; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd util-linux; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd util-linux; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -5355,43 +5268,39 @@ case $host_os in
     ;;
   windows*|mingw*)
     if test $ENABLE_PTHREADS_W32 = "yes"; then
-      if test -d pthreads-w32 -o -d "`readlink pthreads-w32`"; then
-        if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-          cwd=`pwd`
+      if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d pthreads-w32 -o -d "`readlink pthreads-w32`" \); then
+        cwd=`pwd`
 
-          AC_MSG_COMPILE([pthreads-w32])
-          result=1
-          if test $result -eq 1; then
-            # patch to fix warnings:
-            #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
+        AC_MSG_COMPILE([pthreads-w32])
+        result=1
+        if test $result -eq 1; then
+          # patch to fix warnings:
+          #   diff -u pthreads-w32-2-9-1-release.org pthreads-w32-2-9-1-release > pthreads-w32-2-9-1-release.patch
 #TODO            (cd pthreads-w32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/pthreads-w32-2-9-1-release.patch) 1>$tmpFile 2>&1
-            if test $? -ne 0; then
-              AC_MSG_RESULT([fail (patch)])
-              AC_MSG_OUTPUT_LOG($tmpFile)
-              result=0
-            fi
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (patch)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result=0
           fi
-          if test $result -eq 1; then
-            if test "$ENABLE_DEBUG" = "yes"; then
-              (cd pthreads-w32; make clean; make CROSS="$host-" GC-static-debug) 1>$tmpFile 2>&1
-            else
-              (cd pthreads-w32; make clean; make CROSS="$host-" GC-static) 1>$tmpFile 2>&1
-            fi
-            if test $? -ne 0; then
-              AC_MSG_RESULT([fail (make)])
-              AC_MSG_OUTPUT_LOG($tmpFile)
-              result=0
-            fi
+        fi
+        if test $result -eq 1; then
+          if test "$ENABLE_DEBUG" = "yes"; then
+            (cd pthreads-w32; make clean; make CROSS="$host-" GC-static-debug) 1>$tmpFile 2>&1
+          else
+            (cd pthreads-w32; make clean; make CROSS="$host-" GC-static) 1>$tmpFile 2>&1
           fi
-          if test $result -eq 1; then
-            (cd pthreads-w32; install -m 644 pthread.h sched.h semaphore.h $cwd/extern/include) 1>/dev/null
-            (cd pthreads-w32; install -m 644 libpthreadGC2.a $cwd/extern/lib) 1>/dev/null
+          if test $? -ne 0; then
+            AC_MSG_RESULT([fail (make)])
+            AC_MSG_OUTPUT_LOG($tmpFile)
+            result=0
           fi
-          if test $result -eq 1; then
-            AC_MSG_RESULT([done])
-          fi
-        else
-          result=1
+        fi
+        if test $result -eq 1; then
+          (cd pthreads-w32; install -m 644 pthread.h sched.h semaphore.h $cwd/extern/include) 1>/dev/null
+          (cd pthreads-w32; install -m 644 libpthreadGC2.a $cwd/extern/lib) 1>/dev/null
+        fi
+        if test $result -eq 1; then
+          AC_MSG_RESULT([done])
         fi
 
         if test $result -eq 1; then
@@ -5411,77 +5320,73 @@ esac
 
 # compile/use binutils
 if test $ENABLE_BFD = "yes"; then
-  if test -d binutils -o -d "`readlink binutils`"; then
-    if test "$ENABLE_EXTERN_COMPILE" = "yes"; then
-      cwd=`pwd`
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d binutils -o -d "`readlink binutils`" \); then
+    cwd=`pwd`
 
-      AC_MSG_COMPILE([bfd])
-      result=1
-      if test $result -eq 1; then
-        # patch to fix memory leak
-        #   diff -u binutils-2.32.org/bfd/dwarf2.c binutils-2.32/bfd/dwarf2.c > ../misc/binutils-2.32-dwarf2-leak.patch
+    AC_MSG_COMPILE([bfd])
+    result=1
+    if test $result -eq 1; then
+      # patch to fix memory leak
+      #   diff -u binutils-2.32.org/bfd/dwarf2.c binutils-2.32/bfd/dwarf2.c > ../misc/binutils-2.32-dwarf2-leak.patch
 #TODO        (cd extern/binutils-2.32; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/binutils-2.32-dwarf2-leak.patch) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (patch)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
-        # Note: - fix distlean
-        #       - use cpu+os to avoid "unknown" in name which cause
-        #         using of wrong tool names by binutils build!
-        (cd binutils; make distclean; find . -type f -name config.cache | xargs rm) 1>/dev/null 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+      # Note: - fix distlean
+      #       - use cpu+os to avoid "unknown" in name which cause
+      #         using of wrong tool names by binutils build!
+      (cd binutils; make distclean; find . -type f -name config.cache | xargs rm) 1>/dev/null 2>&1
 #            --host=$build_cpu-$build_os
 
-        if test "$ENABLE_DEBUG" = "yes"; then
-          (cd binutils; CC="" CFLAGS="-g -O0" CXXFLAGS="-g -O0" LD="" LDFLAGS="" ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-            --disable-host-shared \
-            --disable-ld \
-          ) 1>$tmpFile 2>&1
-        else
-          (cd binutils; CC="" CFLAGS="" CXXFLAGS="" LD="" LDFLAGS="" ./configure \
-            --host=$host \
-            --build=$build \
-            --prefix=$cwd/extern \
-            --disable-host-shared \
-            --disable-ld \
-          ) 1>$tmpFile 2>&1
-        fi
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (configure)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+      if test "$ENABLE_DEBUG" = "yes"; then
+        (cd binutils; CC="" CFLAGS="-g -O0" CXXFLAGS="-g -O0" LD="" LDFLAGS="" ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --disable-host-shared \
+          --disable-ld \
+        ) 1>$tmpFile 2>&1
+      else
+        (cd binutils; CC="" CFLAGS="" CXXFLAGS="" LD="" LDFLAGS="" ./configure \
+          --host=$host \
+          --build=$build \
+          --prefix=$cwd/extern \
+          --disable-host-shared \
+          --disable-ld \
+        ) 1>$tmpFile 2>&1
       fi
-      if test $result -eq 1; then
-        (cd binutils; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (make)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
       fi
-      if test $result -eq 1; then
-        (cd binutils; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
-        if test $? -ne 0; then
-          AC_MSG_RESULT([fail (install)])
-          AC_MSG_OUTPUT_LOG($tmpFile)
-          result=0
-        fi
+    fi
+    if test $result -eq 1; then
+      (cd binutils; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd binutils; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
 
-        # fix incomplete install: does not install all header files?
-        install -d $cwd/extern/include
-        install -m 644 binutils/include/libiberty.h binutils/include/demangle.h $cwd/extern/include
-        install -d $cwd/extern/lib
-        install -m 644 binutils/libiberty/libiberty.a $cwd/extern/lib
-      fi
-      if test $result -eq 1; then
-        AC_MSG_RESULT([done])
-      fi
-    else
-      result=1
+      # fix incomplete install: does not install all header files?
+      install -d $cwd/extern/include
+      install -m 644 binutils/include/libiberty.h binutils/include/demangle.h $cwd/extern/include
+      install -d $cwd/extern/lib
+      install -m 644 binutils/libiberty/libiberty.a $cwd/extern/lib
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
     fi
 
     if test $result -eq 1; then
@@ -5837,6 +5742,7 @@ AC_CHECK_FUNCTION(libssh2_keepalive_send,               AC_DEFINE(HAVE_SSH2_KEEP
 AC_CHECK_FUNCTION(libssh2_scp_send64,                   AC_DEFINE(HAVE_SSH2_SCP_SEND64,                   1,[SSH2 has libssh2_scp_send64() function]))
 AC_CHECK_FUNCTION(libssh2_sftp_seek64,                  AC_DEFINE(HAVE_SSH2_SFTP_SEEK64,                  1,[SSH2 has libssh2_sftp_seek64() function]))
 AC_CHECK_FUNCTION(libssh2_sftp_seek2,                   AC_DEFINE(HAVE_SSH2_SFTP_SEEK2,                   1,[SSH2 has libssh2_sftp_seek2() function]))
+AC_CHECK_FUNCTION(libssh2_session_callback_set2,        AC_DEFINE(HAVE_SSH2_SESSION_CALLBACK_SET2,        1,[SSH2 has libssh2_session_callback_set2() function]))
 
 AC_CHECK_FUNCTION(SHA256_Init,                          AC_DEFINE(HAVE_SHA256_INIT,                       1,[OpenSSL has SHA256_Init() function]))
 AC_CHECK_FUNCTION(SHA256_Final,                         AC_DEFINE(HAVE_SHA256_FINAL,                      1,[OpenSSL has SHA256_Final() function]))

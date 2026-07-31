@@ -245,9 +245,12 @@
 #undef HAVE_ICU
 
 /* icudata installed */
+#undef HAVE_ICUDATA
+
+/* static icui18n installed */
 #undef HAVE_ICUI18N
 
-/* icuuc installed */
+/* static icuuc installed */
 #undef HAVE_ICUUC
 
 /* Define to 1 if you have the <icu.h> header file. */
@@ -547,6 +550,9 @@
 /* SMB_SUPER_MAGIC available */
 #undef HAVE_SMB_SUPER_MAGIC
 
+/* static sqlite3 installed */
+#undef HAVE_SQLITE3
+
 /* SSH2 installed */
 #undef HAVE_SSH2
 
@@ -562,6 +568,9 @@
 /* SSH2 has libssh2_scp_send64() function */
 #undef HAVE_SSH2_SCP_SEND64
 
+/* SSH2 has libssh2_session_callback_set2() function */
+#undef HAVE_SSH2_SESSION_CALLBACK_SET2
+
 /* SSH2 has libssh2_sftp_seek2() function */
 #undef HAVE_SSH2_SFTP_SEEK2
 
@@ -571,7 +580,7 @@
 /* SSH2 has libssh2_userauth_publickey_frommemory() function */
 #undef HAVE_SSH2_USERAUTH_PUBLICKEY_FROMMEMORY
 
-/* ssl installed (local) */
+/* SSL installed */
 #undef HAVE_SSL
 
 /* stat() available */
@@ -793,7 +802,7 @@
 /* xdelta3 installed */
 #undef HAVE_XDELTA3
 
-/* libxfs installed */
+/* xfs installed (local) */
 #undef HAVE_XFS
 
 /* z installed */

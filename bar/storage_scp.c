@@ -64,16 +64,29 @@
 
 #ifdef HAVE_SSH2
 
-#define SCP_SET_SEND_CALLBACK(socketHandle,new) \
-  (ssize_t(*)(libssh2_socket_t,const void *,size_t,int,void**))libssh2_session_callback_set2(Network_getSSHSession(socketHandle), \
-                                                                                             LIBSSH2_CALLBACK_SEND, \
-                                                                                             (libssh2_cb_generic *)(new) \
-                                                                                            )
-#define SCP_SET_RECEIVE_CALLBACK(socketHandle,new) \
-  (ssize_t(*)(libssh2_socket_t,void *,size_t,int,void**))libssh2_session_callback_set2(Network_getSSHSession(socketHandle), \
-                                                                                       LIBSSH2_CALLBACK_RECV, \
-                                                                                       (libssh2_cb_generic *)(new) \
-                                                                                      )
+#ifdef HAVE_SSH2_SESSION_CALLBACK_SET2
+  #define SCP_SET_SEND_CALLBACK(socketHandle,new) \
+    (ssize_t(*)(libssh2_socket_t,const void *,size_t,int,void**))libssh2_session_callback_set2(Network_getSSHSession(socketHandle), \
+                                                                                               LIBSSH2_CALLBACK_SEND, \
+                                                                                               (libssh2_cb_generic*)(new) \
+                                                                                              )
+  #define SCP_SET_RECEIVE_CALLBACK(socketHandle,new) \
+    (ssize_t(*)(libssh2_socket_t,void *,size_t,int,void**))libssh2_session_callback_set2(Network_getSSHSession(socketHandle), \
+                                                                                         LIBSSH2_CALLBACK_RECV, \
+                                                                                         (libssh2_cb_generic*)(new) \
+                                                                                        )
+#else
+  #define SCP_SET_SEND_CALLBACK(socketHandle,new) \
+    (ssize_t(*)(libssh2_socket_t,const void *,size_t,int,void**))libssh2_session_callback_set(Network_getSSHSession(socketHandle), \
+                                                                                              LIBSSH2_CALLBACK_SEND, \
+                                                                                              (void*)(new) \
+                                                                                             )
+  #define SCP_SET_RECEIVE_CALLBACK(socketHandle,new) \
+    (ssize_t(*)(libssh2_socket_t,void *,size_t,int,void**))libssh2_session_callback_set(Network_getSSHSession(socketHandle), \
+                                                                                        LIBSSH2_CALLBACK_RECV, \
+                                                                                        (void*)(new) \
+                                                                                       )
+#endif
 
 #endif /* HAVE_SSH2 */
 
