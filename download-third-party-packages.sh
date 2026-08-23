@@ -68,7 +68,7 @@ SMB2_VERSION=2.6.2
 PAR2_VERSION=1.2.0
 UTIL_LINUX_VERSION="v2.41.1"
 ISOFS_VERSION="release-1.5.6.pl01"
-RCU_VERSION=0.15.3
+URCU_VERSION=0.15.3
 XFSPROGS_VERSION=6.16.0
 BURN_VERSION="release-1.5.6"
 BINUTILS_VERSION=2.45
@@ -121,7 +121,7 @@ gnutlsFlag=0
 cdioFlag=0
 smb2Flag=0
 isofsFlag=0
-rcuFlag=0
+urcuFlag=0
 utilLinuxFlag=0
 xfsProgsFlag=0
 burnFlag=0
@@ -289,9 +289,9 @@ while test $# != 0; do
           allFlag=0
           isofsFlag=1
           ;;
-        rcu)
+        urcu|rcu)
           allFlag=0
-          rcuFlag=1
+          urcuFlag=1
           ;;
         uuid|blkid|mount|util-linux)
           allFlag=0
@@ -428,9 +428,9 @@ while test $# != 0; do
       allFlag=0
       isofsFlag=1
       ;;
-    rcu)
+    urcu|rcu)
       allFlag=0
-      rcuFlag=1
+      urcuFlag=1
       ;;
     uuid|blkid|mount|util-linux)
       allFlag=0
@@ -509,8 +509,8 @@ if test $helpFlag -eq 1; then
   $ECHO " util-linux"
   $ECHO " isofs"
   $ECHO " burn"
-  $ECHO " rcu"
-  $ECHO " progs"
+  $ECHO " urcu"
+  $ECHO " xfs"
   $ECHO " binutils"
   $ECHO " launch4j"
   $ECHO " jre-windows"
@@ -1197,7 +1197,7 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $gnutlsFlag -eq 1; then
+  if test $allFlag -eq 1 -o $curlFlag -eq 1; then
     # nettle
     (
      install -d "$destinationDirectory"
@@ -2169,13 +2169,13 @@ if test $cleanFlag -eq 0; then
     esac
   fi
 
-  if test $allFlag -eq 1 -o $rcuFlag -eq 1; then
+  if test $allFlag -eq 1 -o $urcuFlag -eq 1; then
     (
      install -d "$destinationDirectory"
      cd "$destinationDirectory"
 
-     $ECHO_NO_NEW_LINE "Get userspace-rcu ($RCU_VERSION)..."
-     fileName="userspace-rcu-$RCU_VERSION.tar.bz2"
+     $ECHO_NO_NEW_LINE "Get userspace-rcu ($URCU_VERSION)..."
+     fileName="userspace-rcu-$URCU_VERSION.tar.bz2"
      if test ! -f $fileName; then
        if test -n "$localDirectory" -a -f $localDirectory/$fileName; then
          $LN -s $localDirectory/$fileName $fileName
@@ -2198,7 +2198,7 @@ if test $cleanFlag -eq 0; then
          fatalError "decompress"
        fi
 
-       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/userspace-rcu-$RCU_VERSION userspace-rcu)
+       (cd "$workingDirectory"; $LN -sfT $destinationDirectory/userspace-rcu-$URCU_VERSION userspace-rcu)
        if test $? -ne 0; then
          fatalError "symbolic link"
        fi
@@ -2823,7 +2823,7 @@ else
     $RMF $workingDirectory/libisofs
   fi
 
-  if test $allFlag -eq 1 -o $rcuFlag -eq 1; then
+  if test $allFlag -eq 1 -o $urcuFlag -eq 1; then
     # librcu
     (
       cd "$destinationDirectory"
@@ -2833,7 +2833,7 @@ else
   fi
 
   if test $allFlag -eq 1 -o $xfsProgsFlag -eq 1; then
-    # librcu
+    # xfsprogs
     (
       cd "$destinationDirectory"
       $RMRF xfsprogs-*

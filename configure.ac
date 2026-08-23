@@ -333,20 +333,21 @@ AC_DEFUN([AC_SEARCH_LIBRARIES],
       ac_search_libraries_save_CFLAGS="$CFLAGS"
       ac_search_libraries_save_LIBS="$LIBS"
 
-      CFLAGS="$CFLAGS"
+      CFLAGS="$CFLAGS -Wl,-t"
       for define in $CC_DEFINES ""; do
         if test -n "$define"; then
           CFLAGS="$CFLAGS -D$define"
         fi
       done
       for ac_library in $2 ""; do
+        LIBS="-Wl,-t -Wl,-Bdynamic"
         if test -z "$ac_library"; then
-          ac_result="none required"
+          ac_result="none"
+          LIBS="-Wl,-t -Wl,-Bdynamic $ac_search_libraries_save_LIBS"
         else
           ac_result=-l$ac_library
-          LIBS="-l$ac_library $ac_search_libraries_save_LIBS"
+          LIBS="-Wl,-t -Wl,-Bdynamic -l$ac_library $ac_search_libraries_save_LIBS"
         fi
-
         AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
                                         [`if test -z "$5"; then echo "extern void $1();"; fi`
                                          return (int)$1;
@@ -364,7 +365,7 @@ AC_DEFUN([AC_SEARCH_LIBRARIES],
     ]
   )
   AS_VAR_COPY([ac_result],[ac_search_libraries])
-  AS_IF([test "$ac_result" != no],[test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" $3],[$4])
+  AS_IF([test "$ac_result" != no],[test "$ac_result" = "none" || LIBS="$ac_result $LIBS" $3],[$4])
   AS_VAR_POPDEF([ac_search_libraries])dnl
 ])
 
@@ -383,34 +384,29 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
       ac_search_static_libraries_save_LIBS="$LIBS"
 
       dnl test static linkage
-      CFLAGS="$CFLAGS"
+      CFLAGS="$CFLAGS -Wl,-t"
       for define in $CC_DEFINES ""; do
         if test -n "$define"; then
           CFLAGS="$CFLAGS -D$define"
         fi
       done
-      ac_libraries=""
       for ac_library in $2; do
-        if test -n "$ac_libraries"; then
-          ac_libraries="$ac_libraries -l$ac_library"
+        if test -z "$ac_library"; then
+          ac_result="none"
+          LIBS="-Wl,-t -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
         else
-          ac_libraries="-l$ac_library"
+          ac_result="-l:lib$ac_library.a"
+          LIBS="-Wl,-t -l:lib$ac_library.a -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
         fi
+        AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
+                                        [`if test -z "$5"; then echo "extern void $1();"; fi`
+                                         return (int)$1;
+                                        ]
+                                       )
+                       ],
+                       [AS_VAR_SET([ac_search_static_libraries],[$ac_result]); break]
+                      )
       done
-      LIBS="-Wl,-Bstatic $ac_libraries -Wl,-Bdynamic $ac_search_static_libraries_save_LIBS"
-      if test -z "$ac_libraries"; then
-        ac_result="none required"
-      else
-        ac_result=$ac_libraries
-      fi
-      AC_LINK_IFELSE([AC_LANG_PROGRAM([`echo $5|sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`],
-                                      [`if test -z "$5"; then echo "extern void $1();"; fi`
-                                       return (int)$1;
-                                      ]
-                                     )
-                     ],
-                     [AS_VAR_SET([ac_search_static_libraries],[$ac_result]); break]
-                    )
       AS_VAR_SET_IF([ac_search_static_libraries],,[AS_VAR_SET([ac_search_static_libraries],[no])])
 
       dnl restore C compiler settings
@@ -419,7 +415,7 @@ AC_DEFUN([AC_SEARCH_STATIC_LIBRARIES],
     ]
   )
   AS_VAR_COPY([ac_result],[ac_search_static_libraries])
-  AS_IF([test "$ac_result" != no],[test "$ac_result" = "none required" || LIBS="$ac_result $LIBS" $3],[$4])
+  AS_IF([test "$ac_result" != no],[test "$ac_result" = "none" || LIBS="$ac_result $LIBS" $3],[$4])
   AS_VAR_POPDEF([ac_search_static_libraries])dnl
 ])
 
@@ -1785,6 +1781,7 @@ dnl -------- mandatory headers/functions/definitions/libraries ---------
 
 case $host_os in
   linux-*)
+    AC_SEARCH_LIBRARIES(xmalloc,iberty,[LIBRARIES="$LIBRARIES iberty"],AC_ERROR([iberty library not found]))
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
@@ -1792,6 +1789,7 @@ case $host_os in
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     ;;
   sunos | solaris*)
+    AC_SEARCH_LIBRARIES(xmalloc,iberty,[LIBRARIES="$LIBRARIES iberty"],AC_ERROR([iberty library not found]))
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
@@ -1799,6 +1797,7 @@ case $host_os in
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     ;;
   darwin*)
+    AC_SEARCH_LIBRARIES(xmalloc,iberty,[LIBRARIES="$LIBRARIES iberty"],AC_ERROR([iberty library not found]))
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
@@ -1971,11 +1970,15 @@ else
   dnl search for installed icu libraries
 
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
+    AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICU=1;HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])],,unicode/ustring.h)
     if test -z "$HAVE_ICUUC"; then
-      AC_SEARCH_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICU=1;HAVE_ICUUC=1;LIBRARIES="$LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[icuuc installed])],,unicode/ustring.h)
+      # Note: fallback static
+      AC_SEARCH_STATIC_LIBRARIES(u_strToUpper,icuuc,[HAVE_ICU=1;HAVE_ICUUC=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icuuc";AC_DEFINE(HAVE_ICUUC,1,[static icuuc installed])],,unicode/ustring.h)
     fi
+    AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICU=1;HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])],,unicode/uregex.h)
     if test -z "$HAVE_ICUI18N"; then
-      AC_SEARCH_LIBRARIES(uregex_open,icui18n,[HAVE_ICU=1;HAVE_ICUI18N=1;LIBRARIES="$LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[icui18n installed])],,unicode/uregex.h)
+      # Note: fallback static
+      AC_SEARCH_STATIC_LIBRARIES(uregex_open,icui18n,[HAVE_ICU=1;HAVE_ICUI18N=1;STATIC_LIBRARIES="$STATIC_LIBRARIES icui18n";AC_DEFINE(HAVE_ICUI18N,1,[static icui18n installed])],,unicode/uregex.h)
     fi
     # Note: libicudata cannot be searched, because it does not offer any function
     if test -n "$HAVE_ICU"; then
@@ -2050,11 +2053,14 @@ else
 
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_Z=1;LIBRARIES="z $LIBRARIES";AC_DEFINE(HAVE_Z,1,[z installed])])
-  else
     if test -z "$HAVE_Z"; then
+      # Note: fallback static
       AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
     fi
+  else
+    AC_SEARCH_STATIC_LIBRARIES(zlibVersion,z,[HAVE_Z=1;STATIC_LIBRARIES="$STATIC_LIBRARIES z";AC_DEFINE(HAVE_Z,1,[z installed])])
     if test -z "$HAVE_Z"; then
+      # Note: fallback dynamic
       AC_SEARCH_LIBRARIES(zlibVersion,z,[HAVE_Z=1;LIBRARIES="z $LIBRARIES";AC_DEFINE(HAVE_Z,1,[z installed])])
     fi
   fi
@@ -2122,11 +2128,14 @@ if test $ENABLE_BZ2 = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="bz2 $LIBRARIES";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
-    else
       if test -z "$HAVE_BZ2"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[static bzip2 installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bz2";AC_DEFINE(HAVE_BZ2,1,[static bzip2 installed])])
       if test -z "$HAVE_BZ2"; then
+      # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(BZ2_bzCompressInit,bz2,[HAVE_BZ2=1;LIBRARIES="bz2 $LIBRARIES";AC_DEFINE(HAVE_BZ2,1,[bzip2 installed])])
       fi
     fi
@@ -2231,11 +2240,14 @@ if test $ENABLE_LZMA = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="lzma $LIBRARIES";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
-    else
       if test -z "$HAVE_LZMA"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(lzma_easy_encoder,lzma,[HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[static lzma installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(lzma_easy_encoder,lzma,[HAVE_LZMA=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzma";AC_DEFINE(HAVE_LZMA,1,[static lzma installed])])
       if test -z "$HAVE_LZMA"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(lzma_easy_encoder,lzma,[HAVE_LZMA=1;LIBRARIES="lzma $LIBRARIES";AC_DEFINE(HAVE_LZMA,1,[lzma installed])])
       fi
     fi
@@ -2327,19 +2339,22 @@ if test $ENABLE_LZO = "yes"; then
         STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2"
       fi
       HAVE_LZO=1
-      AC_DEFINE(HAVE_LZO,1,[lzo installed (local)])
+      AC_DEFINE(HAVE_LZO,1,[lzo2 installed (local)])
     fi
   else
     dnl search for installed lzo library
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
-    else
+      AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo2,[HAVE_LZO=1;LIBRARIES="$LIBRARIES lzo2";AC_DEFINE(HAVE_LZO,1,[lzo2 installed])])
       if test -z "$HAVE_LZO"; then
-        AC_SEARCH_STATIC_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2";AC_DEFINE(HAVE_LZO,1,[static lzo installed])])
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(lzo1x_1_compress,lzo2,[HAVE_LZO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2";AC_DEFINE(HAVE_LZO,1,[static lzo2 installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(lzo1x_1_compress,lzo2,[HAVE_LZO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lzo2";AC_DEFINE(HAVE_LZO,1,[static lzo2 installed])])
       if test -z "$HAVE_LZO"; then
-        AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo,[HAVE_LZO=1;LIBRARIES="lzo2 $LIBRARIES";AC_DEFINE(HAVE_LZO,1,[lzo installed])])
+        # Note: fallback dynamic
+        AC_SEARCH_LIBRARIES(lzo1x_1_compress,lzo2,[HAVE_LZO=1;LIBRARIES="$LIBRARIES lzo2";AC_DEFINE(HAVE_LZO,1,[lzo2 installed])])
       fi
     fi
   fi
@@ -2412,11 +2427,14 @@ if test $ENABLE_LZ4 = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;LIBRARIES="lz4 $LIBRARIES";AC_DEFINE(HAVE_LZ4,1,[lz4 installed])])
-    else
       if test -z "$HAVE_LZ4"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lz4";AC_DEFINE(HAVE_LZ4,1,[static lz4 installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;STATIC_LIBRARIES="$STATIC_LIBRARIES lz4";AC_DEFINE(HAVE_LZ4,1,[static lz4 installed])])
       if test -z "$HAVE_LZ4"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(LZ4_compress,lz4,[HAVE_LZ4=1;LIBRARIES="lz4 $LIBRARIES";AC_DEFINE(HAVE_LZ4,1,[lz4 installed])])
       fi
     fi
@@ -2494,11 +2512,14 @@ if test $ENABLE_ZSTD = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;LIBRARIES="zstd $LIBRARIES";AC_DEFINE(HAVE_ZSTD,1,[zstd installed])])
-    else
       if test -z "$HAVE_ZSTD"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;CC_DEFINES="$CC_DEFINES ZSTD_STATIC_LINKING_ONLY";STATIC_LIBRARIES="$STATIC_LIBRARIES zstd";AC_DEFINE(HAVE_ZSTD,1,[static zstd installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;CC_DEFINES="$CC_DEFINES ZSTD_STATIC_LINKING_ONLY";STATIC_LIBRARIES="$STATIC_LIBRARIES zstd";AC_DEFINE(HAVE_ZSTD,1,[static zstd installed])])
       if test -z "$HAVE_ZSTD"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(ZSTD_compress,zstd,[HAVE_ZSTD=1;LIBRARIES="zstd $LIBRARIES";AC_DEFINE(HAVE_ZSTD,1,[zstd installed])])
       fi
     fi
@@ -2553,7 +2574,6 @@ if test $ENABLE_XDELTA3 = "yes"; then
       AC_MSG_RESULT([done])
     fi
 
-#    CC_INCLUDES="$CC_INCLUDES $cwd/xdelta3"
     HAVE_XDELTA3=1
     AC_DEFINE(HAVE_XDELTA3,1,[xdelta3 installed])
   fi
@@ -2716,18 +2736,24 @@ if test $ENABLE_GCRYPT = "yes"; then
         LIBRARIES="$LIBRARIES dl"
         if test $ENABLE_LINK_DYNAMIC = "yes"; then
           AC_SEARCH_LIBRARIES(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
-          AC_SEARCH_LIBRARIES(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
-        else
           if test -z "$HAVE_GPG_ERROR"; then
+            # Note: fallback static
             AC_SEARCH_STATIC_LIBRARIES(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[static GPG error installed])])
           fi
-          if test -z "$HAVE_GPG_ERROR"; then
-            AC_SEARCH_LIBRARIES(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
-          fi
+          AC_SEARCH_LIBRARIES(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
           if test -z "$HAVE_GCRYPT"; then
+            # Note: fallback static
             AC_SEARCH_STATIC_LIBRARIES(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[static gcrypt installed])])
           fi
+        else
+          AC_SEARCH_STATIC_LIBRARIES(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[static GPG error installed])])
+          if test -z "$HAVE_GPG_ERROR"; then
+            # Note: fallback dynamic
+            AC_SEARCH_LIBRARIES(gpg_strerror,gpg-error,[HAVE_GPG_ERROR=1;LIBRARIES="$LIBRARIES gpg-error";AC_DEFINE(HAVE_GPG_ERROR,1,[GPG error installed])])
+          fi
+          AC_SEARCH_STATIC_LIBRARIES(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[static gcrypt installed])])
           if test -z "$HAVE_GCRYPT"; then
+            # Note: fallback dynamic
             AC_SEARCH_LIBRARIES(gcry_check_version,gcrypt,[HAVE_GCRYPT=1;LIBRARIES="$LIBRARIES gcrypt";AC_DEFINE(HAVE_GCRYPT,1,[gcrypt installed])])
           fi
         fi
@@ -2876,15 +2902,25 @@ if test $ENABLE_SSH = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(SSL_new,ssl,[HAVE_SSL=1;LIBRARIES="$LIBRARIES ssl";AC_DEFINE(HAVE_SSL,1,[SSL installed])])
-      AC_SEARCH_LIBRARIES(OPENSSL_malloc,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
-    else
       if test -z "$HAVE_SSL"; then
-        AC_SEARCH_STATIC_LIBRARIES(SSL_new,crypto,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssl";AC_DEFINE(HAVE_SSL,1,[static SSL installed])])
-        AC_SEARCH_STATIC_LIBRARIES(OPENSSL_malloc,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(SSL_new,ssl,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssl";AC_DEFINE(HAVE_SSL,1,[static SSL installed])])
       fi
+      AC_SEARCH_LIBRARIES(OPENSSL_init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+      if test -z "$HAVE_CRYPTO"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(OPENSSL_init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
+      fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(SSL_new,ssl,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssl";AC_DEFINE(HAVE_SSL,1,[static SSL installed])])
       if test -z "$HAVE_SSL"; then
-        AC_SEARCH_LIBRARIES(SSL_new,crypto,[HAVE_SSL=1;LIBRARIES="$LIBRARIES ssl";AC_DEFINE(HAVE_SSL,1,[SSL installed])])
-        AC_SEARCH_LIBRARIES(OPENSSL_malloc,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
+        # Note: fallback dynamic
+        AC_SEARCH_LIBRARIES(SSL_new,ssl,[HAVE_SSL=1;LIBRARIES="$LIBRARIES ssl";AC_DEFINE(HAVE_SSL,1,[SSL installed])])
+      fi
+      AC_SEARCH_STATIC_LIBRARIES(OPENSSL_init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
+      if test -z "$HAVE_CRYPTO"; then
+        # Note: fallback dynamic
+        AC_SEARCH_LIBRARIES(OPENSSL_init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
       fi
     fi
   fi
@@ -2981,11 +3017,14 @@ if test $ENABLE_SSH = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
-    else
       if test -z "$HAVE_SSH2"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[static SSH2 installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[static SSH2 installed])])
       if test -z "$HAVE_SSH2"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(libssh2_session_init_ex,ssh2,[HAVE_SSH2=1;LIBRARIES="$LIBRARIES ssh2";AC_DEFINE(HAVE_SSH2,1,[SSH2 installed])])
       fi
     fi
@@ -2997,11 +3036,14 @@ if test $ENABLE_SSH = "yes"; then
       dnl link crypto, too, if available (may be needed by some libssh2 implementations)
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
         AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
-      else
         if test -z "$HAVE_CRYPTO"; then
+          # Note: fallback static
           AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
         fi
+      else
+        AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
         if test -z "$HAVE_CRYPTO"; then
+          # Note: fallback dynamic
           AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
         fi
       fi
@@ -3009,14 +3051,20 @@ if test $ENABLE_SSH = "yes"; then
     windows*|mingw*)
       dnl link crypto+crypt32, too, if available (may be needed by some libssh2 implementations)
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        AC_SEARCH_LIBRARIES(CertGetCertificateContextProperty,crypt32,[LIBRARIES="$LIBRARIES crypt32"],,windows.h wincrypt.h)
+        AC_SEARCH_LIBRARIES(CertGetCertificateContextProperty,crypt32,[HAVE_CRYPT32=1;LIBRARIES="$LIBRARIES crypt32"],,windows.h wincrypt.h)
+        if test -z "$HAVE_CRYPT32"; then
+          # Note: fallback static
+          AC_SEARCH_STATIC_LIBRARIES(CertGetCertificateContextProperty,crypt32,[HAVE_CRYPT32=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"],,windows.h wincrypt.h)
+        fi
         AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
-      else
-        AC_SEARCH_STATIC_LIBRARIES(CertGetCertificateContextProperty,crypt32,[STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"],,windows.h wincrypt.h)
         if test -z "$HAVE_CRYPTO"; then
           AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
         fi
+      else
+        AC_SEARCH_STATIC_LIBRARIES(CertGetCertificateContextProperty,crypt32,[HAVE_CRYPT32=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"],,windows.h wincrypt.h)
+        AC_SEARCH_STATIC_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[static crypto installed])])
         if test -z "$HAVE_CRYPTO"; then
+          # Note: fallback dynamic
           AC_SEARCH_LIBRARIES(MD5_Init,crypto,[HAVE_CRYPTO=1;LIBRARIES="$LIBRARIES crypto";AC_DEFINE(HAVE_CRYPTO,1,[crypto installed])])
         fi
       fi
@@ -3092,10 +3140,12 @@ if test \( $ENABLE_TLS = "yes" \) -o \( $ENABLE_CURL = "yes" \); then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(idn2_check_version,idn2,[HAVE_IDN2=1;LIBRARIES="$LIBRARIES idn2";AC_DEFINE(HAVE_IDN2,1,[libidn2 installed])])
-    else
       if test -z "$HAVE_IDN2"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(idn2_check_version,idn2,[HAVE_IDN2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES idn2";AC_DEFINE(HAVE_IDN2,1,[static libidn2 installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(idn2_check_version,idn2,[HAVE_IDN2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES idn2";AC_DEFINE(HAVE_IDN2,1,[static libidn2 installed])])
     fi
   fi
 
@@ -3303,19 +3353,34 @@ if test $ENABLE_TLS = "yes"; then
     AC_CHECK_TYPE(gnutls_session_t,,AC_MSG_WARN([no or wrong version of gnutls. gnutls version >=2.0.1 needed. Disabled TLS support.]); ENABLE_TLS=no,[#include <gnutls/gnutls.h>])
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
-      AC_SEARCH_LIBRARIES(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
-    else
       if test -z "$HAVE_GNU_TLS"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[static GNU TLS installed])])
       fi
-      if test -z "$HAVE_GNU_TLS"; then
-        AC_SEARCH_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
+      AC_SEARCH_LIBRARIES(nettle_md5_digest,nettle,[HAVE_NETTLE=1;LIBRARIES="$LIBRARIES nettle";AC_DEFINE(HAVE_NETTLE,1,[nettle installed])])
+      if test -z "$HAVE_NETTLE"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(nettle_md5_digest,nettle,[HAVE_NETTLE=1;STATIC_LIBRARIES="$STATIC_LIBRARIES nettle";AC_DEFINE(HAVE_NETTLE,1,[static nettle installed])])
       fi
-
+      AC_SEARCH_LIBRARIES(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
       if test -z "$HAVE_TASN1"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(asn1_length_der,tasn1,[HAVE_TASN1=1;STATIC_LIBRARIES="$STATIC_LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[static TASN.1 installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[static GNU TLS installed])])
+      if test -z "$HAVE_GNU_TLS"; then
+        # Note: fallback dynamic
+        AC_SEARCH_LIBRARIES(gnutls_global_init,gnutls,[HAVE_GNU_TLS=1;LIBRARIES="$LIBRARIES gnutls";AC_DEFINE(HAVE_GNU_TLS,1,[GNU TLS installed])])
+      fi
+      AC_SEARCH_STATIC_LIBRARIES(nettle_md5_digest,nettle,[HAVE_NETTLE=1;STATIC_LIBRARIES="$STATIC_LIBRARIES nettle";AC_DEFINE(HAVE_NETTLE,1,[nettle static installed])])
+      if test -z "$HAVE_NETTLE"; then
+        # Note: fallback dynamic
+        AC_SEARCH_LIBRARIES(nettle_md5_digest,nettle,[HAVE_NETTLE=1;LIBRARIES="$LIBRARIES nettle";AC_DEFINE(HAVE_NETTLE,1,[static installed])])
+      fi
+      AC_SEARCH_STATIC_LIBRARIES(asn1_length_der,tasn1,[HAVE_TASN1=1;STATIC_LIBRARIES="$STATIC_LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[static TASN.1 installed])])
       if test -z "$HAVE_TASN1"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(asn1_length_der,tasn1,[HAVE_TASN1=1;LIBRARIES="$LIBRARIES tasn1";AC_DEFINE(HAVE_TASN1,1,[TASN.1 installed])])
       fi
     fi
@@ -3332,9 +3397,12 @@ if test $ENABLE_TLS = "yes"; then
     windows*|mingw*)
       dnl link crypt32, too, if available (may be needed by some gnutls implementations)
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        AC_SEARCH_LIBRARIES(CertFreeCertificateContext,crypt32,[LIBRARIES="$LIBRARIES crypt32"],,windows.h wincrypt.h)
+        AC_SEARCH_LIBRARIES(CertFreeCertificateContext,crypt32,[HAVE_CRYPT32=1;LIBRARIES="$LIBRARIES crypt32"],,windows.h wincrypt.h)
+        if test -z "$HAVE_CRYPT32"; then
+          AC_SEARCH_STATIC_LIBRARIES(CertFreeCertificateContext,crypt32,[HAVE_CRYPT32=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32";AC_DEFINE(HAVE_GNU_TLS,1,[static crypt32 installed])])
+        fi
       else
-        AC_SEARCH_STATIC_LIBRARIES(CertFreeCertificateContext,crypt32,[STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"],,windows.h wincrypt.h)
+        AC_SEARCH_STATIC_LIBRARIES(CertFreeCertificateContext,crypt32,[HAVE_CRYPT32=1;STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"],,windows.h wincrypt.h)
       fi
       ;;
   esac
@@ -3352,10 +3420,140 @@ if test $ENABLE_TLS = "yes"; then
   fi
 fi
 
+# compile/use mxml
+if test $ENABLE_CURL = "yes"; then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d mxml -o -d "`readlink mxml`" \); then
+    dnl compile mxml library
+
+    cwd=`pwd`
+
+    AC_MSG_COMPILE([mxml])
+    result=1
+    if test $result -eq 1; then
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          # patch to disable usage of lib-command when RANLIB is set
+          #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
+          #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
+#TODO: windows cross-build
+#            if test -d extern/curl-7.28.1; then
+#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
+#            else
+#              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
+#            fi
+          ;;
+      esac
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (patch)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd mxml; ./configure \
+        --host=$host \
+        --build=$build \
+        --prefix=$cwd/extern \
+        --disable-shared \
+        --enable-static \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (configure)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      (cd mxml; make clean; make -j$CPU_CORES libmxml.a) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (make)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+    fi
+    if test $result -eq 1; then
+      # Note: there is no target to install the library and header files only; do it manually
+      (cd mxml; \
+       make install-libmxml.a; \
+       install -m 644 mxml.h $cwd/extern/include; \
+      ) 1>$tmpFile 2>&1
+      if test $? -ne 0; then
+        AC_MSG_RESULT([fail (install)])
+        AC_MSG_OUTPUT_LOG($tmpFile)
+        result=0
+      fi
+      case $host_os in
+        linux-*)
+          ;;
+        sunos | solaris*)
+          ;;
+        darwin*)
+          ;;
+        windows*|mingw*)
+          (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
+          ;;
+      esac
+    fi
+    if test $result -eq 1; then
+      AC_MSG_RESULT([done])
+    fi
+
+    if test $result -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES mxml"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES mxml"
+      fi
+      HAVE_MXML=1
+      AC_DEFINE(HAVE_MXML,1,[mxml installed (local)])
+    fi
+  else
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
+      if test -z "$HAVE_MXML"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[static mxml installed])])
+      fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[static mxml installed])])
+      if test -z "$HAVE_MXML"; then
+        # Note: fallback dynamic
+        AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
+      fi
+    fi
+  fi
+
+  dnl link platform specific libraries
+  case $host_os in
+    linux-*)
+      ;;
+    sunos | solaris*)
+      ;;
+    darwin*)
+      ;;
+    windows*|mingw*)
+      ;;
+  esac
+
+  if test -z "$HAVE_MXML"; then
+    if test ! \( -d mxml -o -d "`readlink mxml`" \); then
+      AC_MSG_WARN([mxml not compiled: mxml package missing])
+    fi
+  fi
+fi
+
 # compile/use curl
 if test $ENABLE_CURL = "yes"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \) -a \( -d mxml -o -d "`readlink mxml`" \); then
-    dnl compile c-ares, curl, mxml libraries
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d c-ares -o -d "`readlink c-ares`" \) -a \( -d curl -o -d "`readlink curl`" \); then
+    dnl compile c-ares, curl libraries
 
     cwd=`pwd`
 
@@ -3457,7 +3655,7 @@ if test $ENABLE_CURL = "yes"; then
       AC_MSG_RESULT([done])
     fi
 
-    AC_MSG_COMPILE([mxml])
+    AC_MSG_COMPILE([curl])
     result2=1
     if test $result2 -eq 1; then
       case $host_os in
@@ -3488,85 +3686,6 @@ if test $ENABLE_CURL = "yes"; then
       fi
     fi
     if test $result2 -eq 1; then
-      (cd mxml; ./configure \
-        --host=$host \
-        --build=$build \
-        --prefix=$cwd/extern \
-        --disable-shared \
-        --enable-static \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (configure)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result2=0
-      fi
-    fi
-    if test $result2 -eq 1; then
-      (cd mxml; make clean; make -j$CPU_CORES libmxml.a) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (make)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result2=0
-      fi
-    fi
-    if test $result2 -eq 1; then
-      # Note: there is no target to install the library and header files only; do it manually
-      (cd mxml; \
-       make install-libmxml.a; \
-       install -m 644 mxml.h $cwd/extern/include; \
-      ) 1>$tmpFile 2>&1
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (install)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result2=0
-      fi
-      case $host_os in
-        linux-*)
-          ;;
-        sunos | solaris*)
-          ;;
-        darwin*)
-          ;;
-        windows*|mingw*)
-          (cd extern/lib; ln -s libmxml.lib libmxml.a) 1>/dev/null 2>/dev/null
-          ;;
-      esac
-    fi
-    if test $result2 -eq 1; then
-      AC_MSG_RESULT([done])
-    fi
-
-    AC_MSG_COMPILE([curl])
-    result3=1
-    if test $result3 -eq 1; then
-      case $host_os in
-        linux-*)
-          ;;
-        sunos | solaris*)
-          ;;
-        darwin*)
-          ;;
-        windows*|mingw*)
-          # patch to disable usage of lib-command when RANLIB is set
-          #   diff -u curl-7.28.1.org/m4/libtool.m4 curl-7.28.1/m4/libtool.m4 >  curl-7.28.1-libtool.patch
-          #   diff -u curl-7.28.1.org/aclocal.m4 curl-7.28.1/aclocal.m4       >> curl-7.28.1-libtool.patch
-          #   diff -u curl-7.28.1.org/Makefile.in curl-7.28.1/Makefile.in     >> curl-7.28.1-libtool.patch
-          #   diff -u curl-7.28.1.org/configure curl-7.28.1/configure         >> curl-7.28.1-libtool.patch
-#TODO: windows cross-build
-#            if test -d extern/curl-7.28.1; then
-#              (cd extern/curl-7.28.1; $PATCH --batch -N -p1 < $SOURCE_DIR/misc/curl-7.28.1-libtool.patch) 1>$tmpFile 2>&1
-#            else
-#              AC_MSG_WARN([curl-7.28.1 not available - skipped libtool patch!])
-#            fi
-          ;;
-      esac
-      if test $? -ne 0; then
-        AC_MSG_RESULT([fail (patch)])
-        AC_MSG_OUTPUT_LOG($tmpFile)
-        result3=0
-      fi
-    fi
-    if test $result3 -eq 1; then
       if test "$host" == "$build"; then
         # compile build
 # TODO: temporary disabled brotli compression, psl
@@ -3576,16 +3695,20 @@ if test $ENABLE_CURL = "yes"; then
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
+          --without-nghttp2 \
           --disable-ldap \
           --disable-rtsp \
           --without-librtmp \
           --without-libpsl \
           --enable-ares=$cwd/extern \
           --with-zlib=$cwd/extern \
-          `if test $HAVE_ZSTD = 1; then echo --with-zstd=$cwd/extern; else echo --without-zstd; fi` \
-          `if test $HAVE_GNU_TLS = 1; then echo --with-gnutls=$cwd/extern; fi` \
-          `if test $HAVE_SSL = 1; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; else echo --without-ssl; fi` \
-          `if test $HAVE_SSH2 = 1; then echo --with-libssh2=$cwd/extern; fi` \
+          `if test -f $cwd/extern/lib/libzstd.a; then echo --with-zstd=$cwd/extern; fi` \
+          `if test -z "$HAVE_ZSTD"; then echo --without-zstd; fi` \
+          `if test -f $cwd/extern/lib/libgnutls.a; then echo --with-gnutls=$cwd/extern; fi` \
+          `if test -f $cwd/extern/lib/libssl.a; then echo --with-openssl=$cwd/extern --disable-openssl-auto-load-config; fi` \
+          ${HAVE_SSL:+--with-openssl} \
+          ${HAVE_GNU_TLS:+--with-gnutls} \
+          `if test -f $cwd/extern/lib/libssh2.a; then echo --with-libssh2=$cwd/extern; fi` \
 --without-brotli \
 --without-libpsl \
           `if test "$ENABLE_DEBUG" = "yes"; then echo --enable-debug; fi` \
@@ -3593,7 +3716,7 @@ if test $ENABLE_CURL = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
+          result2=0
         fi
       else
         # cross-compile host
@@ -3603,6 +3726,7 @@ if test $ENABLE_CURL = "yes"; then
           --prefix=$cwd/extern \
           --disable-shared \
           --enable-static \
+          --without-nghttp2 \
           --disable-ldap \
           --disable-rtsp \
           --without-librtmp \
@@ -3618,24 +3742,24 @@ if test $ENABLE_CURL = "yes"; then
         if test $? -ne 0; then
           AC_MSG_RESULT([fail (configure)])
           AC_MSG_OUTPUT_LOG($tmpFile)
-          result3=0
+          result2=0
         fi
       fi
     fi
-    if test $result3 -eq 1; then
+    if test $result2 -eq 1; then
       (cd curl; make clean; make -j$CPU_CORES) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result3=0
+        result2=0
       fi
     fi
-    if test $result3 -eq 1; then
+    if test $result2 -eq 1; then
       (cd curl; make install) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (install)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result3=0
+        result2=0
       fi
       case $host_os in
         linux-*)
@@ -3649,54 +3773,51 @@ if test $ENABLE_CURL = "yes"; then
           ;;
       esac
     fi
-    if test $result3 -eq 1; then
+    if test $result2 -eq 1; then
       AC_MSG_RESULT([done])
     fi
 
-    if test $result1 -eq 1 -a $result2 -eq 1 -a $result3 -eq 1; then
+    if test $result1 -eq 1 -a $result2; then
       CC_DEFINES="$CC_DEFINES CARES_STATICLIB CURL_STATICLIB"
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES curl cares mxml"
+        LIBRARIES="$LIBRARIES curl cares"
         if test "$host" != "$build"; then
           LIBRARIES="$LIBRARIES crypt32"
         fi
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES curl cares mxml"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES curl cares"
         if test "$host" != "$build"; then
           STATIC_LIBRARIES="$STATIC_LIBRARIES crypt32"
         fi
       fi
       HAVE_FTP=1
       HAVE_CARES=1
-      HAVE_MXML=1
       HAVE_CURL=1
       AC_DEFINE(HAVE_CARES,1,[c-ares installed (local)])
-      AC_DEFINE(HAVE_MXML,1,[mxml installed (local)])
       AC_DEFINE(HAVE_CURL,1,[curl installed (local)])
     fi
   else
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
+      AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_FTP=1;HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
+      if test -z "$HAVE_CURL"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(curl_global_init,curl,[HAVE_FTP=1;HAVE_CURL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[static curl installed])])
+      fi
       AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CARES,1,[c-ares installed])])
-      AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
-    else
-      if test -z "$HAVE_CURL"; then
-        AC_SEARCH_STATIC_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[static curl installed])])
-      fi
-      if test -z "$HAVE_CURL"; then
-        AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
-      fi
       if test -z "$HAVE_CARES"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[static c-ares installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(curl_global_init,curl,[HAVE_FTP=1;HAVE_CURL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[static curl installed])])
+      if test -z "$HAVE_CURL"; then
+        # Note: fallback dynamic
+        AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_FTP=1;HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
+      fi
+      AC_SEARCH_STATIC_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[static c-ares installed])])
       if test -z "$HAVE_CARES"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[c-ares installed])])
-      fi
-      if test -z "$HAVE_MXML"; then
-        AC_SEARCH_STATIC_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[static mxml installed])])
-      fi
-      if test -z "$HAVE_MXML"; then
-        AC_SEARCH_LIBRARIES(mxmlNewXML,mxml,[HAVE_MXML=1;LIBRARIES="$LIBRARIES mxml";AC_DEFINE(HAVE_MXML,1,[mxml installed])])
       fi
     fi
   fi
@@ -3723,21 +3844,20 @@ if test $ENABLE_CURL = "yes"; then
       AC_MSG_WARN([curl not compiled: c-ares package missing])
     fi
   fi
-  if test -z "$HAVE_MXML"; then
-    if test ! \( -d mxml -o -d "`readlink mxml`" \); then
-      AC_MSG_WARN([curl not compiled: mxml package missing])
-    fi
-  fi
   if test -z "$HAVE_IDN2"; then
     if test ! \( -d libidn2 -o -d "`readlink libidn2`" \); then
       AC_MSG_WARN([curl not compiled: libidn2 package missing])
     fi
   fi
 
-  if test "$HAVE_CURL" -a "$HAVE_CARES" -a "$HAVE_MXML" -a "$HAVE_IDN2"; then
+  if test "$HAVE_CURL" -a "$HAVE_CARES" -a "$HAVE_IDN2"; then
     dnl link libssl, too
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(SSL_new,ssl,[HAVE_SSL=1;LIBRARIES="$LIBRARIES ssl"],AC_ERROR([SSL library required for curl]))
+      if test -z "$HAVE_SSL"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(SSL_new,ssl,[HAVE_SSL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssl"],AC_ERROR([static SSL library required for curl]))
+      fi
     else
       AC_SEARCH_STATIC_LIBRARIES(SSL_new,ssl,[HAVE_SSL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES ssl"],AC_ERROR([static SSL library required for curl]))
     fi
@@ -3791,6 +3911,10 @@ if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d sqlite -o -d "`readlink sqlite
 else
   if test $ENABLE_LINK_DYNAMIC = "yes"; then
     AC_SEARCH_LIBRARIES(sqlite3_config,sqlite3,[HAVE_SQLITE3=1;LIBRARIES="$LIBRARIES sqlite3";AC_DEFINE(HAVE_SQLITE3,1,[sqlite3 installed])])
+    if test -z "$HAVE_SQLITE3"; then
+      # Note: fallback static
+      AC_SEARCH_STATIC_LIBRARIES(sqlite3_config,sqlite3,[HAVE_SQLITE3=1;STATIC_LIBRARIES="$STATIC_LIBRARIES sqlite3";AC_DEFINE(HAVE_SQLITE3,1,[static sqlite3 installed])])
+    fi
   else
     AC_SEARCH_STATIC_LIBRARIES(sqlite3_config,sqlite3,[HAVE_SQLITE3=1;STATIC_LIBRARIES="$STATIC_LIBRARIES sqlite3";AC_DEFINE(HAVE_SQLITE3,1,[static sqlite3 installed])])
   fi
@@ -3904,13 +4028,16 @@ if test $ENABLE_MARIADB = "yes"; then
     dnl search for installed mariadbclient library
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
-    else
+      AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadb $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
       if test -z "$HAVE_MARIADB"; then
-        AC_SEARCH_STATIC_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadbclient";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadb";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mariadb";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
       if test -z "$HAVE_MARIADB"; then
-        AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadbclient $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
+        # Note: fallback dynamic
+        AC_SEARCH_LIBRARIES(mysql_init,mariadb,[HAVE_MARIADB=1;LIBRARIES="mariadb $LIBRARIES";AC_DEFINE(HAVE_MARIADB,1,[mariadbclient installed])])
       fi
     fi
   fi
@@ -4022,6 +4149,10 @@ if test $ENABLE_POSTGRESQL = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(PQconnectdbParams,pq,[HAVE_POSTGRESQL=1;LIBRARIES="pq $LIBRARIES";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+      if test -z "$HAVE_POSTGRESQL"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(PQconnectdbParams,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
+      fi
     else
       AC_SEARCH_STATIC_LIBRARIES(PQconnectdbParams,pq,[HAVE_POSTGRESQL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES pq";AC_DEFINE(HAVE_POSTGRESQL,1,[pq installed])])
     fi
@@ -4179,11 +4310,14 @@ if test $ENABLE_ISO9660 = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
-    else
       if test -z "$HAVE_ISO9660"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(iso9660_open,iso9660,[HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[static iso9660 installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(iso9660_open,iso9660,[HAVE_ISO9660=1;STATIC_LIBRARIES="$STATIC_LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[static iso9660 installed])])
       if test -z "$HAVE_ISO9660"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(iso9660_open,iso9660,[HAVE_ISO9660=1;LIBRARIES="$LIBRARIES iso9660 cdio";AC_DEFINE(HAVE_ISO9660,1,[iso9660 installed])])
       fi
     fi
@@ -4240,6 +4374,7 @@ if test $ENABLE_SMBCLIENT = "yes"; then
             --build=$build \
             --enable-static \
             --disable-shared \
+            --without-keyutils \
           ) 1>$tmpFile 2>&1
           if test $? -ne 0; then
             AC_MSG_RESULT([fail (configure)])
@@ -4431,11 +4566,14 @@ if test $ENABLE_SMBCLIENT = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(smb2_init_context,smb2,[HAVE_SMB2=1;LIBRARIES="$LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5";AC_DEFINE(HAVE_SMB2,1,[SMB2 client installed])])
-    else
       if test -z "$HAVE_SMB2"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(smb2_init_context,smb2,[HAVE_SMB2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5";AC_DEFINE(HAVE_SMB2,1,[static SMB2 client installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(smb2_init_context,smb2,[HAVE_SMB2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5";AC_DEFINE(HAVE_SMB2,1,[static SMB2 client installed])])
       if test -z "$HAVE_SMB2"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(smb2_init_context,smb2,[HAVE_SMB2=1;LIBRARIES="$LIBRARIES smb2 krb5support k5crypto com_err gssapi_krb5 krb5";AC_DEFINE(HAVE_SMB2,1,[SMB2 client installed])])
       fi
     fi
@@ -4553,19 +4691,34 @@ if test $ENABLE_PCRE = "yes"; then
         STATIC_LIBRARIES="$STATIC_LIBRARIES pcre pcreposix"
       fi
       HAVE_PCRE=1
+      HAVE_PCREPOSIX=1
       AC_DEFINE(HAVE_PCRE,1,[pcre installed (local)])
+      AC_DEFINE(HAVE_PCREPOSIX,1,[pcreposix installed (local)])
     fi
   else
-    dnl search for installed pcre library
+    dnl search for installed pcre libraries
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(pcre_compile,pcre,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
-    else
       if test -z "$HAVE_PCRE"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(pcre_compile,pcre,[HAVE_PCRE=1;CC_DEFINES="$CC_DEFINES PCRE_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[static pcre installed])])
       fi
+      AC_SEARCH_LIBRARIES(pcreposix_regcomp,pcreposix,[HAVE_PCREPOSIX=1;LIBRARIES="$LIBRARIES pcreposix";AC_DEFINE(HAVE_PCREPOSIX,1,[pcreposix installed])])
+      if test -z "$HAVE_PCREPOSIX"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(pcreposix_regcomp,pcreposix,[HAVE_PCREPOSIX=1;CC_DEFINES="$CC_DEFINES PCRE_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES pcreposix";AC_DEFINE(HAVE_PCREPOSIX,1,[static pcreposix installed])])
+      fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(pcre_compile,pcre,[HAVE_PCRE=1;CC_DEFINES="$CC_DEFINES PCRE_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[static pcre installed])])
       if test -z "$HAVE_PCRE"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(pcre_compile,pcre,[HAVE_PCRE=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCRE,1,[pcre installed])])
+      fi
+      AC_SEARCH_STATIC_LIBRARIES(pcreposix_regcomp,pcreposix,[HAVE_PCREPOSIX=1;CC_DEFINES="$CC_DEFINES PCRE_STATIC";STATIC_LIBRARIES="$STATIC_LIBRARIES pcre";AC_DEFINE(HAVE_PCREPOSIX,1,[static pcreposix installed])])
+      if test -z "$HAVE_PCREPOSIX"; then
+        # Note: fallback dynamic
+        AC_SEARCH_LIBRARIES(pcreposix_regcomp,pcreposix,[HAVE_PCREPOSIX=1;LIBRARIES="$LIBRARIES pcre";AC_DEFINE(HAVE_PCREPOSIX,1,[pcreposix installed])])
       fi
     fi
   fi
@@ -4668,11 +4821,14 @@ if test $ENABLE_PAR2 = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(par2create,par2,[HAVE_PAR2=1;LIBRARIES="par2 $LIBRARIES";AC_DEFINE(HAVE_PAR2,1,[PAR2 installed])])
-    else
       if test -z "$HAVE_PAR2"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(par2create,par2,[HAVE_PAR2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES par2";AC_DEFINE(HAVE_PAR2,1,[PAR2 installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(par2create,par2,[HAVE_PAR2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES par2";AC_DEFINE(HAVE_PAR2,1,[PAR2 installed])])
       if test -z "$HAVE_PAR2"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(par2create,par2,[HAVE_PAR2=1;LIBRARIES="par2 $LIBRARIES";AC_DEFINE(HAVE_PAR2,1,[PAR2 installed])])
       fi
     fi
@@ -4771,11 +4927,14 @@ if test $ENABLE_ISOFS = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(iso_image_new,isofs,[HAVE_ISOFS=1;LIBRARIES="isofs $LIBRARIES";AC_DEFINE(HAVE_ISOFS,1,[libisofs installed])])
-    else
       if test -z "$HAVE_ISOFS"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(iso_image_new,isofs,[HAVE_ISOFS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES isofs";AC_DEFINE(HAVE_ISOFS,1,[libisofs installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(iso_image_new,isofs,[HAVE_ISOFS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES isofs";AC_DEFINE(HAVE_ISOFS,1,[libisofs installed])])
       if test -z "$HAVE_ISOFS"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(iso_image_new,isofs,[HAVE_ISOFS=1;LIBRARIES="isofs $LIBRARIES";AC_DEFINE(HAVE_ISOFS,1,[libisofs installed])])
       fi
     fi
@@ -4800,9 +4959,9 @@ if test $ENABLE_ISOFS = "yes"; then
   fi
 fi
 
-# compile/use xfsprogrs (libuuid, libblkid, liburcu, libfrog, libxfs)
+# compile/use libuuid, libblkid
 if test $ENABLE_XFS = "yes"; then
-  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d util-linux -o -d "`readlink util-linux`" \) -a \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \); then
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d util-linux -o -d "`readlink util-linux`" \); then
     cwd=`pwd`
 
     dnl compile libuuid, libblkid from util-linux
@@ -4857,9 +5016,39 @@ if test $ENABLE_XFS = "yes"; then
       AC_MSG_RESULT([done])
     fi
 
+    if test $result1 -eq 1 -a $result2 -eq 1; then
+      if test $ENABLE_LINK_DYNAMIC = "yes"; then
+        LIBRARIES="$LIBRARIES uuid blkid"
+      else
+        STATIC_LIBRARIES="$STATIC_LIBRARIES uuid blkid"
+      fi
+      HAVE_UUID=1
+      HAVE_BLKID=1
+    fi
+  else
+    dnl search for installed libuuid, libblkid libraries
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(uuid_parse,uuid,[HAVE_UUID=1;LIBRARIES="$LIBRARIES uuid";AC_DEFINE(HAVE_UUID,1,[libuuid installed])])
+      if test -z "$HAVE_UUID"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(uuid_parse,uuid,[HAVE_UUID=1;LIBRARIES="$STATIC_LIBRARIES uuid";AC_DEFINE(HAVE_UUID,1,[libuuid installed])])
+      fi
+      AC_SEARCH_LIBRARIES(blkid_new_probe,blkid,[HAVE_BLKID=1;LIBRARIES="$LIBRARIES blkid";AC_DEFINE(HAVE_BLKID,1,[libblkid installed])])
+      if test -z "$HAVE_BLKID"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(blkid_new_probe,blkid,[HAVE_BLKID=1;LIBRARIES="$STATIC_LIBRARIES blkid";AC_DEFINE(HAVE_BLKID,1,[libblkid installed])])
+      fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(uuid_parse,uuid,[HAVE_UUID=1;LIBRARIES="$STATIC_LIBRARIES uuid";AC_DEFINE(HAVE_UUID,1,[libuuid installed])])
+      AC_SEARCH_STATIC_LIBRARIES(blkid_new_probe,blkid,[HAVE_BLKID=1;LIBRARIES="$STATIC_LIBRARIES blkid";AC_DEFINE(HAVE_BLKID,1,[libblkid installed])])
+    fi
+  fi
+
+  if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \); then
     AC_MSG_COMPILE([userspace-rcu])
-    result2=1
-    if test $result2 -eq 1; then
+    result=1
+    if test $result -eq 1; then
       case $host_os in
         linux-*)
           ;;
@@ -4873,10 +5062,11 @@ if test $ENABLE_XFS = "yes"; then
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (patch)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result2=0
+        result=0
       fi
     fi
-    if test $result2 -eq 1; then
+    if test $result -eq 1; then
+      (cd userspace-rcu; aclocal && automake --add-missing --copy && autoconf)
       case $host_os in
         linux-* | sunos | solaris* | darwin*)
           (cd userspace-rcu; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
@@ -4896,61 +5086,57 @@ if test $ENABLE_XFS = "yes"; then
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result2=0
+        result=0
       fi
     fi
-    if test $result2 -eq 1; then
+    if test $result -eq 1; then
       (cd userspace-rcu; \
        make -j$CPU_CORES; \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result2=0
+        result=0
       fi
     fi
-    if test $result2 -eq 1; then
+    if test $result -eq 1; then
       (cd userspace-rcu; \
        make install PREFIX=$cwd/extern; \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (install)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result2=0
+        result=0
       fi
     fi
-    if test $result2 -eq 1; then
+    if test $result -eq 1; then
       AC_MSG_RESULT([done])
     fi
 
     if test $result1 -eq 1 -a $result2 -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
-        LIBRARIES="$LIBRARIES frog urcu uuid blkid"
+        LIBRARIES="$LIBRARIES urcu"
       else
-        STATIC_LIBRARIES="$STATIC_LIBRARIES frog urcu uuid blkid"
+        STATIC_LIBRARIES="$STATIC_LIBRARIES urcu"
       fi
-      HAVE_UUID=1
-      HAVE_RCU=1
+      HAVE_URCU=1
     fi
   else
-    dnl search for installed libfrog, liburcu, libuuid, libblkid libraries
-
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="frog urcu uuid blkid $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
+      AC_SEARCH_LIBRARIES(urcu_memb_init,urcu,[HAVE_URCU=1;LIBRARIES="$LIBRARIES urcu";AC_DEFINE(HAVE_URCU,1,[liburcu installed])])
+      if test -z "$HAVE_URCU"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(urcu_memb_init,urcu,[HAVE_URCU=1;LIBRARIES="$STATIC_LIBRARIES urcu";AC_DEFINE(HAVE_URCU,1,[liburcu installed])])
+      fi
     else
-      if test -z "$HAVE_XFSPROGS"; then
-        AC_SEARCH_STATIC_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;STATIC_LIBRARIES="$STATIC_LIBRARIES frog urcu uuid blkid";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
-      fi
-      if test -z "$HAVE_XFSPROGS"; then
-        AC_SEARCH_LIBRARIES(libxfs_init,xfs,[HAVE_XFSPROGS=1;LIBRARIES="frog urcu uuid blkid $LIBRARIES";AC_DEFINE(HAVE_XFS,1,[libxfs installed])])
-      fi
+      AC_SEARCH_STATIC_LIBRARIES(urcu_memb_init,urcu,[HAVE_URCU=1;LIBRARIES="$STATIC_LIBRARIES urcu";AC_DEFINE(HAVE_URCU,1,[liburcu installed])])
     fi
   fi
 
   if test "$ENABLE_EXTERN_COMPILE" = "yes" -a \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
     AC_MSG_COMPILE([xfsprogs])
-    result1=1
-    if test $result1 -eq 1; then
+    result=1
+    if test $result -eq 1; then
       case $host_os in
         linux-*)
           ;;
@@ -4964,10 +5150,10 @@ if test $ENABLE_XFS = "yes"; then
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (patch)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       (cd xfsprogs; make configure) 1>$tmpFile 2>&1
       case $host_os in
         linux-* | sunos | solaris* | darwin*)
@@ -4988,11 +5174,11 @@ if test $ENABLE_XFS = "yes"; then
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result1=0
+        result=0
       fi
     fi
 
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       (   cd xfsprogs \
        && make headers \
        && make -j$CPU_CORES -C include install-headers \
@@ -5004,10 +5190,10 @@ if test $ENABLE_XFS = "yes"; then
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       (   cd xfsprogs \
        && make -j$CPU_CORES -C libfrog install-dev \
        && make -j$CPU_CORES -C libxfs install-dev \
@@ -5015,18 +5201,28 @@ if test $ENABLE_XFS = "yes"; then
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (install)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       AC_MSG_RESULT([done])
     fi
 
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       # Note: only static libxfs available
       STATIC_LIBRARIES="$STATIC_LIBRARIES xfs"
       HAVE_XFS=1
       AC_DEFINE(HAVE_XFS,1,[xfs installed (local)])
+    fi
+
+    if test $ENABLE_LINK_DYNAMIC = "yes"; then
+      AC_SEARCH_LIBRARIES(crc32c_le,frog,[HAVE_FROG=1;LIBRARIES="$LIBRARIES frog";AC_DEFINE(HAVE_FROG,1,[libfrog installed])])
+      if test -z "$HAVE_FROG"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(crc32c_le,frog,[HAVE_FROG=1;STATIC_LIBRARIES="$STATIC_LIBRARIES frog";AC_DEFINE(HAVE_FROG,1,[libfrog installed])])
+      fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(crc32c_le,frog,[HAVE_FROG=1;STATIC_LIBRARIES="$STATIC_LIBRARIES frog";AC_DEFINE(HAVE_FROG,1,[libfrog installed])])
     fi
   fi
 
@@ -5042,13 +5238,27 @@ if test $ENABLE_XFS = "yes"; then
       ;;
   esac
 
+  if test -z "$HAVE_FROG"; then
+    if test ! \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
+      AC_MSG_WARN([libfrog not compiled: xfsprogs package missing])
+    fi
+  fi
+  if test -z "$HAVE_URCU"; then
+    if test ! \( -d xfsprogs -o -d "`readlink userspace-rcu`" \); then
+      AC_MSG_WARN([liburcu not compiled: userspace-rcu package missing])
+    fi
+  fi
+  if test -z "$HAVE_UUID"; then
+    if test ! \( -d xfsprogs -o -d "`readlink util-linux`" \); then
+      AC_MSG_WARN([libuuid not compiled: util-linux package missing])
+    fi
+  fi
+  if test -z "$HAVE_BLKID"; then
+    if test ! \( -d xfsprogs -o -d "`readlink util-linux`" \); then
+      AC_MSG_WARN([libblkid not compiled: util-linux package missing])
+    fi
+  fi
   if test -z "$HAVE_XFS"; then
-    if test ! \( -d util-linux -o -d "`readlink util-linux`" \); then
-      AC_MSG_WARN([util-linux not compiled: util-linux package missing])
-    fi
-    if test ! \( -d userspace-rcu -o -d "`readlink userspace-rcu`" \); then
-      AC_MSG_WARN([userspace-rcu not compiled: userspace-rcu package missing])
-    fi
     if test ! \( -d xfsprogs -o -d "`readlink xfsprogs`" \); then
       AC_MSG_WARN([xfsprogs not compiled: xfsprogs package missing])
     fi
@@ -5129,11 +5339,14 @@ if test $ENABLE_BURN = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;LIBRARIES="burn $LIBRARIES";AC_DEFINE(HAVE_BURN,1,[libburn installed])])
-    else
       if test -z "$HAVE_BURN"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;STATIC_LIBRARIES="$STATIC_LIBRARIES burn";AC_DEFINE(HAVE_BURN,1,[libburn installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;STATIC_LIBRARIES="$STATIC_LIBRARIES burn";AC_DEFINE(HAVE_BURN,1,[libburn installed])])
       if test -z "$HAVE_BURN"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(burn_disc_write,burn,[HAVE_BURN=1;LIBRARIES="burn $LIBRARIES";AC_DEFINE(HAVE_BURN,1,[libburn installed])])
       fi
     fi
@@ -5229,11 +5442,14 @@ if test $ENABLE_MOUNT = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(mnt_new_table_from_file,mount,[HAVE_MOUNT=1;LIBRARIES="mount blkid $LIBRARIES";AC_DEFINE(HAVE_MOUNT,1,[libisofs installed])])
-    else
       if test -z "$HAVE_MOUNT"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(mnt_new_table_from_file,mount,[HAVE_MOUNT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mount blkid";AC_DEFINE(HAVE_MOUNT,1,[libisofs installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(mnt_new_table_from_file,mount,[HAVE_MOUNT=1;STATIC_LIBRARIES="$STATIC_LIBRARIES mount blkid";AC_DEFINE(HAVE_MOUNT,1,[libisofs installed])])
       if test -z "$HAVE_MOUNT"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(mnt_new_table_from_file,mount,[HAVE_MOUNT=1;LIBRARIES="mount blkid $LIBRARIES";AC_DEFINE(HAVE_MOUNT,1,[libisofs installed])])
       fi
     fi
@@ -5408,11 +5624,14 @@ if test $ENABLE_BFD = "yes"; then
 
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
-    else
       if test -z "$HAVE_BFD"; then
+        # Note: fallback static
         AC_SEARCH_STATIC_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[static libbfd installed])])
       fi
+    else
+      AC_SEARCH_STATIC_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;STATIC_LIBRARIES="$STATIC_LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[static libbfd installed])])
       if test -z "$HAVE_BFD"; then
+        # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(bfd_init,bfd,[HAVE_BFD=1;LIBRARIES="$LIBRARIES bfd iberty z";AC_DEFINE(HAVE_BFD,1,[libbfd installed])])
       fi
     fi
@@ -5449,7 +5668,8 @@ AC_ARG_ENABLE(
    AS_IF(test $HAVE_POSTGRESQL,,AC_MSG_ERROR([PostgreSQL missing]))
    AS_IF(test $HAVE_ISO9660   ,,AC_MSG_ERROR([ISO9660 missing]))
    AS_IF(test $HAVE_SMB2      ,,AC_MSG_ERROR([smb2 missing]))
-   AS_IF(test $HAVE_PCRE      ,,AC_MSG_ERROR([PCRE missing]))
+   AS_IF(test $HAVE_PCRE      ,,AC_MSG_ERROR([pcre missing]))
+   AS_IF(test $HAVE_PCREPOSIX ,,AC_MSG_ERROR([pcreposix missing]))
    AS_IF(test $HAVE_PAR2      ,,AC_MSG_ERROR([PAR2 missing]))
    AS_IF(test $HAVE_ISOFS     ,,AC_MSG_ERROR([isofs missing]))
    AS_IF(test $HAVE_XFS       ,,AC_MSG_ERROR([xfs missing]))
@@ -5492,10 +5712,13 @@ AC_CHECK_HEADERS(\
                  mntent.h \
                  mariadb/mysql.h \
                  mariadb/errmsg.h \
+                 mysql/mysql.h \
+                 mysql/errmsg.h \
                  netdb.h \
                  netinet/in.h \
                  pwd.h \
                  poll.h \
+                 postgresql/libpq-fe.h \
                  regex.h \
                  stdbool.h \
                  sys/inotify.h \
@@ -5542,16 +5765,24 @@ AC_CHECK_SIZEOF(size_t)
 AC_CHECK_STATIC_ASSERT()
 
 if test $ENABLE_LINK_DYNAMIC = "yes"; then
-  AC_SEARCH_LIBRARIES(uuid_generate,uuid,[LIBRARIES="$LIBRARIES uuid"],,uuid/uuid.h)
+  AC_SEARCH_LIBRARIES(uuid_generate,uuid,[HAVE_UUID=1;LIBRARIES="$LIBRARIES uuid"],,uuid/uuid.h)
+  if test -z "$HAVE_UUID"; then
+    # Note: fallback static
+    AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[HAVE_UUID=1;STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],[],uuid/uuid.h)
+  fi
 else
   AC_SEARCH_STATIC_LIBRARIES(uuid_generate,uuid,[STATIC_LIBRARIES="$STATIC_LIBRARIES uuid"],[],uuid/uuid.h)
 fi
 case $host_os in
   linux-*)
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
-      AC_SEARCH_LIBRARIES(idn_free,idn2,[LIBRARIES="$LIBRARIES idn2"],,idn-free.h)
+      AC_SEARCH_LIBRARIES(idn_free,idn2,[HAVE_IDN2=1;LIBRARIES="$LIBRARIES idn2"],,idn-free.h)
+      if test -z "$HAVE_IDN2"; then
+        # Note: fallback static
+        AC_SEARCH_STATIC_LIBRARIES(idn_free,idn2,[HAVE_IDN2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES idn2"],,idn-free.h)
+      fi
     else
-      AC_SEARCH_STATIC_LIBRARIES(idn_free,idn2,[STATIC_LIBRARIES="$STATIC_LIBRARIES idn2"],,idn-free.h)
+      AC_SEARCH_STATIC_LIBRARIES(idn_free,idn2,[HAVE_IDN2=1;STATIC_LIBRARIES="$STATIC_LIBRARIES idn2"],,idn-free.h)
     fi
     ;;
   sunos | solaris*)
@@ -6021,6 +6252,7 @@ if test "$HAVE_CURL"; then
                     [ "]
                    )
   if test -n "$VERSION_CURL" -a "$VERSION_CURL" \< "7.77"; then
+    # Note: needed for e. g. API function CURLOPT_CAINFO_BLOB
     AC_ERROR([required libcurl 7.77 (0x077700) or newer - found '$VERSION_CURL'])
   fi
   AC_DEFINE_UNQUOTED(VERSION_CURL,"$VERSION_CURL",[curl version])
@@ -6271,7 +6503,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  TLS/SSL              : `if test "$HAVE_GNU_TLS"; then echo "yes (OpenSSL $VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support     : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
                     echo "  SMB support          : `if test "$HAVE_SMB2"; then echo "yes ($VERSION_SMB2)"; else echo no; fi`";
-                    echo "  PCRE support         : `if test "$HAVE_PCRE"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
+                    echo "  pcre support         : `if test "$HAVE_PCRE" -a "$HAVE_PCREPOSIX"; then echo "yes ($VERSION_PCRE)"; else echo no; fi`";
                     echo "  SQLite               : yes ($VERSION_SQLITE)";
                     echo "  MariaDB support      : `if test "$HAVE_MARIADB"; then echo "yes ($VERSION_MARIADB)"; else echo no; fi`";
                     echo "  PostgreSQL support   : `if test "$HAVE_POSTGRESQL"; then echo "yes ($VERSION_POSTGRESQL)"; else echo no; fi`";
@@ -6317,9 +6549,10 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_ISO9660" \
                             -o ! "$HAVE_SMB2" \
                             -o ! "$HAVE_PCRE" \
+                            -o ! "$HAVE_PCREPOSIX" \
                             -o ! "$HAVE_PAR2" \
                             -o ! "$HAVE_ISOFS" \
-                            -o ! "$HAVE_XFSPROGS" \
+                            -o ! "$HAVE_XFS" \
                             -o ! "$HAVE_BURN" \
                             -o ! "$HAVE_MOUNT" ; then
                       echo "Note: you can download missing additional software with the script"
@@ -6355,6 +6588,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_ISO9660=$HAVE_ISO9660
                    HAVE_SMB2=$HAVE_SMB2
                    HAVE_PCRE=$HAVE_PCRE
+                   HAVE_PCREPOSIX=$HAVE_PCREPOSIX
                    HAVE_PAR2=$HAVE_PAR2
                    HAVE_ISOFS=$HAVE_ISOFS
                    HAVE_RCU=$HAVE_RCU

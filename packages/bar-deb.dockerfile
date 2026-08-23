@@ -1,3 +1,4 @@
+# require Debian >= 13
 FROM debian:13
 ENV container docker
 
@@ -35,6 +36,7 @@ RUN apt-get -y install --no-install-recommends --fix-missing \
 # install packages (Note: ignore expired key with --force-yes)
 RUN apt-get -y install --no-install-recommends --fix-missing \
   autoconf \
+  automake \
   autotools-dev \
   bison \
   build-essential \
@@ -75,6 +77,44 @@ RUN apt-get -y install --no-install-recommends --fix-missing \
   xz-utils \
   ;
 
+# install packages for dynamic linkage
+RUN apt-get -y install --no-install-recommends --fix-missing \
+  libiberty-dev \
+  libicu-dev \
+  zlib1g-dev \
+  libz-dev \
+  liblzo2-dev \
+  liblz4-dev \
+  liblzma-dev \
+  libbz2-dev \
+  libzstd-dev \
+  libssl-dev \
+  libtls-dev \
+  nettle-dev \
+  libgmp-dev \
+  libcurl4-openssl-dev \
+  libc-ares-dev \
+  libidn2-dev \
+  libgcrypt20-dev \
+  libssh2-1-dev \
+  libmount-dev \
+  libburn-dev \
+  libiso9660-dev \
+  libisofs-dev \
+  libcdio-dev \
+  libsmbclient-dev \
+  libsmb2-dev \
+  libkrb5-dev \
+  libsqlite3-dev \
+  libmariadb-dev \
+  libpq-dev \
+  uuid-dev \
+  libblkid-dev \
+  liburcu-dev \
+  libfrog-dev \
+  binutils-dev \
+  ;
+
 RUN apt-get install -y --no-install-recommends --fix-missing \
   libreoffice \
   python3-pip \
@@ -113,40 +153,3 @@ RUN    install -d /media/home \
 VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]
-
-# install packages for dynamic linkage
-RUN apt-get -y install --no-install-recommends --fix-missing \
-libicu-dev \
-libz-dev \
-liblz4-dev \
-liblzma-dev \
-libbz2-dev \
-libzstd-dev \
-libssl-dev \
-libtls-dev \
-nettle-dev \
-libgmp-dev \
-libcurl4-openssl-dev \
-libmxml-dev \
-libc-ares-dev \
-libidn2-dev \
-libgcrypt20-dev \
-libssh2-1-dev \
-libmount-dev \
-libburn-dev \
-libiso9660-dev \
-libisofs-dev \
-libcdio-dev \
-libsmbclient-dev \
-libsmb2-dev \
-libkrb5-dev \
-libsqlite3-dev \
-libmariadb-dev \
-libpq-dev \
-uuid-dev \
-libblkid-dev \
-liburcu-dev \
-libfrog-dev \
-binutils-dev \
-\
-liblzo2-dev \

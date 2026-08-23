@@ -54,6 +54,13 @@
 #define MAX_BUFFER_SIZE       (64*1024)
 #define MAX_FILENAME_LENGTH   ( 8*1024)
 
+#if MXML_MAJOR_VERSION < 4
+  // Note: why mxml break the API for this?
+  #define MXML_DESCEND_ALL  MXML_DESCEND
+  #define MXML_TYPE_ELEMENT MXML_ELEMENT
+  #define MXML_TYPE_OPAQUE  MXML_OPAQUE
+#endif
+
 /***************************** Datatypes *******************************/
 
 /***************************** Variables *******************************/
@@ -3202,13 +3209,20 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     }
 
     // parse directory entries
-    mxml_options_t *options = mxmlOptionsNew();
-    assert(options != NULL);
-    storageDirectoryListHandle->webdav.rootNode = mxmlLoadString(NULL,
-                                                                 options,
-                                                                 String_cString(directoryData)
-                                                                );
-    mxmlOptionsDelete(options);
+    #if MXML_MAJOR_VERSION >= 4
+      mxml_options_t *options = mxmlOptionsNew();
+      assert(options != NULL);
+      storageDirectoryListHandle->webdav.rootNode = mxmlLoadString(NULL,
+                                                                   options,
+                                                                   String_cString(directoryData)
+                                                                  );
+      mxmlOptionsDelete(options);
+    #else
+      storageDirectoryListHandle->webdav.rootNode = mxmlLoadString(NULL,
+                                                                   String_cString(directoryData),
+                                                                   MXML_TEXT_CALLBACK
+                                                                  );
+    #endif
     if (storageDirectoryListHandle->webdav.rootNode == NULL)
     {
       error = ERROR_READ_DIRECTORY;
@@ -3374,7 +3388,6 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
                                                NULL,
                                                MXML_DESCEND_ALL
                                                );
-
         if (   (propNode != NULL)
             && (mxmlGetType(propNode) == MXML_TYPE_ELEMENT)
             && (mxmlGetFirstChild(propNode) != NULL)

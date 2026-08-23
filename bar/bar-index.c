@@ -17,11 +17,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 // Note: sanitizer intercept regex functions; must use libc regex
-#if defined(HAVE_PCRE) && !defined(__SANITIZE_ADDRESS__)
+#if defined(HAVE_PCRE) && defined(HAVE_PCREPOSIX) && !defined(__SANITIZE_ADDRESS__)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>
-#endif /* HAVE_PCRE || HAVE_REGEX_H */
+#endif /* HAVE_PCRE/HAVE_PCREPOSIX || HAVE_REGEX_H */
 #include <assert.h>
 
 #include "common/global.h"

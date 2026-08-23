@@ -19,12 +19,17 @@
 #include <assert.h>
 
 #include "sqlite3.h"
-#ifdef HAVE_MARIADB_MYSQL_H
+
+#if   defined(HAVE_MARIADB_MYSQL_H)
   #include "mariadb/mysql.h"
+#elif defined(HAVE_MYSQL_MYSQL_H)
+  #include "mysql/mysql.h"
 #endif
-#ifdef HAVE_LIBPQ_FE_H
+#if defined(HAVE_POSTGRESQL_LIBPQ_FE_H)
+  #include "postgresql/libpq-fe.h"
+#elif defined(HAVE_LIBPQ_FE_H)
   #include "libpq-fe.h"
-#endif
+#endif /* HAVE_LIBPQ_FE_H */
 
 #include "common/arrays.h"
 #include "common/dictionaries.h"

@@ -67,6 +67,9 @@
 /* BLKGETSIZE available */
 #undef HAVE_BLKGETSIZE
 
+/* libblkid installed */
+#undef HAVE_BLKID
+
 /* Define to 1 if you have the <blkid/blkid.h> header file. */
 #undef HAVE_BLKID_BLKID_H
 
@@ -138,6 +141,9 @@
 
 /* freelocale() available */
 #undef HAVE_FREELOCALE
+
+/* libfrog installed */
+#undef HAVE_FROG
 
 /* fseeko() available */
 #undef HAVE_FSEEKO
@@ -232,7 +238,7 @@
 /* gmtime_r() available */
 #undef HAVE_GMTIME_R
 
-/* GNU TLS installed */
+/* static crypt32 installed */
 #undef HAVE_GNU_TLS
 
 /* GPG error installed */
@@ -367,7 +373,7 @@
 /* lzma installed */
 #undef HAVE_LZMA
 
-/* lzo installed */
+/* lzo2 installed */
 #undef HAVE_LZO
 
 /* major() available */
@@ -418,6 +424,12 @@
 /* mxml installed */
 #undef HAVE_MXML
 
+/* Define to 1 if you have the <mysql/errmsg.h> header file. */
+#undef HAVE_MYSQL_ERRMSG_H
+
+/* Define to 1 if you have the <mysql/mysql.h> header file. */
+#undef HAVE_MYSQL_MYSQL_H
+
 /* nanosleep() available */
 #undef HAVE_NANOSLEEP
 
@@ -426,6 +438,9 @@
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
+
+/* static installed */
+#undef HAVE_NETTLE
 
 /* newlocale() available */
 #undef HAVE_NEWLOCALE
@@ -457,6 +472,9 @@
 /* pcre installed */
 #undef HAVE_PCRE
 
+/* pcreposix installed */
+#undef HAVE_PCREPOSIX
+
 /* pipe() available */
 #undef HAVE_PIPE
 
@@ -468,6 +486,9 @@
 
 /* pq installed */
 #undef HAVE_POSTGRESQL
+
+/* Define to 1 if you have the <postgresql/libpq-fe.h> header file. */
+#undef HAVE_POSTGRESQL_LIBPQ_FE_H
 
 /* pselect() available */
 #undef HAVE_PSELECT
@@ -769,11 +790,17 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
+/* liburcu installed */
+#undef HAVE_URCU
+
 /* uselocale() available */
 #undef HAVE_USELOCALE
 
 /* usleep() available */
 #undef HAVE_USLEEP
+
+/* libuuid installed */
+#undef HAVE_UUID
 
 /* uuid_generate() available */
 #undef HAVE_UUID_GENERATE

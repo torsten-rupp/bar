@@ -14,13 +14,13 @@
 #include <stdio.h>
 #include <stdarg.h>
 // Note: sanitizer intercept regex functions; must use libc regex
-#if defined(HAVE_PCRE) && !defined(__SANITIZE_ADDRESS__)
+#if defined(HAVE_PCRE) && defined(HAVE_PCREPOSIX) && !defined(__SANITIZE_ADDRESS__)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>
 #else
   #warning No regular expression library available!
-#endif /* HAVE_PCRE || HAVE_REGEX_H */
+#endif /* HAVE_PCRE/HAVE_PCREPOSIX || HAVE_REGEX_H */
 #include <assert.h>
 
 #include "common/lists.h"
@@ -477,7 +477,7 @@ StringNode *StringList_matchCString(const StringList *stringList, const char *pa
   assert(pattern != NULL);
 
   StringNode *stringNode;
-  #if defined(HAVE_PCRE) || defined(HAVE_REGEX_H)
+  #if (defined(HAVE_PCRE) && defined(HAVE_PCREPOSIX) && !defined(__SANITIZE_ADDRESS__)) || defined(HAVE_REGEX_H)
     /* compile pattern */
     regex_t regex;
     if (regcomp(&regex,pattern,REG_ICASE|REG_EXTENDED) != 0)

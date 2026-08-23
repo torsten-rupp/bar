@@ -35,13 +35,13 @@
   #include <libintl.h>
 #endif
 // Note: sanitizer intercept regex functions; must use libc regex
-#if defined(HAVE_PCRE) && !defined(__SANITIZE_ADDRESS__)
+#if defined(HAVE_PCRE) && defined(HAVE_PCREPOSIX) && !defined(__SANITIZE_ADDRESS__)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>
 #else
   #warning No regular expression library available!
-#endif /* HAVE_PCRE || HAVE_REGEX_H */
+#endif /* HAVE_PCRE/HAVE_PCREPOSIX || HAVE_REGEX_H */
 #ifdef HAVE_EXECINFO_H
   #include <execinfo.h>
 #endif

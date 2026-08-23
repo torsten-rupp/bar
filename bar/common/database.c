@@ -31,13 +31,13 @@
 #include <time.h>
 #include <signal.h>
 // Note: sanitizer intercept regex functions; must use libc regex
-#if defined(HAVE_PCRE) && !defined(__SANITIZE_ADDRESS__)
+#if defined(HAVE_PCRE) && defined(HAVE_PCREPOSIX) && !defined(__SANITIZE_ADDRESS__)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>
 #else
   #error No regular expression library available!
-#endif /* HAVE_PCRE || HAVE_REGEX_H */
+#endif /* HAVE_PCRE/HAVE_PCREPOSIX || HAVE_REGEX_H */
 #ifdef POSTGRESQL_BINARY_INTERFACE
   #include <endian.h>
 #endif
@@ -45,12 +45,21 @@
 #include <assert.h>
 
 #include "sqlite3.h"
-#if defined(HAVE_MARIADB_MYSQL_H) && defined(HAVE_MARIADB_ERRMSG_H)
+#if   defined(HAVE_MARIADB_MYSQL_H)
   #include "mariadb/mysql.h"
+#elif defined(HAVE_MYSQL_MYSQL_H)
+  #include "mysql/mysql.h"
+#endif
+#if   defined(HAVE_MARIADB_ERRMSG_H)
   #include "mariadb/errmsg.h"
   #include "mariadb/mysqld_error.h"
+#elif defined(HAVE_MYSQL_ERRMSG_H)
+  #include "mysql/errmsg.h"
+  #include "mysql/mysqld_error.h"
 #endif /* HAVE_MARIADB_MYSQL_H && HAVE_MARIADB_ERRMSG_H */
-#if defined(HAVE_LIBPQ_FE_H)
+#if defined(HAVE_POSTGRESQL_LIBPQ_FE_H)
+  #include "postgresql/libpq-fe.h"
+#elif defined(HAVE_LIBPQ_FE_H)
   #include "libpq-fe.h"
 #endif /* HAVE_LIBPQ_FE_H */
 

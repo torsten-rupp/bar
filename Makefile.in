@@ -114,12 +114,11 @@ VERSION                     := $(VERSION_MAJOR)$(if $(VERSION_MINOR),$(if $(VERS
 PACKAGE_NAME                = backup-archiver
 PACKAGE_NAME_GUI            = backup-archiver-gui
 DISTRIBUTION_NAME           = $(PACKAGE_NAME)-$(VERSION)
-DISTRIBUTION_NAME_ORIG      = $(PACKAGE_NAME)_$(VERSION).orig
 DISTRIBUTION_NAME_GUI       = $(PACKAGE_NAME_GUI)-$(VERSION)
 
 # Notes: also change ci/packages.jenkinsfile
 #        AlmaLinux 10.0 does not run on CPU without AVX3
-TEST_PACKAGES_ALMALINUX     := 9.0 9.1 9.2 9.3 9.4 9.5 9.6
+TEST_PACKAGES_ALMALINUX     := 9.0 9.1 9.2 9.3 9.4 9.5 9.6 9.7 9.8
 TEST_PACKAGES_FEDORA        := 37 38 39 40 41 42
 TEST_PACKAGES_OPENSUSE_LEAP := 15.1 15.2 15.3 15.4 15.5 15.6
 TEST_PACKAGES_DEBIAN        := 11 12 13
@@ -681,6 +680,7 @@ $(DISTRIBUTION_NAME).orig.tar.gz: \
           extern/icu*.tgz \
           extern/libiconv-*.tar.gz \
           extern/libcdio-*.tar.gz \
+          extern/libcdio-*.tar.gz \
           extern/libgcrypt-*.tar.bz2 \
           extern/libgpg-error-*.tar.bz2 \
           extern/libssh2-*.tar.gz \
@@ -729,7 +729,7 @@ packages: \
 .PHONY: docker_build docker_update update_docker
 docker_build docker_update update_docker:
 	# base images
-	$(DOCKER) pull almalinux:8.10
+	$(DOCKER) pull almalinux:9.0
 	$(DOCKER) pull debian:13
 	$(DOCKER) pull ubuntu:24.04
 	#
@@ -829,17 +829,19 @@ rpmd: \
 
 .PHONY: rpm32 rpm32d rpm64 rpm64d
 rpm64: \
-  $(DISTRIBUTION_NAME)-x86_64.rpm
+  $(DISTRIBUTION_NAME)-x86_64.rpm $(DISTRIBUTION_NAME)-dynamic-x86_64.rpm
 rpm64d:
-	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm PACKAGE_DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm $(DISTRIBUTION_NAME)-dynamic-x86_64.rpm PACKAGE_DEBUG=1
 
 clean_rpm:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm.log
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-dynamic-x86_64.rpm
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-dynamic-x86_64.rpm.log
 
 $(DISTRIBUTION_NAME)-x86_64.rpm: \
   $(DISTRIBUTION_NAME).tar.bz2
-	@$(call functionPrintInfo,Build RPM on AlmaLinux)
+	@$(call functionPrintInfo,Build RPM on AlmaLinux 9.0)
 	@( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
@@ -851,18 +853,33 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
+$(DISTRIBUTION_NAME)-dynamic-x86_64.rpm: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	@$(call functionPrintInfo,Build RPM on AlmaLinux 9.0)
+	@( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
+            --net=host \
+            --user $(shell id -u):$(shell id -g) \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+            -v $(PWD):/media/home \
+            bar-rpm setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm PACKAGE_LINK_DYNAMIC=1 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
+
 .PHONY: build_rpm
 build_rpm:
 	install -d build/rpm
 	(cd build/rpm; \
          ../../packages/build_rpm.sh \
+           $(if $(PACKAGE_LINK_DYNAMIC),--link-dynamic) \
+           $(if $(PACKAGE_DEBUG),--debug) \
            ../.. \
            $(PACKAGE_NAME) \
            ../../$(DISTRIBUTION_NAME).tar.bz2 \
            $(VERSION) \
            $(shell id -u):$(shell id -g) \
-           $(DISTRIBUTION_NAME)-x86_64.rpm \
-           $(if $(PACKAGE_DEBUG),--debug) \
+           $(if $(PACKAGE_LINK_DYNAMIC),$(DISTRIBUTION_NAME)-dynamic-x86_64.rpm,$(DISTRIBUTION_NAME)-x86_64.rpm) \
            ; \
         )
 
@@ -875,9 +892,9 @@ debd: \
 
 .PHONY: deb64 deb64d deb-gui64 deb-gui64d
 deb64: \
-  $(DISTRIBUTION_NAME)-x86_64.deb
+  $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME)-dynamic-x86_64.deb
 deb64d:
-	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.deb PACKAGE_DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME)-dynamic-x86_64.deb PACKAGE_DEBUG=1
 deb-gui64: \
   $(DISTRIBUTION_NAME_GUI)-x86_64.deb
 deb-gui64d:
@@ -885,12 +902,13 @@ deb-gui64d:
 
 clean_deb:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.deb
+	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-dynamic-x86_64.deb
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME_GUI)-x86_64.deb
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.deb.log
 
 $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
   $(DISTRIBUTION_NAME).tar.bz2
-	@$(call functionPrintInfo,Build DEB on Debian)
+	@$(call functionPrintInfo,Build DEB on Debian 13)
 	( \
           $(DOCKER) $(DOCKER_RUN_FLAGS) \
             --rm \
@@ -898,7 +916,21 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
             --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
-            bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
+            bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb PACKAGE_TOOLS=1 PACKAGE_GUI=1 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
+        ) | tee $@.log
+	@$(call functionPrintResult,OK)
+
+$(DISTRIBUTION_NAME)-dynamic-x86_64.deb: \
+  $(DISTRIBUTION_NAME).tar.bz2
+	@$(call functionPrintInfo,Build DEB on Debian 13)
+	( \
+          $(DOCKER) $(DOCKER_RUN_FLAGS) \
+            --rm \
+            --net=host \
+            --user $(shell id -u):$(shell id -g) \
+            -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
+            -v $(PWD):/media/home \
+            bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb PACKAGE_TOOLS=1 PACKAGE_LINK_DYNAMIC=1 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -908,15 +940,18 @@ build_deb:
 	install -d build/deb
 	(cd build/deb; \
 	 ../../packages/build_deb.sh \
+           $(if $(PACKAGE_TOOLS),--tools) \
+           $(if $(PACKAGE_GUI),--gui) \
+           $(if $(PACKAGE_LINK_DYNAMIC),--link-dynamic) \
+           $(if $(PACKAGE_DEBUG),--debug) \
            ../.. \
            $(PACKAGE_NAME) \
            ../../$(DISTRIBUTION_NAME).tar.bz2 \
            $(VERSION) \
            $(shell id -u):$(shell id -g) \
-           $(DISTRIBUTION_NAME)-x86_64.deb \
+           $(if $(PACKAGE_LINK_DYNAMIC),$(DISTRIBUTION_NAME)-dynamic-x86_64.deb,$(DISTRIBUTION_NAME)-x86_64.deb) \
            $(DISTRIBUTION_NAME_GUI)-x86_64.deb \
-           $(if $(PACKAGE_DEBUG),--debug); \
---link-dynamic \
+           ; \
         )
 
 # Windows setup
@@ -953,13 +988,13 @@ build_win32:
 	install -d build/win32
 	(cd build/win32; \
 	 ../../packages/build_win32.sh \
+           $(if $(PACKAGE_DEBUG),--debug); \
            ../.. \
            $(PACKAGE_NAME) \
            ../../$(DISTRIBUTION_NAME).tar.bz2 \
            $(VERSION) \
            $(shell id -u):$(shell id -g) \
            $(PACKAGE_NAME)-setup-$(VERSION) \
-           $(if $(PACKAGE_DEBUG),--debug); \
         )
 
 # install test

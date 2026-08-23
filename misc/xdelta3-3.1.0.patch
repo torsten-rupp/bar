@@ -1,6 +1,6 @@
-diff -Naur xdelta3-3.1.0.org/testing/checksum_test.cc xdelta3-3.1.0/testing/checksum_test.cc
+diff -ru xdelta3-3.1.0.org/testing/checksum_test.cc xdelta3-3.1.0/testing/checksum_test.cc
 --- xdelta3-3.1.0.org/testing/checksum_test.cc	2016-01-01 07:34:33.000000000 +0100
-+++ xdelta3-3.1.0/testing/checksum_test.cc	2026-06-28 16:21:58.606427800 +0200
++++ xdelta3-3.1.0/testing/checksum_test.cc	2026-08-01 07:28:03.855009101 +0200
 @@ -453,12 +453,12 @@
  
    void print() {
@@ -17,9 +17,9 @@ diff -Naur xdelta3-3.1.0.org/testing/checksum_test.cc xdelta3-3.1.0/testing/chec
  	   test_name,
  	   Checksum::cksum_size,
  	   Checksum::cksum_skip,
-diff -Naur xdelta3-3.1.0.org/testing/file.h xdelta3-3.1.0/testing/file.h
+diff -ru xdelta3-3.1.0.org/testing/file.h xdelta3-3.1.0/testing/file.h
 --- xdelta3-3.1.0.org/testing/file.h	2016-01-08 07:49:10.000000000 +0100
-+++ xdelta3-3.1.0/testing/file.h	2026-06-28 16:21:58.607427812 +0200
++++ xdelta3-3.1.0/testing/file.h	2026-08-01 07:28:03.855009101 +0200
 @@ -316,7 +316,7 @@
      pid_t pid = getpid();
      char buf[64];
@@ -29,9 +29,9 @@ diff -Naur xdelta3-3.1.0.org/testing/file.h xdelta3-3.1.0/testing/file.h
      filename_.append(buf);
      unlink(filename_.c_str());
    }
-diff -Naur xdelta3-3.1.0.org/testing/regtest.cc xdelta3-3.1.0/testing/regtest.cc
+diff -ru xdelta3-3.1.0.org/testing/regtest.cc xdelta3-3.1.0/testing/regtest.cc
 --- xdelta3-3.1.0.org/testing/regtest.cc	2016-01-05 09:09:40.000000000 +0100
-+++ xdelta3-3.1.0/testing/regtest.cc	2026-06-28 16:21:58.607427812 +0200
++++ xdelta3-3.1.0/testing/regtest.cc	2026-08-01 07:28:03.856009116 +0200
 @@ -92,7 +92,7 @@
      bool done = false;
      bool done_after_input = false;
@@ -99,9 +99,9 @@ diff -Naur xdelta3-3.1.0.org/testing/regtest.cc xdelta3-3.1.0/testing/regtest.cc
        T::BLOCK_SIZE, T::WINDOW_SIZE);
    Regtest<T> regtest;
    TEST(TestEmptyInMemory);
-diff -Naur xdelta3-3.1.0.org/xdelta3-blkcache.h xdelta3-3.1.0/xdelta3-blkcache.h
+diff -ru xdelta3-3.1.0.org/xdelta3-blkcache.h xdelta3-3.1.0/xdelta3-blkcache.h
 --- xdelta3-3.1.0.org/xdelta3-blkcache.h	2016-01-05 08:41:09.000000000 +0100
-+++ xdelta3-3.1.0/xdelta3-blkcache.h	2026-06-28 16:21:58.607427812 +0200
++++ xdelta3-3.1.0/xdelta3-blkcache.h	2026-08-01 07:28:03.856009116 +0200
 @@ -248,7 +248,7 @@
  
        if (sfile->size_known)
@@ -171,9 +171,22 @@ diff -Naur xdelta3-3.1.0.org/xdelta3-blkcache.h xdelta3-3.1.0/xdelta3-blkcache.h
  	      "lru_filled=%u)\n", blkno, nread, 
  	      lru_hits, lru_misses, lru_filled);
  	}
-diff -Naur xdelta3-3.1.0.org/xdelta3-main.h xdelta3-3.1.0/xdelta3-main.h
+diff -ru xdelta3-3.1.0.org/xdelta3-decode.h xdelta3-3.1.0/xdelta3-decode.h
+--- xdelta3-3.1.0.org/xdelta3-decode.h	2016-01-05 08:47:01.000000000 +0100
++++ xdelta3-3.1.0/xdelta3-decode.h	2026-08-01 07:33:42.261996120 +0200
+@@ -795,7 +795,7 @@
+   if ((stream->dec_win_ind & VCD_ADLER32) != 0 &&
+       (stream->flags & XD3_ADLER32_NOVER) == 0)
+     {
+-      uint32_t a32 = adler32 (1L, stream->next_out, stream->avail_out);
++      uint32_t a32 = xd3_adler32 (1L, stream->next_out, stream->avail_out);
+ 
+       if (a32 != stream->dec_adler32)
+ 	{
+Only in xdelta3-3.1.0: xdelta3-decode.h~
+diff -ru xdelta3-3.1.0.org/xdelta3-main.h xdelta3-3.1.0/xdelta3-main.h
 --- xdelta3-3.1.0.org/xdelta3-main.h	2016-01-07 07:37:25.000000000 +0100
-+++ xdelta3-3.1.0/xdelta3-main.h	2026-06-28 16:21:58.608427825 +0200
++++ xdelta3-3.1.0/xdelta3-main.h	2026-08-01 07:28:03.857009130 +0200
 @@ -604,7 +604,7 @@
  
        if (r >= 100 && r < 1000)
@@ -429,9 +442,9 @@ diff -Naur xdelta3-3.1.0.org/xdelta3-main.h xdelta3-3.1.0/xdelta3-main.h
  	  main_format_millis (end_time - start_time, &tm),
  	  ifile->nread, nwrite, 100.0 * nwrite / ifile->nread);
      }
-diff -Naur xdelta3-3.1.0.org/xdelta3-test.h xdelta3-3.1.0/xdelta3-test.h
+diff -ru xdelta3-3.1.0.org/xdelta3-test.h xdelta3-3.1.0/xdelta3-test.h
 --- xdelta3-3.1.0.org/xdelta3-test.h	2016-01-05 08:07:04.000000000 +0100
-+++ xdelta3-3.1.0/xdelta3-test.h	2026-06-28 16:21:58.615427914 +0200
++++ xdelta3-3.1.0/xdelta3-test.h	2026-08-01 07:28:03.857009130 +0200
 @@ -223,7 +223,7 @@
  {
    char buf[64];
@@ -503,9 +516,9 @@ diff -Naur xdelta3-3.1.0.org/xdelta3-test.h xdelta3-3.1.0/xdelta3-test.h
  	  stream->msg = "wrong result";
  	  return XD3_INTERNAL;
  	}
-diff -Naur xdelta3-3.1.0.org/xdelta3.c xdelta3-3.1.0/xdelta3.c
+diff -ru xdelta3-3.1.0.org/xdelta3.c xdelta3-3.1.0/xdelta3.c
 --- xdelta3-3.1.0.org/xdelta3.c	2016-01-05 09:05:31.000000000 +0100
-+++ xdelta3-3.1.0/xdelta3.c	2026-06-28 16:40:21.210129545 +0200
++++ xdelta3-3.1.0/xdelta3.c	2026-08-01 07:33:55.945197756 +0200
 @@ -1084,7 +1084,7 @@
  #define A32_DO8(buf,i)  A32_DO4(buf,i); A32_DO4(buf,i+4);
  #define A32_DO16(buf)   A32_DO8(buf,0); A32_DO8(buf,8);
@@ -515,9 +528,19 @@ diff -Naur xdelta3-3.1.0.org/xdelta3.c xdelta3-3.1.0/xdelta3.c
  {
      uint32_t s1 = adler & 0xffffU;
      uint32_t s2 = (adler >> 16) & 0xffffU;
-diff -Naur xdelta3-3.1.0.org/xdelta3.h xdelta3-3.1.0/xdelta3.h
+@@ -2822,7 +2822,7 @@
+ 
+       if (stream->flags & XD3_ADLER32)
+ 	{
+-	  a32 = adler32 (1L, stream->next_in, stream->avail_in);
++	  a32 = xd3_adler32 (1L, stream->next_in, stream->avail_in);
+ 	}
+       else
+ 	{
+Only in xdelta3-3.1.0: xdelta3.c~
+diff -ru xdelta3-3.1.0.org/xdelta3.h xdelta3-3.1.0/xdelta3.h
 --- xdelta3-3.1.0.org/xdelta3.h	2016-01-08 07:43:21.000000000 +0100
-+++ xdelta3-3.1.0/xdelta3.h	2026-06-28 16:21:58.615427914 +0200
++++ xdelta3-3.1.0/xdelta3.h	2026-08-01 07:28:03.858009145 +0200
 @@ -170,16 +170,16 @@
  typedef uint64_t xoff_t;
  /* Note: The following generates benign warnings in a mingw

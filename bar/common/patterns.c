@@ -13,7 +13,7 @@
 #include <string.h>
 #include <sys/types.h>
 // Note: sanitizer intercept regex functions; must use libc regex
-#if defined(HAVE_PCRE) && !defined(__SANITIZE_ADDRESS__)
+#if defined(HAVE_PCRE) && defined(HAVE_PCREPOSIX) && !defined(__SANITIZE_ADDRESS__)
   #include <pcreposix.h>
 #elif defined(HAVE_REGEX_H)
   #include <regex.h>
@@ -592,13 +592,15 @@ bool Pattern_isValid(const ConstString string, PatternTypes patternType)
                        PATTERN_FLAG_NONE
                       );
 
-  // compile pattern
-  regex_t regex;
-  if (regcomp(&regex,String_cString(regexString),regexFlags) == 0)
-  {
-    regfree(&regex);
-    isValid = TRUE;
-  }
+  #if (defined(HAVE_PCRE) && defined(HAVE_PCREPOSIX) && !defined(__SANITIZE_ADDRESS__)) || defined(HAVE_REGEX_H)
+    // compile pattern
+    regex_t regex;
+    if (regcomp(&regex,String_cString(regexString),regexFlags) == 0)
+    {
+      regfree(&regex);
+      isValid = TRUE;
+    }
+  #endif /* HAVE_PCRE || HAVE_REGEX_H */
 
   // free resources
   String_delete(regexString);

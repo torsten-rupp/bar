@@ -1,12 +1,15 @@
-2026-07-26 28
+2026-08-23 28
   * fix clean-up index with invalid states (bug #48)
   * fix schedule job when day light saving changes (bug #49)
   * fix various warnings
   * fix build dynamic linked
+  * fix usage of regex+pcre
   * support build with libssh2 1.11.0
+  * build dynamic linked binary packages
   * upgrade zlib 1.3.2
   * upgrade xz 5.8.3
   * upgrade xdelta3 3.1.0
+  * upgrade ssh2 1.11.0
   * upgrade MXML 4.0.4
   * upgrade nettle 3.10.2
   * upgrade GNU TLS 3.8.13
@@ -16,7 +19,7 @@
   * upgrade PostgreSQL 18.4
   * upgrade Kerberos 1.22.2
   * upgrade PAR2 1.2.0
-  * BARControl: upgarde to Java 8
+  * BARControl: upgrade to Java 8
 
 2026-03-08 27a
   * fix ICU data (bug #33)

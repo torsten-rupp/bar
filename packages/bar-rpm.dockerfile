@@ -1,3 +1,4 @@
+# require AlmaLinux >= 9.0
 FROM almalinux:9.0
 ENV container docker
 
@@ -31,9 +32,9 @@ RUN yum -y install --allowerasing \
   ;
 
 RUN yum -y install --allowerasing \
+  autoconf \
   automake \
   bison \
-  build-essential \
   bzip2 \
   curl \
   e2fsprogs \
@@ -134,3 +135,31 @@ RUN    install -d /media/home \
 VOLUME [ "/media/home" ]
 
 CMD ["/usr/sbin/init"]
+
+# install packages for dynamic linkage
+RUN yum -y install --allowerasing \
+  binutils-devel \
+;
+
+RUN yum -y install --allowerasing \
+  libicu-devel \
+  zlib-devel \
+  lzo-devel \
+  lz4-devel \
+  xz-devel \
+  bzip2-devel \
+  libzstd-devel \
+  gnutls-devel \
+  openssl-devel \
+  nettle-devel \
+  gmp-devel \
+  c-ares-devel \
+  libidn2-devel \
+  libgcrypt-devel \
+  libssh-devel \
+  libmount-devel \
+  krb5-devel \
+  mariadb-connector-c-devel \
+  libpq-devel \
+  libuuid-devel \
+  ;

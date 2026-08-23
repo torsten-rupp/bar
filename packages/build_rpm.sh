@@ -105,16 +105,16 @@ if test $helpFlag -eq 1; then
   echo "Usage: $0 [options] <source path>:<distribution name> <version> <user:group> <package name>"
   echo ""
   echo "Options:  --link-dynamic  build dynamic linked binaries"
-  echo "          -t|--test   execute tests"
-  echo "          -d|--debug  enable debug"
-  echo "          -h|--help   print help"
+  echo "          -t|--test       execute tests"
+  echo "          -d|--debug      enable debug"
+  echo "          -h|--help       print help"
   exit 0
 fi
 
 # enable tracing
-if test $debugFlag -eq 1; then
-  set -x
-fi
+#if test $debugFlag -eq 1; then
+#  set -x
+#fi
 
 # check arguments
 if test -z "$packageName"; then
@@ -172,30 +172,29 @@ chmod a+r $distributionFileName
 # TODO: out-of-source build, build from source instead of extract distribution file
   # build rpm
   if test $linkDynamicFlag -eq 1; then
-    rpmbuild \
-      -bb \
-      --define "_sourcedir $sourcePath" \
-      --define "_topdir `pwd`" \
-      --define "ADDITIONAL_DOWNLOAD_FLAGS " \
-      --define "ADDITIONAL_CONFIGURE_FLAGS --enable-link-dynamic" \
-      --define "packageName $packageName" \
-      --define "distributionFileName $distributionFileName" \
-      --define "version $version" \
-      --define "rpmFileName $rpmFileName" \
-      --define "testsFlag $testsFlag" \
-      backup-archiver.spec
+    # Note:
+    #  - libxdelta3, libssh2, libxfs, liburcu, libpar2 not available as dynamic libraries
+    #  - available libmxml, libsqlite3 is too old
+    #  - available libcurl is too old: >= 7.77 required
+    #  - libpcre, libisofs, libcdio, libburn, libsmbclient not available
+    additionalDownloadFlags="xdelta3 ssh2 curl xfs urcu par2 mxml pcre isofs cdio burn smbclient sqlite3"
+    additionalConfigureFlags="--enable-link-dynamic"
   else
-    rpmbuild \
-      -bb \
-      --define "_sourcedir $sourcePath" \
-      --define "_topdir `pwd`" \
-      --define "packageName $packageName" \
-      --define "distributionFileName $distributionFileName" \
-      --define "version $version" \
-      --define "rpmFileName $rpmFileName" \
-      --define "testsFlag $testsFlag" \
-      backup-archiver.spec
+    additionalDownloadFlags=""
+    additionalConfigureFlags=""
   fi
+  rpmbuild \
+    -bb \
+    --define "_sourcedir $sourcePath" \
+    --define "_topdir `pwd`" \
+    ${additionalDownloadFlags:+--define "additionalDownloadFlags $additionalDownloadFlags"} \
+    ${additionalConfigureFlags:+--define "additionalConfigureFlags $additionalConfigureFlags"} \
+    --define "packageName $packageName" \
+    --define "distributionFileName $distributionFileName" \
+    --define "version $version" \
+    --define "rpmFileName $rpmFileName" \
+    --define "testsFlag $testsFlag" \
+    backup-archiver.spec
 
   # get result
   cp -f $tmpDir/RPMS/*/backup-archiver-[0-9]*.rpm $sourcePath/$rpmFileName

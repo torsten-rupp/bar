@@ -50,6 +50,9 @@ RUN apt-get -y install --no-install-recommends --fix-missing \
   xz-utils \
   ;
 RUN apt-get -y install --no-install-recommends --fix-missing \
+  autoconf \
+  automake \
+  autotools-dev \
   bison \
   build-essential \
   cmake \

@@ -1,5 +1,6 @@
 #!/bin/bash
 
+set -x
 # constants
 BUILD_DIR=$PWD
 
@@ -11,6 +12,8 @@ version=""
 userGroup=""
 debFileName=""
 debFileNameGUI=""
+toolsFlag=0
+guiFlag=0
 linkDynamicFlag=0
 testsFlag=0
 debugFlag=0
@@ -20,6 +23,14 @@ while test $# != 0; do
   case $1 in
     -h | --help)
       helpFlag=1
+      shift
+      ;;
+    --tools)
+      toolsFlag=1
+      shift
+      ;;
+    --gui)
+      guiFlag=1
       shift
       ;;
     --link-dynamic)
@@ -110,17 +121,19 @@ while test $# != 0; do
   esac
   shift
 done
+
+# print help
 if test $helpFlag -eq 1; then
-  echo "Usage: $0 [options] <source path> <distribution name> <version> <user:group> <package name> [<package name GUI>]"
+  echo "Usage: $0 [options] <source path> <distribution name> <version> <user:group> <package name> <package name GUI>"
   echo ""
-  echo "Options:  --link-dynamic  build dynamic linked binaries"
+  echo "Options:  --tools         build command line tools package"
+  echo "          --gui           build GUI package"
+  echo "          --link-dynamic  build dynamic linked binaries"
   echo "          -t|--test       execute tests"
   echo "          -d|--debug      enable debug"
   echo "          -h|--help       print help"
   exit 0
 fi
-
-linkDynamicFlag=1
 
 # enable tracing
 if test $debugFlag -eq 1; then
@@ -144,12 +157,16 @@ if test -z "$userGroup"; then
   echo >&2 ERROR: no user:group id given!
   exit 1
 fi
-if test -z "$debFileName"; then
-  echo >&2 ERROR: no DEB filename given!
+if test $toolsFlag -eq 1 -a -z "$debFileName"; then
+  echo >&2 ERROR: no tools DEB filename given!
+  exit 1
+fi
+if test $guiFlag -eq 1 -a -z "$debFileNameGUI"; then
+  echo >&2 ERROR: no GUI DEB filename given!
   exit 1
 fi
 
-# get tools
+# find tools
 
 # TODO: out-of-source build, use existing checkout
 
@@ -178,10 +195,9 @@ fi
   tar xjf $distributionFileName
   cd $packageName-$version
 
-  # create debian files with changelog
+  # create debian files
   install -d debian
   install -t debian \
-          packages/debian/compat \
           packages/debian/control \
           packages/debian/copyright \
           packages/debian/preinst \
@@ -204,44 +220,53 @@ fi
   #  -e testsFlag=$testsFlag \
   #  -us -uc
   #ln -s packages/debian
+  debBuildProfiles=""
+  if test \( $toolsFlag -eq 0 -a $guiFlag -eq 0 \) -o $toolsFlag -eq 1; then
+    debBuildProfiles="$debBuildProfiles tools"
+  fi
+  if test \( $toolsFlag -eq 0 -a $guiFlag -eq 0 \) -o $guiFlag -eq 1; then
+    debBuildProfiles="$debBuildProfiles gui"
+  fi
   if test $linkDynamicFlag -eq 1; then
     # Note:
-    #  - libxfs, libpar2 not available as dynamic libraries
+    #  - libxdelta3, libxfs, libpar2 not available as dynamic libraries
+    #  - available libmxml is too old
     #  - libpcre not available
-    debuild \
-      -e SOURCE_DIR=$sourcePath \
--e ADDITIONAL_DOWNLOAD_FLAGS="zlib sqlite3 xfs par2 pcre" \
-      -e ADDITIONAL_CONFIGURE_FLAGS="--enable-link-dynamic" \
-      -e packageName=$packageName \
-      -e distributionFileName=$distributionFileName \
-      -e version=$version \
-      -e debFileName=$debFileName \
-      -e testsFlag=$testsFlag \
-      -us -uc
-    #  -i -us -uc -b
+    additionalDownloadFlags="xdelta3 xfs par2 mxml pcre"
+    additionalConfigureFlags="--enable-link-dynamic"
   else
-    debuild \
-      -e SOURCE_DIR=$sourcePath \
-      -e packageName=$packageName \
-      -e distributionFileName=$distributionFileName \
-      -e version=$version \
-      -e debFileName=$debFileName \
-      -e testsFlag=$testsFlag \
-      -us -uc
-    #  -i -us -uc -b
+    additionalDownloadFlags=""
+    additionalConfigureFlags=""
   fi
+  DEB_BUILD_PROFILES="$debBuildProfiles" \
+  debuild \
+    -e SOURCE_DIR=$sourcePath \
+    -e ADDITIONAL_DOWNLOAD_FLAGS="$additionalDownloadFlags" \
+    -e ADDITIONAL_CONFIGURE_FLAGS="$additionalConfigureFlags" \
+    -us -uc
+  #  -i -us -uc -b
 
-  # get result
-  cp -f $tmpDir/${packageName}_[0-9]*.deb $sourcePath/$debFileName
-  chown $userGroup $sourcePath/$debFileName
-  if test -n "$debFileNameGUI"; then
+#    -e packageName=$packageName \
+#    -e distributionFileName=$distributionFileName \
+#    -e version=$version \
+#    -e debFileName=$debFileName \
+#    -e testsFlag=$testsFlag \
+
+  # get results
+  if test $toolsFlag -eq 1; then
+    cp -f $tmpDir/${packageName}_[0-9]*.deb $sourcePath/$debFileName
+    chown $userGroup $sourcePath/$debFileName
+  fi
+  if test $guiFlag -eq 1; then
     cp -f $tmpDir/${packageName}-gui_[0-9]*.deb $sourcePath/$debFileNameGUI
     chown $userGroup $sourcePath/$debFileNameGUI
   fi
 
   # get SHA256 hash
-  sha256sum $sourcePath/$debFileName
-  if test -n "$debFileNameGUI"; then
+  if test $toolsFlag -eq 1; then
+    sha256sum $sourcePath/$debFileName
+  fi
+  if test $guiFlag -eq 1; then
     sha256sum $sourcePath/$debFileNameGUI
   fi
 
