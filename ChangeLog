@@ -4,6 +4,8 @@
   * fix various warnings
   * fix build dynamic linked
   * fix usage of regex+pcre
+  * fix write CD/DVD/BD: special files
+  * add libisofs+libburn debug output on verbose >= 4
   * support build with libssh2 1.11.0
   * build dynamic linked binary packages
   * upgrade zlib 1.3.2
@@ -19,6 +21,7 @@
   * upgrade PostgreSQL 18.4
   * upgrade Kerberos 1.22.2
   * upgrade PAR2 1.2.0
+  * upgrade isofs 1.5.8pl02
   * BARControl: upgrade to Java 8
 
 2026-03-08 27a

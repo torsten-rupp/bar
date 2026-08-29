@@ -82,6 +82,15 @@
 
 /***************************** Datatypes *******************************/
 
+// burn source handle
+typedef struct
+{
+  int                fileHandle;
+  IsoImage           *isoImage;
+  IsoWriteOpts       *isoWriteOpts;
+  struct burn_source *burnSource;
+} ISOSourceHandle;
+
 // execute I/IO info
 typedef struct
 {
@@ -100,6 +109,92 @@ typedef struct
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : setMessageSeveritity
+* Purpose: set debug verbose level in libisofs+libburn
+* Input  : verboseLevel - verbose level
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void setMessageSeveritity(long verboseLevel)
+{
+  if      (verboseLevel >= 5)
+  {
+    #ifdef HAVE_ISOFS
+      iso_set_msgs_severities("ALL", "NEVER", "");
+    #endif // HAVE_ISOFS
+  #ifdef HAVE_BURN
+    burn_msgs_set_severities("ALL", "NEVER", "");
+  #endif // HAVE_BURN
+  }
+  else if (verboseLevel >= 4)
+  {
+    #ifdef HAVE_ISOFS
+      iso_set_msgs_severities("DEBUG", "NEVER", "");
+    #endif // HAVE_ISOFS
+  #ifdef HAVE_BURN
+    burn_msgs_set_severities("DEBUG", "NEVER", "");
+  #endif // HAVE_BURN
+  }
+  else
+  {
+    #ifdef HAVE_ISOFS
+      iso_set_msgs_severities("NEVER", "NEVER", "");
+    #endif // HAVE_ISOFS
+  #ifdef HAVE_BURN
+    burn_msgs_set_severities("NEVER", "NEVER", "");
+  #endif // HAVE_BURN
+  }
+}
+
+/***********************************************************************\
+* Name   : libisofsPollMessages
+* Purpose: poll and output debug messages from libisofs
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void libisofsPollMessages(void)
+{
+  int  errorCode;
+  int  imageId;
+  char messageText[ISO_MSGS_MESSAGE_LEN];
+  char severity[80];
+  while (iso_obtain_msgs("ALL",&errorCode,&imageId,messageText,severity) == 1)
+  {
+    UNUSED_VARIABLE(imageId);
+    UNUSED_VARIABLE(severity);
+    printInfo(0, "DEBUG libisofs: %s (error %d)\n", messageText, errorCode);
+  }
+}
+
+/***********************************************************************\
+* Name   : libburnPollMessages
+* Purpose: poll and output debug messages from libburn
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+void libburnPollMessages(void)
+{
+  int  errorCode;
+  char messageText[BURN_MSGS_MESSAGE_LEN];
+  int  osError;
+  char severity[80];
+  while (burn_msgs_obtain("ALL",&errorCode,messageText,&osError,severity) == 1)
+  {
+    UNUSED_VARIABLE(osError);
+    UNUSED_VARIABLE(severity);
+    printInfo(0, "DEBUG liburn: %s (error %d)\n", messageText, errorCode);
+  }
+}
 
 /***********************************************************************\
 * Name   : initExecuteIOInfo
@@ -488,9 +583,11 @@ LOCAL Errors StorageOptical_initAll(void)
 {
   #ifdef HAVE_ISOFS
     (void)cdio_log_set_handler(libcdioLogCallback);
+
     int result = iso_init();
     if (result != ISO_SUCCESS)
     {
+      (void)cdio_log_set_handler(NULL);
       return ERRORX_(INIT,result,"%s",iso_error_to_msg(result));
     }
   #endif // HAVE_ISOFS
@@ -501,6 +598,7 @@ LOCAL Errors StorageOptical_initAll(void)
       #ifdef HAVE_ISOFS
         iso_finish();
       #endif // HAVE_ISOFS
+      (void)cdio_log_set_handler(NULL);
       return ERROR_INIT;
     }
   #endif // HAVE_BURN
@@ -1395,6 +1493,7 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
             burn_set_signal_handling(NULL, NULL, 0x30);
             burn_disc_erase(burnDriveInfo->drive, 1);
             Misc_mdelay(1*MS_PER_S);
+            setMessageSeveritity(globalOptions.verboseLevel);
             struct burn_progress burnProgress;
             while (burn_drive_get_status(burnDriveInfo->drive,&burnProgress) != BURN_DRIVE_IDLE)
             {
@@ -1413,6 +1512,10 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
                     break;
                 }
               }
+
+              libisofsPollMessages();
+              libburnPollMessages();
+
               Misc_mdelay(100);
             }
             switch (globalOptions.runMode)
@@ -1429,6 +1532,16 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
               error = ERROR_ABORTED;
             }
             burn_set_signal_handling(NULL, NULL, 0x00);
+
+            enum burn_disc_status burnDiscStatus = burn_disc_get_status(burnDriveInfo->drive);
+            if (   (burnDiscStatus != BURN_DISC_BLANK)
+                && (burnDiscStatus != BURN_DISC_APPENDABLE)
+               )
+            {
+              error = ERRORX_(WRITE_OPTICAL_DISK,burnDiscStatus,"disc not writable");
+            }
+
+            burn_drive_release(burnDriveInfo->drive,0);
 
             burn_drive_info_free(burnDriveInfo);
           }
@@ -1524,6 +1637,311 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
 
   return error;
 }
+
+/***********************************************************************\
+* Name   : createISOSourceFromDirectory
+* Purpose: create ISO from directory
+* Input  : isoSourceHandle - burn source handle variable
+*          directory       - directory with files for ISO
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors createISOSourceFromDirectory(ISOSourceHandle *isoSourceHandle, ConstString directory)
+{
+  assert(isoSourceHandle != NULL);
+  assert(directory != NULL);
+
+  Errors error = ERROR_NONE;
+
+  isoSourceHandle->fileHandle = -1;
+
+  int result;
+
+  // create new ISO image
+  result = iso_image_new("Backup", &isoSourceHandle->isoImage);
+  if (result == ISO_SUCCESS)
+  {
+    assert(isoSourceHandle->isoImage != NULL);
+
+    // read ISO image content from dirctory
+    iso_tree_set_follow_symlinks(isoSourceHandle->isoImage,1);
+    iso_tree_set_ignore_hidden(isoSourceHandle->isoImage,1);
+    iso_tree_set_ignore_special(isoSourceHandle->isoImage,1);
+    result = iso_tree_add_dir_rec(isoSourceHandle->isoImage,
+                                  iso_image_get_root(isoSourceHandle->isoImage),
+                                  String_cString(directory)
+                                 );
+    if (result == ISO_SUCCESS)
+    {
+      // set ISO options
+      result = iso_write_opts_new(&isoSourceHandle->isoWriteOpts, 0);
+      if (result == ISO_SUCCESS)
+      {
+        assert(isoSourceHandle->isoWriteOpts != NULL);
+        iso_write_opts_set_iso_level(isoSourceHandle->isoWriteOpts,2);
+        iso_write_opts_set_rockridge(isoSourceHandle->isoWriteOpts,1);
+        iso_write_opts_set_joliet(isoSourceHandle->isoWriteOpts,0);
+        iso_write_opts_set_iso1999(isoSourceHandle->isoWriteOpts,0);
+
+        // create burn source from ISO image
+        result = iso_image_create_burn_source(isoSourceHandle->isoImage,
+                                              isoSourceHandle->isoWriteOpts,
+                                              &isoSourceHandle->burnSource
+                                             );
+        if (result == ISO_SUCCESS)
+        {
+          assert(isoSourceHandle->burnSource != NULL);
+          assert(isoSourceHandle->burnSource->read == NULL);
+          assert(isoSourceHandle->burnSource->version >= 1);
+        }
+        else
+        {
+          iso_write_opts_free(isoSourceHandle->isoWriteOpts);
+        }
+      }
+      else
+      {
+        error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
+      }
+    }
+    else
+    {
+      iso_image_unref(isoSourceHandle->isoImage);
+      error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
+    }
+  }
+  else
+  {
+    error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : createISOSourceFromDirectory
+* Purpose: create ISO from image
+* Input  : isoSourceHandle - burn source handle variable
+*          imageFileName   - image file name
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors createISOSourceFromImage(ISOSourceHandle *isoSourceHandle, ConstString imageFileName)
+{
+  assert(isoSourceHandle != NULL);
+  assert(imageFileName != NULL);
+
+  Errors error = ERROR_NONE;
+
+  isoSourceHandle->isoImage     = NULL;
+  isoSourceHandle->isoWriteOpts = NULL;
+
+  // get image size
+  FileInfo fileInfo;
+  File_getInfo(&fileInfo,imageFileName);
+
+  // open image file
+  isoSourceHandle->fileHandle = open(String_cString(imageFileName),O_RDONLY);
+  if (isoSourceHandle->fileHandle != -1)
+  {
+    // create burn source from image file
+    isoSourceHandle->burnSource = burn_fd_source_new(isoSourceHandle->fileHandle,-1,fileInfo.size);
+    if (isoSourceHandle->burnSource != NULL)
+    {
+      assert(isoSourceHandle->burnSource != NULL);
+      assert(isoSourceHandle->burnSource->read == NULL);
+      assert(isoSourceHandle->burnSource->version >= 1);
+    }
+    else
+    {
+      close(isoSourceHandle->fileHandle);
+      error = ERRORX_(WRITE_OPTICAL_DISK,0,"initialize write source");
+    }
+  }
+  else
+  {
+    error = ERRORX_(OPEN_FILE,errno,"%s",strerror(errno));
+  }
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : deleteBurnSource
+* Purpose: delete burn source
+* Input  : isoSourceHandle - burn source to delete
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deleteISOSource(ISOSourceHandle *isoSourceHandle)
+{
+  assert(isoSourceHandle != NULL);
+
+  burn_source_free(isoSourceHandle->burnSource);
+  if (isoSourceHandle->isoWriteOpts != NULL)
+  {
+    iso_write_opts_free(isoSourceHandle->isoWriteOpts);
+  }
+  if (isoSourceHandle->isoImage != NULL)
+  {
+    iso_image_unref(isoSourceHandle->isoImage);
+  }
+  if (isoSourceHandle->fileHandle != -1)
+  {
+    close(isoSourceHandle->fileHandle);
+  }
+}
+
+#ifdef HAVE_BURN
+/***********************************************************************\
+* Name   : writeISOSource
+* Purpose: write ISO source handler with FIFO
+* Input  : storageInfo     - storage info
+*          burnDriveInfo   - burn drive info
+*          isoSourceHandle - ISO source handle
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors writeISOSource(StorageInfo            *storageInfo,
+                            struct burn_drive_info *burnDriveInfo,
+                            ISOSourceHandle        *isoSourceHandle
+                           )
+{
+  assert(storageInfo != NULL);
+  assert(burnDriveInfo != NULL);
+  assert(isoSourceHandle != NULL);
+
+  Errors error = ERROR_NONE;
+
+  struct burn_disc    *burnDisc    = burn_disc_create();
+  assert(burnDisc != NULL);
+  struct burn_session *burnSession = burn_session_create();
+  assert(burnSession != NULL);
+  struct burn_track   *burnTrack   = burn_track_create();
+  assert(burnTrack != NULL);
+  burn_disc_add_session(burnDisc,burnSession,BURN_POS_END);
+
+  struct burn_source *burnFifoSource = burn_fifo_source_new(isoSourceHandle->burnSource,
+                                                            ISO_SECTOR_SIZE,
+                                                            ISO_FIFO_SIZE,
+                                                            0
+                                                           );
+  if (burnFifoSource != NULL)
+  {
+    enum burn_source_status burnSourceStatus;
+    burnSourceStatus = burn_track_set_source(burnTrack,
+                                             burnFifoSource
+                                            );
+    if (burnSourceStatus == BURN_SOURCE_OK)
+    {
+      burn_session_add_track(burnSession,
+                             burnTrack,
+                             BURN_POS_END
+                            );
+
+      // set burn options
+      struct burn_write_opts *burnWriteOptions = burn_write_opts_new(burnDriveInfo->drive);
+      if (burnWriteOptions != NULL)
+      {
+        burn_write_opts_set_perform_opc(burnWriteOptions, 0);
+// TODO: command line options
+//                burn_write_opts_set_multi(burnWriteOptions, !!multi);
+//if (simulate_burn) printf("\n*** Will TRY to SIMULATE burning ***\n\n");
+//burn_write_opts_set_simulate(burnWriteOptions,1);
+        burn_drive_set_speed(burnDriveInfo->drive,0,0);
+        burn_write_opts_set_underrun_proof(burnWriteOptions,1);
+        char burnReasons[BURN_REASONS_LEN];
+        if (burn_write_opts_auto_write_type(burnWriteOptions,burnDisc,burnReasons,0) != BURN_WRITE_NONE)
+        {
+          // write image
+          burn_set_signal_handling(NULL, NULL, 0x30);
+          burn_disc_write(burnWriteOptions,burnDisc);
+          while (   !Storage_isAborted(storageInfo)
+                 && (burn_drive_get_status(burnDriveInfo->drive,NULL) == BURN_DRIVE_SPAWNING)
+                )
+          {
+            Misc_mdelay(100);
+          }
+          setMessageSeveritity(globalOptions.verboseLevel);
+          struct burn_progress burnProgress;
+          while (   !Storage_isAborted(storageInfo)
+                 && (burn_drive_get_status(burnDriveInfo->drive,&burnProgress) != BURN_DRIVE_IDLE)
+                )
+          {
+            // output progress
+            if (burnProgress.sectors > 0)
+            {
+              double percentage = ((double)burnProgress.sector*100.0)/(double)burnProgress.sectors;
+              switch (globalOptions.runMode)
+              {
+                case RUN_MODE_INTERACTIVE:
+                  printInfo(1,"%3u%%\b\b\b\b",(uint)percentage);
+                  break;
+                case RUN_MODE_BATCH:
+                case RUN_MODE_SERVER:
+                  updateVolumeDone(storageInfo,0,percentage);
+                  updateStorageRunningInfo(storageInfo);
+                  break;
+              }
+            }
+
+            libisofsPollMessages();
+            libburnPollMessages();
+
+            Misc_mdelay(100);
+          }
+          switch (globalOptions.runMode)
+          {
+            case RUN_MODE_INTERACTIVE:
+              printInfo(1,"    \b\b\b\b");
+              break;
+            case RUN_MODE_BATCH:
+            case RUN_MODE_SERVER:
+              break;
+          }
+          if (Storage_isAborted(storageInfo) || (burn_is_aborting(0) < 0))
+          {
+            error = ERROR_ABORTED;
+          }
+          burn_set_signal_handling(NULL, NULL, 0x00);
+        }
+        else
+        {
+          error = ERRORX_(WRITE_OPTICAL_DISK,0,"%s",burnReasons);
+        }
+        burn_write_opts_free(burnWriteOptions);
+      }
+      else
+      {
+        error = ERRORX_(WRITE_OPTICAL_DISK,0,"initialize write options");
+      }
+    }
+    else
+    {
+      error = ERRORX_(WRITE_OPTICAL_DISK,burnSourceStatus,"initialize write track");
+    }
+    burnFifoSource->free_data(burnFifoSource);
+  }
+  else
+  {
+    error = ERRORX_(WRITE_OPTICAL_DISK,0,"initialize write FIFO");
+  }
+
+  burn_track_free(burnTrack);
+  burn_session_free(burnSession);
+  burn_disc_free(burnDisc);
+
+  return error;
+}
+#endif
 
 /***********************************************************************\
 * Name   : createISOImage
@@ -1642,7 +2060,10 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
             iso_tree_set_follow_symlinks(isoImage,0);
             iso_tree_set_ignore_hidden(isoImage,0);
             iso_tree_set_ignore_special(isoImage,0);
-            result = iso_tree_add_dir_rec(isoImage,iso_image_get_root(isoImage),String_cString(storageInfo->opticalDisk.write.directory));
+            result = iso_tree_add_dir_rec(isoImage,
+                                          iso_image_get_root(isoImage),
+                                          String_cString(storageInfo->opticalDisk.write.directory)
+                                         );
             if (result == ISO_SUCCESS)
             {
               IsoWriteOpts *isoWriteOpts;
@@ -1942,140 +2363,6 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
   return error;
 }
 
-#ifdef HAVE_BURN
-/***********************************************************************\
-* Name   : writeISOSource
-* Purpose: write ISO source handler with FIFO
-* Input  : storageInfo   - storage info
-*          burnDriveInfo - burn drive info
-*          burnSource    - ISO source
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors writeISOSource(StorageInfo *storageInfo, struct burn_drive_info *burnDriveInfo, struct burn_source *burnSource)
-{
-  assert(storageInfo != NULL);
-  assert(burnDriveInfo != NULL);
-  assert(burnSource != NULL);
-
-  Errors error = ERROR_NONE;
-
-  struct burn_disc    *burnDisc    = burn_disc_create();
-  assert(burnDisc != NULL);
-  struct burn_session *burnSession = burn_session_create();
-  assert(burnSession != NULL);
-  struct burn_track   *burnTrack   = burn_track_create();
-  assert(burnTrack != NULL);
-  burn_disc_add_session(burnDisc,burnSession,BURN_POS_END);
-
-  struct burn_source *burnFifoSource = burn_fifo_source_new(burnSource,
-                                                            ISO_SECTOR_SIZE,
-                                                            ISO_FIFO_SIZE,
-                                                            0
-                                                           );
-  if (burnFifoSource != NULL)
-  {
-    enum burn_source_status burnSourceStatus;
-    burnSourceStatus = burn_track_set_source(burnTrack,
-                                             burnFifoSource
-                                            );
-    if (burnSourceStatus == BURN_SOURCE_OK)
-    {
-      burn_session_add_track(burnSession,
-                             burnTrack,
-                             BURN_POS_END
-                            );
-
-      // set burn options
-      struct burn_write_opts *burnWriteOptions = burn_write_opts_new(burnDriveInfo->drive);
-      if (burnWriteOptions != NULL)
-      {
-        burn_write_opts_set_perform_opc(burnWriteOptions, 0);
-// TODO: command line options
-//                burn_write_opts_set_multi(burnWriteOptions, !!multi);
-//if (simulate_burn) printf("\n*** Will TRY to SIMULATE burning ***\n\n");
-//burn_write_opts_set_simulate(burnWriteOptions,1);
-        burn_drive_set_speed(burnDriveInfo->drive,0,0);
-        burn_write_opts_set_underrun_proof(burnWriteOptions,1);
-        char burnReasons[BURN_REASONS_LEN];
-        if (burn_write_opts_auto_write_type(burnWriteOptions,burnDisc,burnReasons,0) != BURN_WRITE_NONE)
-        {
-          // write image
-          burn_set_signal_handling(NULL, NULL, 0x30);
-          burn_disc_write(burnWriteOptions,burnDisc);
-          while (   !Storage_isAborted(storageInfo)
-                 && (burn_drive_get_status(burnDriveInfo->drive,NULL) == BURN_DRIVE_SPAWNING)
-                )
-          {
-            Misc_mdelay(100);
-          }
-          struct burn_progress burnProgress;
-          while (   !Storage_isAborted(storageInfo)
-                 && (burn_drive_get_status(burnDriveInfo->drive,&burnProgress) != BURN_DRIVE_IDLE)
-                )
-          {
-            if (burnProgress.sectors > 0)
-            {
-              double percentage = ((double)burnProgress.sector*100.0)/(double)burnProgress.sectors;
-              switch (globalOptions.runMode)
-              {
-                case RUN_MODE_INTERACTIVE:
-                  printInfo(1,"%3u%%\b\b\b\b",(uint)percentage);
-                  break;
-                case RUN_MODE_BATCH:
-                case RUN_MODE_SERVER:
-                  updateVolumeDone(storageInfo,0,percentage);
-                  updateStorageRunningInfo(storageInfo);
-                  break;
-              }
-            }
-            Misc_mdelay(100);
-          }
-          switch (globalOptions.runMode)
-          {
-            case RUN_MODE_INTERACTIVE:
-              printInfo(1,"    \b\b\b\b");
-              break;
-            case RUN_MODE_BATCH:
-            case RUN_MODE_SERVER:
-              break;
-          }
-          if (Storage_isAborted(storageInfo) || (burn_is_aborting(0) < 0))
-          {
-            error = ERROR_ABORTED;
-          }
-          burn_set_signal_handling(NULL, NULL, 0x00);
-        }
-        else
-        {
-          error = ERRORX_(WRITE_OPTICAL_DISK,0,"%s",burnReasons);
-        }
-
-        burn_write_opts_free(burnWriteOptions);
-      }
-      else
-      {
-        error = ERRORX_(WRITE_OPTICAL_DISK,0,"initialize write options");
-      }
-    }
-    else
-    {
-      error = ERRORX_(WRITE_OPTICAL_DISK,burnSourceStatus,"initialize write track");
-    }
-
-    burnFifoSource->free_data(burnFifoSource);
-  }
-  else
-  {
-    error = ERRORX_(WRITE_OPTICAL_DISK,0,"initialize write FIFO");
-  }
-
-  return error;
-}
-#endif
-
 /***********************************************************************\
 * Name   : writeISOImage
 * Purpose: write ISO9660 image to volume
@@ -2093,10 +2380,6 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
   assert(imageFileName != NULL);
 
   Errors error = ERROR_NONE;
-
-  // get image size
-  FileInfo fileInfo;
-  File_getInfo(&fileInfo,imageFileName);
 
   messageSet(&storageInfo->progress.message,MESSAGE_CODE_WRITE_VOLUME,NULL);
   updateStorageRunningInfo(storageInfo);
@@ -2130,35 +2413,19 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
               || (burnDiscStatus == BURN_DISC_APPENDABLE)
              )
           {
-            struct burn_disc *burnDisc = burn_disc_create();
+            struct burn_disc    *burnDisc    = burn_disc_create();
             assert(burnDisc != NULL);
             struct burn_session *burnSession = burn_session_create();
             assert(burnSession != NULL);
             burn_disc_add_session(burnDisc, burnSession, BURN_POS_END);
 
-            // open image file
-            int fileHandle = open(String_cString(imageFileName),O_RDONLY);
-            if (fileHandle != -1)
+            // create ISO source form image file
+            ISOSourceHandle isoSourceHandle;
+            error = createISOSourceFromImage(&isoSourceHandle,imageFileName);
+            if (error == ERROR_NONE)
             {
-              // create data source
-              struct burn_source *burnSource;
-              burnSource = burn_fd_source_new(fileHandle,-1,fileInfo.size);
-              if (burnSource != NULL)
-              {
-                error = writeISOSource(storageInfo,burnDriveInfo,burnSource);
-
-                burn_source_free(burnSource);
-              }
-              else
-              {
-                error = ERRORX_(WRITE_OPTICAL_DISK,0,"initialize write source");
-              }
-
-              close(fileHandle);
-            }
-            else
-            {
-              error = ERRORX_(OPEN_FILE,errno,"%s",strerror(errno));
+              error = writeISOSource(storageInfo,burnDriveInfo,&isoSourceHandle);
+              deleteISOSource(&isoSourceHandle);
             }
 
             burn_session_free(burnSession);
@@ -2166,8 +2433,10 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
           }
           else
           {
-            error = ERRORX_(WRITE_OPTICAL_DISK,burnDiscStatus,"invalid drive status");
+            error = ERRORX_(WRITE_OPTICAL_DISK,burnDiscStatus,"disc not writable");
           }
+
+          burn_drive_release(burnDriveInfo->drive,0);
 
           burn_drive_info_free(burnDriveInfo);
         }
@@ -2204,6 +2473,10 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
   }
   else
   {
+    // get image size
+    FileInfo fileInfo;
+    File_getInfo(&fileInfo,imageFileName);
+
     // init macros
     uint j = Thread_getNumberOfCores();
     TextMacros (textMacros,8);
@@ -2316,61 +2589,20 @@ LOCAL Errors writeDirectory(StorageInfo *storageInfo, ConstString archiveName)
               || (burnDiscStatus == BURN_DISC_APPENDABLE)
              )
           {
-            int result;
-
-            IsoImage *isoImage;
-            result = iso_image_new("Backup", &isoImage);
-            if (result == ISO_SUCCESS)
+            ISOSourceHandle isoSourceHandle;
+            error = createISOSourceFromDirectory(&isoSourceHandle,storageInfo->opticalDisk.write.directory);
+            if (error == ERROR_NONE)
             {
-              assert(isoImage != NULL);
-              iso_tree_set_follow_symlinks(isoImage,0);
-              iso_tree_set_ignore_hidden(isoImage,0);
-              iso_tree_set_ignore_special(isoImage,0);
-              result = iso_tree_add_dir_rec(isoImage,iso_image_get_root(isoImage),String_cString(storageInfo->opticalDisk.write.directory));
-              if (result == ISO_SUCCESS)
-              {
-                IsoWriteOpts *isoWriteOpts;
-                result = iso_write_opts_new(&isoWriteOpts, 0);
-                if (result == ISO_SUCCESS)
-                {
-                  assert(isoWriteOpts != NULL);
-  // TODO: command line pptions for leve, rockridge, joliet?
-                  iso_write_opts_set_iso_level(isoWriteOpts,2);
-                  iso_write_opts_set_rockridge(isoWriteOpts,1);
-                  iso_write_opts_set_joliet(isoWriteOpts,0);
-                  iso_write_opts_set_iso1999(isoWriteOpts,0);
-
-                  struct burn_source *burnSource;
-                  result = iso_image_create_burn_source(isoImage,isoWriteOpts,&burnSource);
-                  if (result == ISO_SUCCESS)
-                  {
-                    assert(burnSource != NULL);
-                    assert(burnSource->read == NULL);
-                    assert(burnSource->version >= 1);
-
-                    error = writeISOSource(storageInfo,burnDriveInfo,burnSource);
-
-                    burnSource->free_data(burnSource);
-                  }
-                  else
-                  {
-                    error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
-                  }
-                  iso_write_opts_free(isoWriteOpts);
-                }
-                else
-                {
-                  error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
-                }
-              }
-              else
-              {
-                error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
-              }
-
-              iso_image_unref(isoImage);
+              error = writeISOSource(storageInfo,burnDriveInfo,&isoSourceHandle);
+              deleteISOSource(&isoSourceHandle);
             }
           }
+          else
+          {
+            error = ERRORX_(WRITE_OPTICAL_DISK,burnDiscStatus,"disc not writable");
+          }
+
+          burn_drive_release(burnDriveInfo->drive,0);
 
           burn_drive_info_free(burnDriveInfo);
         }
@@ -2382,8 +2614,42 @@ LOCAL Errors writeDirectory(StorageInfo *storageInfo, ConstString archiveName)
       }
       else
       {
-// TODO:
-fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
+        #ifdef HAVE_ISOFS
+          FileHandle fileHandle;
+          error = File_open(&fileHandle,debugEmulateBlockDevice,FILE_OPEN_CREATE);
+          if (error == ERROR_NONE)
+          {
+            ISOSourceHandle isoSourceHandle;
+            error = createISOSourceFromDirectory(&isoSourceHandle,storageInfo->opticalDisk.write.directory);
+            if (error == ERROR_NONE)
+            {
+              byte buffer[ISO_SECTOR_SIZE];
+              while (   (error == ERROR_NONE)
+                     && (isoSourceHandle.burnSource->read_xt(isoSourceHandle.burnSource,buffer,ISO_SECTOR_SIZE) == ISO_SECTOR_SIZE)
+                    )
+              {
+                error = File_write(&fileHandle,buffer,ISO_SECTOR_SIZE);
+              }
+              deleteISOSource(&isoSourceHandle);
+              if (error == ERROR_NONE)
+              {
+                error = File_close(&fileHandle);
+              }
+              else
+              {
+                (void)File_close(&fileHandle);
+                File_delete(debugEmulateBlockDevice,FALSE);
+              }
+            }
+            else
+            {
+              (void)File_close(&fileHandle);
+              File_delete(debugEmulateBlockDevice,FALSE);
+            }
+          }
+        #else // not HAVE_ISOFS
+          error = ERROR_FUNCTION_NOT_SUPPORTED;
+        #endif // HAVE_ISOFS
       }
       #endif
     #else

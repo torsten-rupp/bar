@@ -3718,7 +3718,6 @@ LOCAL Errors writeFileDataBlocks(ArchiveEntryInfo *archiveEntryInfo,
         if (byteLength > 0L)
         {
           // encrypt block
-//fprintf(stderr,"%s, %d: cryptBytes=%d\n",__FILE__,__LINE__,byteLength); debugDumpMemory(archiveEntryInfo->file.byteBuffer,byteLength,FALSE);
           error = Crypt_encryptBytes(&archiveEntryInfo->file.cryptInfo,
                                      archiveEntryInfo->file.byteBuffer,
                                      byteLength
