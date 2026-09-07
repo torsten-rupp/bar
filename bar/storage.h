@@ -340,6 +340,7 @@ typedef struct
         String     eccPostProcessCommand;                     // command to execute after ECC calculation
         String     eccCommand;                                // command for ECC calculation
         String     blankCommand;                              // command to blank medium before writing
+        String     formatCommand;                             // command to format medium before writing
         String     writePreProcessCommand;                    // command to execute before writing cd/dvd/bd
         String     writePostProcessCommand;                   // command to execute after writing cd/dvd/bd
         String     writeCommand;                              // command to write cd/dvd/bd

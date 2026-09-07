@@ -56,29 +56,30 @@
 
 /***************************** Constants *******************************/
 /* file data buffer size */
-#define BUFFER_SIZE (64*1024)
+#define BUFFER_SIZE (64*KB)
 
-#define INITIAL_BUFFER_SIZE   (64*1024)
-#define INCREMENT_BUFFER_SIZE ( 8*1024)
-#define MAX_BUFFER_SIZE       (64*1024)
-#define MAX_FILENAME_LENGTH   ( 8*1024)
+#define INITIAL_BUFFER_SIZE   (64*KB)
+#define INCREMENT_BUFFER_SIZE ( 8*KB)
+#define MAX_BUFFER_SIZE       (64*KB)
+#define MAX_FILENAME_LENGTH   ( 8*KB)
 
 #define OPTICAL_UNLOAD_VOLUME_DELAY_TIME (30LL*MS_PER_SECOND) // [ms]
 #define OPTICAL_LOAD_VOLUME_DELAY_TIME   (30LL*MS_PER_SECOND) // [ms]
 
-#define MAX_CD_SIZE  (900LL*1024LL*1024LL)     // 900M
-#define MAX_DVD_SIZE (2LL*4613734LL*1024LL)    // 9G (dual layer)
-#define MAX_BD_SIZE  (2LL*25LL*1024LL*1024LL)  // 50G (dual layer)
+#define MAX_CD_SIZE  (        900LL*MB)  // 900M
+#define MAX_DVD_SIZE (2LL*4613734LL*KB)  // 9G (dual layer)
+#define MAX_BD_SIZE  (     3LL*25LL*GB)  // 50G (triple layer)
 
-#define CD_VOLUME_SIZE      (700LL*1024LL*1024LL)
-#define CD_VOLUME_ECC_SIZE  (560LL*1024LL*1024LL)
-#define DVD_VOLUME_SIZE     (4482LL*1024LL*1024LL)
-#define DVD_VOLUME_ECC_SIZE (3600LL*1024LL*1024LL)
-#define BD_VOLUME_SIZE      (25LL*1024LL*1024LL*1024LL)
-#define BD_VOLUME_ECC_SIZE  (20LL*1024LL*1024LL*1024LL)
+#define CD_VOLUME_SIZE      ( 700LL*MB)
+#define CD_VOLUME_ECC_SIZE  ( 560LL*MB)
+#define DVD_VOLUME_SIZE     (4482LL*MB)
+#define DVD_VOLUME_ECC_SIZE (3600LL*MB)
+#define BD_VOLUME_SIZE      (  25LL*GB)
+#define BD_VOLUME_ECC_SIZE  (  20LL*GB)
 
 #define ISO_SECTOR_SIZE     2048
-#define ISO_FIFO_SIZE       2048  // 2048*2048 = 4MB
+#define ISO_FIFO_SIZE       2048      // 2048*2048 = 4MB
+#define ISO_PADDING         (300*KB)  // 300KB padding
 
 /***************************** Datatypes *******************************/
 
@@ -273,12 +274,10 @@ LOCAL const char *getDeviceName(const StorageSpecifier *storageSpecifier)
 /***********************************************************************\
 * Name   : libcdioLogCallback
 * Purpose: callback for libcdio log messages
-* Input  : buffer   - buffer for data
-*          size     - size of element
-*          n        - number of elements
-*          userData - user data
+* Input  : level   - level (not used)
+*          message - message
 * Output : -
-* Return : always size*n
+* Return : *
 * Notes  : -
 \***********************************************************************/
 
@@ -312,8 +311,8 @@ LOCAL void executeIOmkisofsOutput(StorageInfo *storageInfo,
   String s = String_new();
   if (String_matchCString(line,STRING_BEGIN,".*?([0-9\\.]+)%.*",NULL,STRING_NO_ASSIGN,s,NULL))
   {
-    double p = String_toDouble(s,0,NULL,NULL,0);
-    updateVolumeDone(storageInfo,0,p);
+    double percentageDone = String_toDouble(s,0,NULL,NULL,0);
+    updateVolumeDone(storageInfo,0,percentageDone);
     updateStorageRunningInfo(storageInfo);
   }
   String_delete(s);
@@ -382,14 +381,14 @@ LOCAL void executeIOdvdisasterOutput(StorageInfo *storageInfo,
   String s = String_new();
   if      (String_matchCString(line,STRING_BEGIN,".*adding space\\): +([0-9\\.]+)%",NULL,STRING_NO_ASSIGN,s,NULL))
   {
-    double p = String_toDouble(s,0,NULL,NULL,0);
-    updateVolumeDone(storageInfo,0, 0+p/2);
+    double percentageDone = String_toDouble(s,0,NULL,NULL,0);
+    updateVolumeDone(storageInfo,0, 0+percentageDone/2);
     updateStorageRunningInfo(storageInfo);
   }
   else if (String_matchCString(line,STRING_BEGIN,".*generation: +([0-9\\.]+)%",NULL,STRING_NO_ASSIGN,s,NULL))
   {
-    double p = String_toDouble(s,0,NULL,NULL,0);
-    updateVolumeDone(storageInfo,0,50+p/2);
+    double percentageDone = String_toDouble(s,0,NULL,NULL,0);
+    updateVolumeDone(storageInfo,0,50+percentageDone/2);
     updateStorageRunningInfo(storageInfo);
   }
   String_delete(s);
@@ -438,8 +437,8 @@ LOCAL void executeIOdvdisasterStderr(ConstString line,
 }
 
 /***********************************************************************\
-* Name   : executeIOblankOutput
-* Purpose: process blank output
+* Name   : executeIOOpticalFormatOutput
+* Purpose: process format output
 * Input  : storageInfo - storage info
 *          line        - line
 * Output : -
@@ -447,9 +446,9 @@ LOCAL void executeIOdvdisasterStderr(ConstString line,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOblankOutput(StorageInfo *storageInfo,
-                                ConstString line
-                               )
+LOCAL void executeIOOpticalFormatOutput(StorageInfo *storageInfo,
+                                        ConstString line
+                                       )
 {
   assert(storageInfo != NULL);
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
@@ -458,15 +457,85 @@ LOCAL void executeIOblankOutput(StorageInfo *storageInfo,
   String s = String_new();
   if (String_matchCString(line,STRING_BEGIN,".*?([0-9\\.]+)%.*",NULL,STRING_NO_ASSIGN,s,NULL))
   {
-    double p = String_toDouble(s,0,NULL,NULL,0);
-    updateVolumeDone(storageInfo,0,p);
+    double percentageDone = String_toDouble(s,0,NULL,NULL,0);
+    updateVolumeDone(storageInfo,0,percentageDone);
     updateStorageRunningInfo(storageInfo);
   }
   String_delete(s);
 }
 
 /***********************************************************************\
-* Name   : executeIOblankStdout
+* Name   : executeIOformatStdout
+* Purpose: process format stdout output
+* Input  : line     - line
+*          userData - storage file handle variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void executeIOOpticalFormatStdout(ConstString line,
+                                        void        *userData
+                                       )
+{
+  ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
+  assert(executeIOInfo != NULL);
+  assert(executeIOInfo->storageInfo != NULL);
+  executeIOOpticalFormatOutput(executeIOInfo->storageInfo,line);
+  executeIOOutput(line,NULL);
+}
+
+/***********************************************************************\
+* Name   : executeIOOpticalFormatStderr
+* Purpose: process format stderr output
+* Input  : line     - line
+*          userData - storage file handle variable
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void executeIOOpticalFormatStderr(ConstString line,
+                                        void        *userData
+                                       )
+{
+  ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
+  assert(executeIOInfo != NULL);
+  assert(executeIOInfo->storageInfo != NULL);
+  executeIOOpticalFormatOutput(executeIOInfo->storageInfo,line);
+  executeIOOutput(line,&executeIOInfo->stderrList);
+}
+
+/***********************************************************************\
+* Name   : executeIOOpticalBlankOutput
+* Purpose: process blank output
+* Input  : storageInfo - storage info
+*          line        - line
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void executeIOOpticalBlankOutput(StorageInfo *storageInfo,
+                                       ConstString line
+                                      )
+{
+  assert(storageInfo != NULL);
+  assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
+  assert(line != NULL);
+
+  String s = String_new();
+  if (String_matchCString(line,STRING_BEGIN,".*?([0-9\\.]+)%.*",NULL,STRING_NO_ASSIGN,s,NULL))
+  {
+    double percentageDone = String_toDouble(s,0,NULL,NULL,0);
+    updateVolumeDone(storageInfo,0,percentageDone);
+    updateStorageRunningInfo(storageInfo);
+  }
+  String_delete(s);
+}
+
+/***********************************************************************\
+* Name   : executeIOOpticalBlankStdout
 * Purpose: process blank stdout output
 * Input  : line     - line
 *          userData - storage file handle variable
@@ -475,19 +544,19 @@ LOCAL void executeIOblankOutput(StorageInfo *storageInfo,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOblankStdout(ConstString line,
-                                void        *userData
-                               )
+LOCAL void executeIOOpticalBlankStdout(ConstString line,
+                                       void        *userData
+                                      )
 {
   ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
   assert(executeIOInfo != NULL);
   assert(executeIOInfo->storageInfo != NULL);
-  executeIOblankOutput(executeIOInfo->storageInfo,line);
+  executeIOOpticalBlankOutput(executeIOInfo->storageInfo,line);
   executeIOOutput(line,NULL);
 }
 
 /***********************************************************************\
-* Name   : executeIOblankStderr
+* Name   : executeIOOpticalBlankStderr
 * Purpose: process blank stderr output
 * Input  : line     - line
 *          userData - storage file handle variable
@@ -496,14 +565,14 @@ LOCAL void executeIOblankStdout(ConstString line,
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void executeIOblankStderr(ConstString line,
-                                void        *userData
-                               )
+LOCAL void executeIOOpticalBlankStderr(ConstString line,
+                                       void        *userData
+                                      )
 {
   ExecuteIOInfo *executeIOInfo = (ExecuteIOInfo*)userData;
   assert(executeIOInfo != NULL);
   assert(executeIOInfo->storageInfo != NULL);
-  executeIOblankOutput(executeIOInfo->storageInfo,line);
+  executeIOOpticalBlankOutput(executeIOInfo->storageInfo,line);
   executeIOOutput(line,&executeIOInfo->stderrList);
 }
 
@@ -528,8 +597,8 @@ LOCAL void executeIOgrowisofsOutput(StorageInfo *storageInfo,
   String s = String_new();
   if (String_matchCString(line,STRING_BEGIN,".*?([0-9\\.]+)%.*",NULL,STRING_NO_ASSIGN,s,NULL))
   {
-    double p = String_toDouble(s,0,NULL,NULL,0);
-    updateVolumeDone(storageInfo,0,p);
+    double percentageDone = String_toDouble(s,0,NULL,NULL,0);
+    updateVolumeDone(storageInfo,0,percentageDone);
     updateStorageRunningInfo(storageInfo);
   }
   String_delete(s);
@@ -950,6 +1019,7 @@ LOCAL Errors StorageOptical_init(StorageInfo      *storageInfo,
   storageInfo->opticalDisk.write.eccPostProcessCommand   = String_duplicate(opticalDisk.eccPostProcessCommand);
   storageInfo->opticalDisk.write.eccCommand              = String_duplicate(opticalDisk.eccCommand);
   storageInfo->opticalDisk.write.blankCommand            = String_duplicate(opticalDisk.blankCommand);
+  storageInfo->opticalDisk.write.formatCommand           = String_duplicate(opticalDisk.formatCommand);
   storageInfo->opticalDisk.write.writePreProcessCommand  = String_duplicate(opticalDisk.writePreProcessCommand);
   storageInfo->opticalDisk.write.writePostProcessCommand = String_duplicate(opticalDisk.writePostProcessCommand);
   storageInfo->opticalDisk.write.writeCommand            = String_duplicate(opticalDisk.writeCommand);
@@ -1044,6 +1114,7 @@ LOCAL Errors StorageOptical_done(StorageInfo *storageInfo)
   String_delete(storageInfo->opticalDisk.write.writeCommand);
   String_delete(storageInfo->opticalDisk.write.writePostProcessCommand);
   String_delete(storageInfo->opticalDisk.write.writePreProcessCommand);
+  String_delete(storageInfo->opticalDisk.write.formatCommand);
   String_delete(storageInfo->opticalDisk.write.blankCommand);
   String_delete(storageInfo->opticalDisk.write.eccCommand);
   String_delete(storageInfo->opticalDisk.write.eccPostProcessCommand);
@@ -1063,7 +1134,7 @@ LOCAL Errors StorageOptical_done(StorageInfo *storageInfo)
 * Purpose: load optical volume (close tray)
 * Input  : storageInfo - storage info
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1090,20 +1161,108 @@ LOCAL Errors loadOpticalVolume(const StorageInfo *storageInfo)
       if (debugEmulateBlockDevice == NULL)
       {
       #endif
-        struct burn_drive_info *burnDriveInfo;
-        if (burn_drive_scan_and_grab(&burnDriveInfo,(char*)deviceName,1) == 1)
+        uint                  retries = 3;
+        int                   profileNumber;
+        char                  profileName[80];
+        bool                  profileOK;
+        enum burn_disc_status burnDiscStatus;
+        do
         {
-          while (burn_drive_get_status(burnDriveInfo->drive,NULL) != BURN_DRIVE_IDLE)
+          struct burn_drive_info *burnDriveInfo;
+          if (burn_drive_scan_and_grab(&burnDriveInfo,(char*)deviceName,1) == 1)  // Note: close tray+lock
           {
-            Misc_mdelay(100);
-          }
-          burn_drive_release(burnDriveInfo->drive,0);
+            // wait for drive
+            while (burn_drive_get_status(burnDriveInfo->drive,NULL) != BURN_DRIVE_IDLE)
+            {
+              Misc_mdelay(100);
+            }
 
-          burn_drive_info_free(burnDriveInfo);
+            // get media info
+            profileOK      = (burn_disc_get_profile(burnDriveInfo->drive,&profileNumber,profileName) == 1);
+            burnDiscStatus = burn_disc_get_status(burnDriveInfo->drive);
+
+            burn_drive_release(burnDriveInfo->drive,0);  // Note: keep tray closed, just unlock
+
+            burn_drive_info_free(burnDriveInfo);
+
+            if (   (burnDiscStatus != BURN_DISC_FULL)
+                && (burnDiscStatus != BURN_DISC_APPENDABLE)
+                && (burnDiscStatus != BURN_DISC_BLANK)
+               )
+            {
+              Misc_mdelay(2000);
+              retries--;
+            }
+          }
+          else
+          {
+            error = ERRORX_(OPEN_OPTICAL_DRIVE,errno,"%s",strerror(errno));
+          }
         }
-        else
+        while (   (error == ERROR_NONE)
+               && (burnDiscStatus != BURN_DISC_FULL)
+               && (burnDiscStatus != BURN_DISC_APPENDABLE)
+               && (burnDiscStatus != BURN_DISC_BLANK)
+               && (retries > 0)
+              );
+        if (error == ERROR_NONE)
         {
-          error = ERRORX_(OPTICAL_DRIVE_NOT_FOUND,errno,"%s",strerror(errno));
+          switch (burnDiscStatus)
+          {
+            case BURN_DISC_FULL:
+              if (profileOK && !stringIsEmpty(profileName))
+              {
+                printInfo(1,
+                          "Loaded medium '%s', full\n",
+                          profileName
+                         );
+              }
+              else
+              {
+                printInfo(1,
+                          "Loaded medium 0x%04X, full\n",
+                          profileNumber
+                         );
+              }
+              break;
+            case BURN_DISC_APPENDABLE:
+              if (profileOK && !stringIsEmpty(profileName))
+              {
+                printInfo(1,
+                          "Loaded medium '%s', appendable\n",
+                          profileName
+                         );
+              }
+              else
+              {
+                printInfo(1,
+                          "Loaded medium 0x%04X, appendable\n",
+                          profileNumber
+                         );
+              }
+              break;
+            case BURN_DISC_BLANK:
+              if (profileOK && !stringIsEmpty(profileName))
+              {
+                printInfo(1,
+                          "Loaded medium '%s', blank\n",
+                          profileName
+                         );
+              }
+              else
+              {
+                printInfo(1,
+                          "Loaded medium 0x%04X, blank\n",
+                          profileNumber
+                         );
+              }
+              break;
+            case BURN_DISC_EMPTY:
+            default:
+              printError("no medium present or not recognized");
+              error = ERROR_OPTICAL_DISK_NOT_FOUND;
+              break;
+          }
         }
       #ifndef NDEBUG
       }
@@ -1169,7 +1328,7 @@ LOCAL Errors loadOpticalVolume(const StorageInfo *storageInfo)
 * Purpose: unload optical volume (open tray)
 * Input  : storageInfo - storageInfo
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
@@ -1197,19 +1356,21 @@ LOCAL Errors unloadOpticalVolume(const StorageInfo *storageInfo)
       {
       #endif
         struct burn_drive_info *burnDriveInfo;
-        if (burn_drive_scan_and_grab(&burnDriveInfo,(char*)deviceName,0) == 1)
+        if (burn_drive_scan_and_grab(&burnDriveInfo,(char*)deviceName,0) == 1)  // Note: just lock
         {
+          // wait for drive
           while (burn_drive_get_status(burnDriveInfo->drive,NULL) != BURN_DRIVE_IDLE)
           {
             Misc_mdelay(100);
           }
-          burn_drive_release(burnDriveInfo->drive,1);
+
+          burn_drive_release(burnDriveInfo->drive,1);  // Note: 1 = unlock+eject tray
 
           burn_drive_info_free(burnDriveInfo);
         }
         else
         {
-          error = ERRORX_(OPTICAL_DRIVE_NOT_FOUND,errno,"%s",strerror(errno));
+          error = ERRORX_(OPEN_OPTICAL_DRIVE,errno,"%s",strerror(errno));
         }
       #ifndef NDEBUG
       }
@@ -1286,6 +1447,8 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
                                      bool        waitFlag
                                     )
 {
+  Errors error = ERROR_NONE;
+
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
   #ifndef NDEBUG
     const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
@@ -1295,169 +1458,418 @@ LOCAL Errors requestNewOpticalMedium(StorageInfo *storageInfo,
     }
   #endif
 
-  if (   (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
-      || (storageInfo->volumeState == STORAGE_VOLUME_STATE_LOADED)
-     )
+  // unload medium
+  if (error == ERROR_NONE)
   {
-    printInfo(1,"Unload medium #%d...",storageInfo->volumeNumber);
-    (void)unloadOpticalVolume(storageInfo);
-    printInfo(1,"OK\n");
+    if (   (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNKNOWN)
+        || (storageInfo->volumeState == STORAGE_VOLUME_STATE_LOADED)
+       )
+    {
+      error = unloadOpticalVolume(storageInfo);
+      if (error == ERROR_NONE)
+      {
+        printInfo(1,"Unloaded medium #%d\n",storageInfo->volumeNumber);
+      }
+      else
+      {
+        printInfo(1,"Unload medium #%d failed (error: %s)\n",storageInfo->volumeNumber, Error_getText(error));
+      }
 
-    storageInfo->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
+      storageInfo->volumeState = STORAGE_VOLUME_STATE_UNLOADED;
+    }
   }
 
   // request new medium
   bool                        volumeRequestedFlag        = FALSE;
   StorageVolumeRequestResults storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_UNKNOWN;
-  if      (storageInfo->volumeRequestFunction != NULL)
+  if (error == ERROR_NONE)
   {
-    // request volume via callback
-    volumeRequestedFlag = TRUE;
-
-    // request new medium via call back, unload if requested
-    do
+    if      (storageInfo->volumeRequestFunction != NULL)
     {
-      storageRequestVolumeResult = storageInfo->volumeRequestFunction(STORAGE_REQUEST_VOLUME_TYPE_NEW,
-                                                                      storageInfo->volumeRequestNumber,
-                                                                      message,
-                                                                      storageInfo->volumeRequestUserData
-                                                                     );
-      if (storageRequestVolumeResult == STORAGE_VOLUME_REQUEST_RESULT_UNLOAD)
+      // request volume via callback
+      volumeRequestedFlag = TRUE;
+
+      // request new medium via call back, unload if requested
+      do
       {
-        printInfo(1,"Unload medium...");
-        (void)unloadOpticalVolume(storageInfo);
-        printInfo(1,"OK\n");
+        storageRequestVolumeResult = storageInfo->volumeRequestFunction(STORAGE_REQUEST_VOLUME_TYPE_NEW,
+                                                                        storageInfo->volumeRequestNumber,
+                                                                        message,
+                                                                        storageInfo->volumeRequestUserData
+                                                                       );
+        if (storageRequestVolumeResult == STORAGE_VOLUME_REQUEST_RESULT_UNLOAD)
+        {
+          error = unloadOpticalVolume(storageInfo);
+          if (error == ERROR_NONE)
+          {
+            printInfo(1,"Unloaded medium #%d\n",storageInfo->volumeNumber);
+          }
+          else
+          {
+            printInfo(1,"Unload medium #%d failed (error: %s)\n",storageInfo->volumeNumber, Error_getText(error));
+          }
+        }
       }
-    }
-    while (storageRequestVolumeResult == STORAGE_VOLUME_REQUEST_RESULT_UNLOAD);
+      while (storageRequestVolumeResult == STORAGE_VOLUME_REQUEST_RESULT_UNLOAD);
 
-    storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
-  }
-  else if (storageInfo->opticalDisk.write.requestVolumeCommand != NULL)
-  {
-    // request volume via external command
-    volumeRequestedFlag = TRUE;
-
-    TextMacros (textMacros,2);
-    TEXT_MACROS_INIT(textMacros)
-    {
-      TEXT_MACRO_X_STRING("device",deviceName,                      NULL);
-      TEXT_MACRO_X_UINT  ("number",storageInfo->volumeRequestNumber,NULL);
+      storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
     }
+    else if (storageInfo->opticalDisk.write.requestVolumeCommand != NULL)
+    {
+      // request volume via external command
+      volumeRequestedFlag = TRUE;
 
-    // request new volume via external command
-    printInfo(1,"Request new medium #%d...",storageInfo->volumeRequestNumber);
-    if (Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.requestVolumeCommand),
-                            textMacros.data,
-                            textMacros.count,
-                            NULL, // commandLine
-                            CALLBACK_(executeIOOutput,NULL),
-                            CALLBACK_(executeIOOutput,NULL),
-                            (globalOptions.commandTimeout > 0) ? (long)globalOptions.commandTimeout : WAIT_FOREVER
-                           ) == ERROR_NONE
-       )
-    {
-      printInfo(1,"OK\n");
-      storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
-    }
-    else
-    {
-      printInfo(1,"FAIL\n");
-      storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_FAIL;
-    }
-
-    storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
-  }
-  else
-  {
-    // request volume via console
-    if (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNLOADED)
-    {
-      if (waitFlag)
+      TextMacros (textMacros,2);
+      TEXT_MACROS_INIT(textMacros)
       {
-        volumeRequestedFlag = TRUE;
+        TEXT_MACRO_X_STRING("device",deviceName,                      NULL);
+        TEXT_MACRO_X_UINT  ("number",storageInfo->volumeRequestNumber,NULL);
+      }
 
-        printInfo(0,
-                  "Please insert medium #%d into drive '%s' and press ENTER to continue\n",
-                  storageInfo->volumeRequestNumber,
-                  deviceName
-                 );
-        Misc_waitEnter();
-
+      // request new volume via external command
+      printInfo(1,"Request new medium #%d...",storageInfo->volumeRequestNumber);
+      if (Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.requestVolumeCommand),
+                              textMacros.data,
+                              textMacros.count,
+                              NULL, // commandLine
+                              CALLBACK_(executeIOOutput,NULL),
+                              CALLBACK_(executeIOOutput,NULL),
+                              (globalOptions.commandTimeout > 0) ? (long)globalOptions.commandTimeout : WAIT_FOREVER
+                             ) == ERROR_NONE
+         )
+      {
+        printInfo(1,"OK\n");
         storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
       }
       else
       {
-        printInfo(0,
-                  "Please insert medium #%d into drive '%s'\n",
-                  storageInfo->volumeRequestNumber,
-                  deviceName
-                 );
+        printInfo(1,"FAIL\n");
+        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_FAIL;
       }
+
+      storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
     }
     else
     {
-      if (waitFlag)
+      // request volume via console
+      if (storageInfo->volumeState == STORAGE_VOLUME_STATE_UNLOADED)
       {
-        volumeRequestedFlag = TRUE;
+        if (waitFlag)
+        {
+          volumeRequestedFlag = TRUE;
 
-        printInfo(0,"Press ENTER to continue\n");
-        Misc_waitEnter();
+          printInfo(0,
+                    "Please insert medium #%d into drive '%s' and press ENTER to continue\n",
+                    storageInfo->volumeRequestNumber,
+                    deviceName
+                   );
+          Misc_waitEnter();
 
-        storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
+          storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
+        }
+        else
+        {
+          printInfo(0,
+                    "Please insert medium #%d into drive '%s'\n",
+                    storageInfo->volumeRequestNumber,
+                    deviceName
+                   );
+        }
+      }
+      else
+      {
+        if (waitFlag)
+        {
+          volumeRequestedFlag = TRUE;
+
+          printInfo(0,"Press ENTER to continue\n");
+          Misc_waitEnter();
+
+          storageRequestVolumeResult = STORAGE_VOLUME_REQUEST_RESULT_LOAD;
+        }
+      }
+
+      storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
+    }
+  }
+
+  if (error == ERROR_NONE)
+  {
+    if (volumeRequestedFlag)
+    {
+      switch (storageRequestVolumeResult)
+      {
+        case STORAGE_VOLUME_REQUEST_RESULT_LOAD:
+          // load medium, then sleep a short time to give hardware time for reading medium information
+          error = loadOpticalVolume(storageInfo);
+          if (error != ERROR_NONE)
+          {
+            printInfo(1,"Load medium failed (error: %s)\n",Error_getText(error));
+          }
+
+          // store new medium number
+          storageInfo->volumeNumber = storageInfo->volumeRequestNumber;
+
+          // update running info
+          storageInfo->progress.volumeNumber = storageInfo->volumeNumber;
+          updateStorageRunningInfo(storageInfo);
+
+          storageInfo->volumeState = STORAGE_VOLUME_STATE_LOADED;
+          error = ERROR_NONE;
+          break;
+        case STORAGE_VOLUME_REQUEST_RESULT_ABORTED:
+          error = ERROR_ABORTED;
+          break;
+        default:
+          error = ERROR_LOAD_VOLUME_FAIL;
+          break;
       }
     }
-
-    storageInfo->volumeState = STORAGE_VOLUME_STATE_WAIT;
   }
 
-  if (volumeRequestedFlag)
-  {
-    switch (storageRequestVolumeResult)
+  return error;
+}
+
+
+/***********************************************************************\
+* Name   : getWritebaleDiscSectors
+* Purpose: get number of writable sectors (2048 bytes) on medium
+* Input  : storageInfo - storage info
+* Output : writableDiscSectors - writeable disc sectors (2028 bytes)
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getWritebaleDiscSectors(uint64 *writableDiscSectors, const StorageInfo *storageInfo)
+{
+  assert(writableDiscSectors != NULL);
+  assert(storageInfo != NULL);
+
+  Errors error = ERROR_NONE;
+
+  const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
+  #ifndef NDEBUG
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
     {
-      case STORAGE_VOLUME_REQUEST_RESULT_LOAD:
-        // load medium, then sleep a short time to give hardware time for reading medium information
-        printInfo(1,"Load medium #%d...",storageInfo->volumeRequestNumber);
-        (void)loadOpticalVolume(storageInfo);
-        printInfo(1,"OK\n");
-
-        // store new medium number
-        storageInfo->volumeNumber = storageInfo->volumeRequestNumber;
-
-        // update running info
-        storageInfo->progress.volumeNumber = storageInfo->volumeNumber;
-        updateStorageRunningInfo(storageInfo);
-
-        storageInfo->volumeState = STORAGE_VOLUME_STATE_LOADED;
-        return ERROR_NONE;
-        break;
-      case STORAGE_VOLUME_REQUEST_RESULT_ABORTED:
-        return ERROR_ABORTED;
-        break;
-      default:
-        return ERROR_LOAD_VOLUME_FAIL;
-        break;
+      deviceName = debugEmulateBlockDevice;
     }
-  }
-  else
+  #endif
+
+  #ifdef HAVE_BURN
+    // aquire drive
+    #ifndef NDEBUG
+    if (debugEmulateBlockDevice == NULL)
+    {
+    #endif
+      struct burn_drive_info *burnDriveInfo;
+      if (burn_drive_scan_and_grab(&burnDriveInfo,(char*)deviceName,1) == 1)
+      {
+        // wait for drive
+        while (burn_drive_get_status(burnDriveInfo->drive,NULL) != BURN_DRIVE_IDLE)
+        {
+          Misc_mdelay(100);
+        }
+
+        // get writable disc sectors
+        (*writableDiscSectors) = (uint64)burn_disc_available_space(burnDriveInfo->drive, NULL) / ISO_SECTOR_SIZE;
+
+        burn_drive_release(burnDriveInfo->drive,0);  // Note: keep tray closed, just unlock
+
+        burn_drive_info_free(burnDriveInfo);
+      }
+      else
+      {
+        error = ERRORX_(OPEN_OPTICAL_DRIVE,errno,"%s",strerror(errno));
+      }
+    #ifndef NDEBUG
+    }
+    #endif
+  #else
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : formatVolume
+* Purpose: format volume
+* Input  : storageInfo - storage info
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors formatVolume(const StorageInfo *storageInfo)
+{
+  assert(storageInfo != NULL);
+
+  Errors error = ERROR_NONE;
+
+  if (storageInfo->jobOptions->blankFlag)
   {
-    return ERROR_NONE;
+//    messageSet(&storageInfo->progress.message,MESSAGE_CODE_BLANK_VOLUME,NULL);
+//    updateStorageRunningInfo(storageInfo);
+
+    const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        deviceName = debugEmulateBlockDevice;
+      }
+    #endif
+
+    printInfo(1,"Format volume #%u...",storageInfo->opticalDisk.write.number);
+    if (String_isEmpty(storageInfo->opticalDisk.write.formatCommand))
+    {
+      #ifdef HAVE_BURN
+        #ifndef NDEBUG
+        if (debugEmulateBlockDevice == NULL)
+        {
+        #endif
+          // aquire drive
+          struct burn_drive_info *burnDriveInfo;
+          if (burn_drive_scan_and_grab(&burnDriveInfo,(char*)deviceName,1) == 1)
+          {
+            setMessageSeveritity(globalOptions.verboseLevel);
+
+            // wait for drive
+            while (burn_drive_get_status(burnDriveInfo->drive,NULL) != BURN_DRIVE_IDLE)
+            {
+              libisofsPollMessages();
+              libburnPollMessages();
+              Misc_mdelay(100);
+            }
+
+            // format
+            burn_set_signal_handling(NULL,NULL,0x30);
+            burn_disc_format(burnDriveInfo->drive,0,0);
+            Misc_mdelay(1*MS_PER_S);
+            struct burn_progress burnProgress;
+//while (burn_drive_get_status(drive, &progress) == BURN_DRIVE_FORMATTING) {
+            while (burn_drive_get_status(burnDriveInfo->drive,&burnProgress) != BURN_DRIVE_IDLE)
+            {
+              libisofsPollMessages();
+              libburnPollMessages();
+              Misc_mdelay(100);
+            }
+            if (burn_is_aborting(0) > 0)
+            {
+              error = ERROR_ABORTED;
+            }
+            burn_set_signal_handling(NULL,NULL,0x00);
+
+            burn_drive_release(burnDriveInfo->drive,0);  // Note: keep tray closed, just unlock
+
+            burn_drive_info_free(burnDriveInfo);
+          }
+          else
+          {
+            error = ERRORX_(OPEN_OPTICAL_DRIVE,errno,"%s",strerror(errno));
+          }
+        #ifndef NDEBUG
+        }
+        #endif
+
+        if (error == ERROR_NONE)
+        {
+          printInfo(1,"OK\n");
+          logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked volume #%u",storageInfo->volumeNumber);
+        }
+        else
+        {
+          printInfo(1,"FAIL (error: %s)\n",Error_getText(error));
+          logMessage(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Blank volume #%u fail: %s",
+                     storageInfo->volumeNumber,
+                     Error_getText(error)
+                    );
+        }
+      #else
+        error = ERROR_FUNCTION_NOT_SUPPORTED;
+      #endif
+    }
+    else
+    {
+// TODO: how to format?
+      // init macros
+      uint j = Thread_getNumberOfCores();
+      TextMacros (textMacros,7);
+      TEXT_MACROS_INIT(textMacros)
+      {
+        TEXT_MACRO_X_CSTRING("device",   deviceName,                                                                         NULL);
+        TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,                                           NULL);
+        TEXT_MACRO_X_UINT64 ("size",     storageInfo->opticalDisk.write.volumeSize,                                          NULL);
+        TEXT_MACRO_X_UINT64 ("sectors",  (storageInfo->opticalDisk.write.volumeSize + ISO_SECTOR_SIZE - 1) / ISO_SECTOR_SIZE,NULL);
+        TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,                                                          NULL);
+        TEXT_MACRO_X_UINT   ("j",        j,                                                                                  NULL);
+        TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                                                                  NULL);
+      }
+
+      // init variables
+      String commandLine = String_new();
+      ExecuteIOInfo executeIOInfo;
+      initExecuteIOInfo(&executeIOInfo,storageInfo);
+
+      // execute external blank command
+      error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.formatCommand),
+                                  textMacros.data,
+                                  textMacros.count,
+                                  commandLine,
+                                  CALLBACK_(executeIOOpticalBlankStdout,&executeIOInfo),
+                                  CALLBACK_(executeIOOpticalBlankStderr,&executeIOInfo),
+                                  WAIT_FOREVER
+                                 );
+      if (error == ERROR_NONE)
+      {
+        printInfo(1,"OK\n");
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
+        logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Formatted volume #%u",storageInfo->volumeNumber);
+      }
+      else
+      {
+        printInfo(1,"FAIL (error: %s)\n",Error_getText(error));
+        logMessage(storageInfo->logHandle,
+                   LOG_TYPE_ERROR,
+                   "Format volume #%u fail: %s",
+                   storageInfo->volumeNumber,
+                   Error_getText(error)
+                  );
+        logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
+        logLines(storageInfo->logHandle,
+                 LOG_TYPE_ERROR,
+                 "  ",
+                 &executeIOInfo.stderrList
+                );
+      }
+
+      // free resources
+      doneExecuteIOInfo(&executeIOInfo);
+      String_delete(commandLine);
+    }
+
+    updateVolumeDone(storageInfo,1,0.0);
+    updateStorageRunningInfo(storageInfo);
   }
+
+  return error;
 }
 
 /***********************************************************************\
 * Name   : blankVolume
-* Purpose:
-* Input  : -
+* Purpose: blank volume
+* Input  : storageInfo - storage info
 * Output : -
-* Return : -
+* Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, ConstString archiveName)
+LOCAL Errors blankVolume(const StorageInfo *storageInfo)
 {
   assert(storageInfo != NULL);
-  assert(imageFileName != NULL);
 
   Errors error = ERROR_NONE;
 
@@ -1465,8 +1877,6 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
   {
     messageSet(&storageInfo->progress.message,MESSAGE_CODE_BLANK_VOLUME,NULL);
     updateStorageRunningInfo(storageInfo);
-
-    (void)loadOpticalVolume(storageInfo);
 
     const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
     #ifndef NDEBUG
@@ -1489,25 +1899,34 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
           struct burn_drive_info *burnDriveInfo;
           if (burn_drive_scan_and_grab(&burnDriveInfo,(char*)deviceName,1) == 1)
           {
+            setMessageSeveritity(globalOptions.verboseLevel);
+
+            // wait for drive
+            while (burn_drive_get_status(burnDriveInfo->drive,NULL) != BURN_DRIVE_IDLE)
+            {
+              libisofsPollMessages();
+              libburnPollMessages();
+              Misc_mdelay(100);
+            }
+
             // blank
-            burn_set_signal_handling(NULL, NULL, 0x30);
+            burn_set_signal_handling(NULL,NULL,0x30);
             burn_disc_erase(burnDriveInfo->drive, 1);
             Misc_mdelay(1*MS_PER_S);
-            setMessageSeveritity(globalOptions.verboseLevel);
             struct burn_progress burnProgress;
             while (burn_drive_get_status(burnDriveInfo->drive,&burnProgress) != BURN_DRIVE_IDLE)
             {
               if (burnProgress.sectors > 0)
               {
-                double percentage = ((double)burnProgress.sector*100.0)/(double)burnProgress.sectors;
+                double percentageDone = ((double)burnProgress.sector*100.0)/(double)burnProgress.sectors;
                 switch (globalOptions.runMode)
                 {
                   case RUN_MODE_INTERACTIVE:
-                    printInfo(1,"%3u%%\b\b\b\b",(uint)percentage);
+                    printInfo(1,"%3u%%\b\b\b\b",(uint)percentageDone);
                     break;
                   case RUN_MODE_BATCH:
                   case RUN_MODE_SERVER:
-                    updateVolumeDone(storageInfo,0,percentage);
+                    updateVolumeDone(storageInfo,0,percentageDone);
                     updateStorageRunningInfo(storageInfo);
                     break;
                 }
@@ -1515,7 +1934,6 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
 
               libisofsPollMessages();
               libburnPollMessages();
-
               Misc_mdelay(100);
             }
             switch (globalOptions.runMode)
@@ -1531,7 +1949,7 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
             {
               error = ERROR_ABORTED;
             }
-            burn_set_signal_handling(NULL, NULL, 0x00);
+            burn_set_signal_handling(NULL,NULL,0x00);
 
             enum burn_disc_status burnDiscStatus = burn_disc_get_status(burnDriveInfo->drive);
             if (   (burnDiscStatus != BURN_DISC_BLANK)
@@ -1541,13 +1959,13 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
               error = ERRORX_(WRITE_OPTICAL_DISK,burnDiscStatus,"disc not writable");
             }
 
-            burn_drive_release(burnDriveInfo->drive,0);
+            burn_drive_release(burnDriveInfo->drive,0);  // Note: keep tray closed, just unlock
 
             burn_drive_info_free(burnDriveInfo);
           }
           else
           {
-            error = ERRORX_(OPTICAL_DRIVE_NOT_FOUND,errno,"%s",strerror(errno));
+            error = ERRORX_(OPEN_OPTICAL_DRIVE,errno,"%s",strerror(errno));
           }
         #ifndef NDEBUG
         }
@@ -1576,17 +1994,16 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
     {
       // init macros
       uint j = Thread_getNumberOfCores();
-      TextMacros (textMacros,8);
+      TextMacros (textMacros,7);
       TEXT_MACROS_INIT(textMacros)
       {
-        TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
-        TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
-        TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
-        TEXT_MACRO_X_UINT   ("sectors",  0,                                       NULL);
-        TEXT_MACRO_X_STRING ("file",     archiveName,                             NULL);
-        TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
-        TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
-        TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+        TEXT_MACRO_X_CSTRING("device",   deviceName,                                                                         NULL);
+        TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,                                           NULL);
+        TEXT_MACRO_X_UINT64 ("size",     storageInfo->opticalDisk.write.volumeSize,                                          NULL);
+        TEXT_MACRO_X_UINT64 ("sectors",  (storageInfo->opticalDisk.write.volumeSize + ISO_SECTOR_SIZE - 1) / ISO_SECTOR_SIZE,NULL);
+        TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,                                                          NULL);
+        TEXT_MACRO_X_UINT   ("j",        j,                                                                                  NULL);
+        TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                                                                  NULL);
       }
 
       // init variables
@@ -1599,8 +2016,8 @@ LOCAL Errors blankVolume(StorageInfo *storageInfo, ConstString imageFileName, Co
                                   textMacros.data,
                                   textMacros.count,
                                   commandLine,
-                                  CALLBACK_(executeIOblankStdout,&executeIOInfo),
-                                  CALLBACK_(executeIOblankStderr,&executeIOInfo),
+                                  CALLBACK_(executeIOOpticalBlankStdout,&executeIOInfo),
+                                  CALLBACK_(executeIOOpticalBlankStderr,&executeIOInfo),
                                   WAIT_FOREVER
                                  );
       if (error == ERROR_NONE)
@@ -1753,8 +2170,8 @@ LOCAL Errors createISOSourceFromImage(ISOSourceHandle *isoSourceHandle, ConstStr
     if (isoSourceHandle->burnSource != NULL)
     {
       assert(isoSourceHandle->burnSource != NULL);
-      assert(isoSourceHandle->burnSource->read == NULL);
-      assert(isoSourceHandle->burnSource->version >= 1);
+      assert(isoSourceHandle->burnSource->read != NULL);
+      assert(isoSourceHandle->burnSource->data != NULL);
     }
     else
     {
@@ -1821,13 +2238,16 @@ LOCAL Errors writeISOSource(StorageInfo            *storageInfo,
 
   Errors error = ERROR_NONE;
 
-  struct burn_disc    *burnDisc    = burn_disc_create();
+  struct burn_disc *burnDisc = burn_disc_create();
   assert(burnDisc != NULL);
+
   struct burn_session *burnSession = burn_session_create();
   assert(burnSession != NULL);
+  burn_disc_add_session(burnDisc,burnSession,BURN_POS_END);
+
   struct burn_track   *burnTrack   = burn_track_create();
   assert(burnTrack != NULL);
-  burn_disc_add_session(burnDisc,burnSession,BURN_POS_END);
+  burn_track_define_data(burnTrack,0,ISO_PADDING,1,BURN_MODE1);
 
   struct burn_source *burnFifoSource = burn_fifo_source_new(isoSourceHandle->burnSource,
                                                             ISO_SECTOR_SIZE,
@@ -1842,93 +2262,151 @@ LOCAL Errors writeISOSource(StorageInfo            *storageInfo,
                                             );
     if (burnSourceStatus == BURN_SOURCE_OK)
     {
-      burn_session_add_track(burnSession,
-                             burnTrack,
-                             BURN_POS_END
-                            );
-
-      // set burn options
-      struct burn_write_opts *burnWriteOptions = burn_write_opts_new(burnDriveInfo->drive);
-      if (burnWriteOptions != NULL)
+      if (burn_session_add_track(burnSession,
+                                 burnTrack,
+                                 BURN_POS_END
+                                ) == 1
+         )
       {
-        burn_write_opts_set_perform_opc(burnWriteOptions, 0);
+
+        // set burn options
+        struct burn_write_opts *burnWriteOptions = burn_write_opts_new(burnDriveInfo->drive);
+        if (burnWriteOptions != NULL)
+        {
+          burn_write_opts_set_perform_opc(burnWriteOptions, 0);
+          burn_write_opts_set_multi(burnWriteOptions, 0);
 // TODO: command line options
 //                burn_write_opts_set_multi(burnWriteOptions, !!multi);
 //if (simulate_burn) printf("\n*** Will TRY to SIMULATE burning ***\n\n");
-//burn_write_opts_set_simulate(burnWriteOptions,1);
-        burn_drive_set_speed(burnDriveInfo->drive,0,0);
-        burn_write_opts_set_underrun_proof(burnWriteOptions,1);
-        char burnReasons[BURN_REASONS_LEN];
-        if (burn_write_opts_auto_write_type(burnWriteOptions,burnDisc,burnReasons,0) != BURN_WRITE_NONE)
-        {
-          // write image
-          burn_set_signal_handling(NULL, NULL, 0x30);
-          burn_disc_write(burnWriteOptions,burnDisc);
-          while (   !Storage_isAborted(storageInfo)
-                 && (burn_drive_get_status(burnDriveInfo->drive,NULL) == BURN_DRIVE_SPAWNING)
-                )
+          burn_write_opts_set_simulate(burnWriteOptions,0);
+          burn_drive_set_speed(burnDriveInfo->drive,0,0);
+          burn_write_opts_set_underrun_proof(burnWriteOptions,1);
+          char burnReasons[BURN_REASONS_LEN];
+          if (burn_write_opts_auto_write_type(burnWriteOptions,burnDisc,burnReasons,0) != BURN_WRITE_NONE)
           {
-            Misc_mdelay(100);
-          }
-          setMessageSeveritity(globalOptions.verboseLevel);
-          struct burn_progress burnProgress;
-          while (   !Storage_isAborted(storageInfo)
-                 && (burn_drive_get_status(burnDriveInfo->drive,&burnProgress) != BURN_DRIVE_IDLE)
-                )
-          {
-            // output progress
-            if (burnProgress.sectors > 0)
+            setMessageSeveritity(globalOptions.verboseLevel);
+
+            TimeoutInfo progressInfoTimeout;
+            Misc_initTimeout(&progressInfoTimeout, 10*MS_PER_SECOND);
+            double      percentageDone     = 0.0;
+            uint        fifoLevel          = 0;
+            uint64      lastSector         = 0;
+            uint64      lastSectorDateTime = Misc_getCurrentDateTime();
+
+            // write image
+            burn_set_signal_handling(NULL,NULL,0x30);
+            burn_disc_write(burnWriteOptions,burnDisc);
+
+            while (   !Storage_isAborted(storageInfo)
+                   && (burn_drive_get_status(burnDriveInfo->drive,NULL) == BURN_DRIVE_SPAWNING)
+                  )
             {
-              double percentage = ((double)burnProgress.sector*100.0)/(double)burnProgress.sectors;
+              libisofsPollMessages();
+              libburnPollMessages();
+              Misc_mdelay(100);
+            }
+
+            struct burn_progress burnProgress;
+            while (   !Storage_isAborted(storageInfo)
+                   && (burn_drive_get_status(burnDriveInfo->drive,&burnProgress) != BURN_DRIVE_IDLE)
+                  )
+            {
+              // calculate percentage done
+              if (burnProgress.sectors > 0)
+              {
+                percentageDone = ((double)burnProgress.sector*100.0)/(double)burnProgress.sectors;
+              }
+
+              // get buffer fifo level
+              if (burnProgress.track >= 0 && burnProgress.track < 1)
+              {
+                int  size;
+                int  bytesFree;
+                char *statusText;
+                if (burn_fifo_inquire_status(burnFifoSource,
+                                             &size,
+                                             &bytesFree,
+                                             &statusText
+                                            ) >= 0
+                   )
+                {
+                  fifoLevel = (uint)(100-(bytesFree*100)/size);
+                }
+              }
+
+              // output progress
               switch (globalOptions.runMode)
               {
                 case RUN_MODE_INTERACTIVE:
-                  printInfo(1,"%3u%%\b\b\b\b",(uint)percentage);
+// TODO: interactive output
                   break;
                 case RUN_MODE_BATCH:
                 case RUN_MODE_SERVER:
-                  updateVolumeDone(storageInfo,0,percentage);
+                  updateVolumeDone(storageInfo,0,percentageDone);
                   updateStorageRunningInfo(storageInfo);
                   break;
               }
+              if (Misc_isTimeout(&progressInfoTimeout))
+              {
+                // calculate writing speed
+                uint64 dateTime = Misc_getCurrentDateTime();
+                double bytesPerSecond = (dateTime > lastSectorDateTime)
+                                          ? ((double)(burnProgress.sector - lastSector) * ISO_SECTOR_SIZE) / (double)(dateTime - lastSectorDateTime)
+                                          : 0;
+                lastSector         = burnProgress.sector;
+                lastSectorDateTime = dateTime;
+
+                switch (globalOptions.runMode)
+                {
+                  case RUN_MODE_INTERACTIVE:
+                    printInfo(1,"Burn %5.1lfMiB/s %5.1lf%% (buffer: %3u%%)\n",bytesPerSecond/(double)MB,percentageDone,fifoLevel);
+                    break;
+                  case RUN_MODE_BATCH:
+                  case RUN_MODE_SERVER:
+                    break;
+                }
+                Misc_restartTimeout(&progressInfoTimeout,0);
+              }
+
+              libisofsPollMessages();
+              libburnPollMessages();
+              Misc_mdelay(100);
             }
 
-            libisofsPollMessages();
-            libburnPollMessages();
+            if      (Storage_isAborted(storageInfo) || (burn_is_aborting(0) < 0))
+            {
+              burn_drive_cancel(burnDriveInfo->drive);
+              error = ERROR_ABORTED;
+            }
+            else if (burn_drive_wrote_well(burnDriveInfo->drive) != 1)
+            {
+              error = ERROR_WRITE_OPTICAL_DISK;
+            }
+            burn_set_signal_handling(NULL,NULL,0x00);
 
-            Misc_mdelay(100);
+            Misc_doneTimeout(&progressInfoTimeout);
           }
-          switch (globalOptions.runMode)
+          else
           {
-            case RUN_MODE_INTERACTIVE:
-              printInfo(1,"    \b\b\b\b");
-              break;
-            case RUN_MODE_BATCH:
-            case RUN_MODE_SERVER:
-              break;
+            error = ERRORX_(WRITE_OPTICAL_DISK,0,"%s",burnReasons);
           }
-          if (Storage_isAborted(storageInfo) || (burn_is_aborting(0) < 0))
-          {
-            error = ERROR_ABORTED;
-          }
-          burn_set_signal_handling(NULL, NULL, 0x00);
+          burn_write_opts_free(burnWriteOptions);
         }
         else
         {
-          error = ERRORX_(WRITE_OPTICAL_DISK,0,"%s",burnReasons);
+          error = ERRORX_(WRITE_OPTICAL_DISK,0,"initialize write options");
         }
-        burn_write_opts_free(burnWriteOptions);
       }
       else
       {
-        error = ERRORX_(WRITE_OPTICAL_DISK,0,"initialize write options");
+        error = ERRORX_(WRITE_OPTICAL_DISK,0,"add track");
       }
     }
     else
     {
       error = ERRORX_(WRITE_OPTICAL_DISK,burnSourceStatus,"initialize write track");
     }
-    burnFifoSource->free_data(burnFifoSource);
+    burn_source_free(burnFifoSource);
   }
   else
   {
@@ -1970,23 +2448,12 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
     }
   #endif
 
-  // init macros
-  uint j = Thread_getNumberOfCores();
-  TextMacros (textMacros,8);
-  TEXT_MACROS_INIT(textMacros)
-  {
-    TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
-    TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
-    TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
-    TEXT_MACRO_X_UINT   ("sectors",  0,                                       NULL);
-    TEXT_MACRO_X_STRING ("file",     archiveName,                             NULL);
-    TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
-    TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
-    TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
-  }
-
   ExecuteIOInfo executeIOInfo;
   initExecuteIOInfo(&executeIOInfo,storageInfo);
+
+  // get image size
+  FileInfo fileInfo;
+  File_getInfo(&fileInfo,imageFileName);
 
   // pre-processing
   if (error == ERROR_NONE)
@@ -1997,6 +2464,26 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
     if (!String_isEmpty(storageInfo->opticalDisk.write.imagePreProcessCommand))
     {
       printInfo(1,"Image pre-processing of volume #%u...",storageInfo->volumeNumber);
+
+      // init macros
+      uint j = Thread_getNumberOfCores();
+      TextMacros (textMacros,11);
+      TEXT_MACROS_INIT(textMacros)
+      {
+        TEXT_MACRO_X_CSTRING("device",       deviceName,                              NULL);
+        TEXT_MACRO_X_STRING ("directory",    storageInfo->opticalDisk.write.directory,NULL);
+        TEXT_MACRO_X_STRING ("image",        imageFileName,                           NULL);
+        TEXT_MACRO_X_UINT64 ("size",         fileInfo.size,                           NULL);
+        TEXT_MACRO_X_UINT64 ("sectors",      (uint64)(fileInfo.size/ISO_SECTOR_SIZE), NULL);
+        TEXT_MACRO_X_UINT64 ("discSectors",  0,                                       NULL);
+        TEXT_MACRO_X_UINT64 ("discSectors97",0,                                       NULL);
+        TEXT_MACRO_X_STRING ("file",         archiveName,                             NULL);
+        TEXT_MACRO_X_UINT   ("number",       storageInfo->volumeNumber,               NULL);
+        TEXT_MACRO_X_UINT   ("j",            j,                                       NULL);
+        TEXT_MACRO_X_UINT   ("j1",           (j > 1) ? j-1 : 1,                       NULL);
+      }
+
+      // execute command
       String commandLine = String_new();
       StringList_clear(&executeIOInfo.stderrList);
       error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.imagePreProcessCommand),
@@ -2046,78 +2533,72 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
     if (String_isEmpty(storageInfo->opticalDisk.write.imageCommand))
     {
       #ifdef HAVE_ISOFS
-        int result;
-
+        printInfo(1,"Create image for volume #%u with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
         FileHandle fileHandle;
         error = File_open(&fileHandle,imageFileName,FILE_OPEN_CREATE);
         if (error == ERROR_NONE)
         {
-          IsoImage *isoImage;
-          result = iso_image_new("Backup", &isoImage);
-          if (result == ISO_SUCCESS)
+          ISOSourceHandle isoSourceHandle;
+          error = createISOSourceFromDirectory(&isoSourceHandle,storageInfo->opticalDisk.write.directory);
+          if (error == ERROR_NONE)
           {
-            assert(isoImage != NULL);
-            iso_tree_set_follow_symlinks(isoImage,0);
-            iso_tree_set_ignore_hidden(isoImage,0);
-            iso_tree_set_ignore_special(isoImage,0);
-            result = iso_tree_add_dir_rec(isoImage,
-                                          iso_image_get_root(isoImage),
-                                          String_cString(storageInfo->opticalDisk.write.directory)
-                                         );
-            if (result == ISO_SUCCESS)
+            byte buffer[ISO_SECTOR_SIZE];
+            off_t size         = isoSourceHandle.burnSource->get_size(isoSourceHandle.burnSource);
+            off_t writtenBytes = 0;
+            while (   (error == ERROR_NONE)
+                   && (isoSourceHandle.burnSource->read_xt(isoSourceHandle.burnSource,buffer,ISO_SECTOR_SIZE) == ISO_SECTOR_SIZE)
+                  )
             {
-              IsoWriteOpts *isoWriteOpts;
-              result = iso_write_opts_new(&isoWriteOpts, 0);
-              if (result == ISO_SUCCESS)
+              error = File_write(&fileHandle,buffer,ISO_SECTOR_SIZE);
+              if (error == ERROR_NONE)
               {
-                assert(isoWriteOpts != NULL);
-                iso_write_opts_set_iso_level(isoWriteOpts,2);
-                iso_write_opts_set_rockridge(isoWriteOpts,1);
-                iso_write_opts_set_joliet(isoWriteOpts,0);
-                iso_write_opts_set_iso1999(isoWriteOpts,0);
+                writtenBytes += ISO_SECTOR_SIZE;
 
-                struct burn_source *burnSource;
-                result = iso_image_create_burn_source(isoImage,isoWriteOpts,&burnSource);
-                if (result == ISO_SUCCESS)
+                double percentageDone = (size > 0)
+                                          ? (writtenBytes*100)/size
+                                          : 0.0;
+                switch (globalOptions.runMode)
                 {
-                  assert(burnSource != NULL);
-                  assert(burnSource->read == NULL);
-                  assert(burnSource->version >= 1);
-
-                  byte buffer[ISO_SECTOR_SIZE];
-                  while (   (error == ERROR_NONE)
-                         && (burnSource->read_xt(burnSource,buffer,ISO_SECTOR_SIZE) == ISO_SECTOR_SIZE)
-                        )
-                  {
-                    error = File_write(&fileHandle,buffer,ISO_SECTOR_SIZE);
-                  }
-
-                  burnSource->free_data(burnSource);
+                  case RUN_MODE_INTERACTIVE:
+                    printInfo(1,"%3u%%\b\b\b\b",(uint)percentageDone);
+                    break;
+                  case RUN_MODE_BATCH:
+                  case RUN_MODE_SERVER:
+                    updateVolumeDone(storageInfo,0,percentageDone);
+                    updateStorageRunningInfo(storageInfo);
+                    break;
                 }
-                else
-                {
-                  error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
-                }
-                iso_write_opts_free(isoWriteOpts);
-              }
-              else
-              {
-                error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
               }
             }
-            else
+            switch (globalOptions.runMode)
             {
-              error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
+              case RUN_MODE_INTERACTIVE:
+                printInfo(1,"    \b\b\b\b");
+                break;
+              case RUN_MODE_BATCH:
+              case RUN_MODE_SERVER:
+                break;
             }
 
-            iso_image_unref(isoImage);
-          }
-          else
-          {
-            error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
+            deleteISOSource(&isoSourceHandle);
           }
 
-          error = File_close(&fileHandle);
+          (void)File_close(&fileHandle);
+        }
+        if (error == ERROR_NONE)
+        {
+          printInfo(1,"OK\n");
+          logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Created image for volume #%u",storageInfo->volumeNumber);
+        }
+        else
+        {
+          printInfo(1,"FAIL (error: %s)\n",Error_getText(error));
+          logMessage(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "Create image volume #%u fail: %s",
+                     storageInfo->volumeNumber,
+                     Error_getText(error)
+                    );
         }
       #else // not HAVE_ISOFS
         error = ERROR_FUNCTION_NOT_SUPPORTED;
@@ -2126,6 +2607,26 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
     else
     {
       printInfo(1,"Create image for volume #%u with %d part(s)...",storageInfo->opticalDisk.write.number,StringList_count(&storageInfo->opticalDisk.write.fileNameList));
+
+      // init macros
+      uint j = Thread_getNumberOfCores();
+      TextMacros (textMacros,11);
+      TEXT_MACROS_INIT(textMacros)
+      {
+        TEXT_MACRO_X_CSTRING("device",       deviceName,                              NULL);
+        TEXT_MACRO_X_STRING ("directory",    storageInfo->opticalDisk.write.directory,NULL);
+        TEXT_MACRO_X_STRING ("image",        imageFileName,                           NULL);
+        TEXT_MACRO_X_UINT64 ("size",         fileInfo.size,                           NULL);
+        TEXT_MACRO_X_UINT64 ("sectors",      (uint64)(fileInfo.size/ISO_SECTOR_SIZE), NULL);
+        TEXT_MACRO_X_UINT64 ("discSectors",  0,                                       NULL);
+        TEXT_MACRO_X_UINT64 ("discSectors97",0,                                       NULL);
+        TEXT_MACRO_X_STRING ("file",         archiveName,                             NULL);
+        TEXT_MACRO_X_UINT   ("number",       storageInfo->volumeNumber,               NULL);
+        TEXT_MACRO_X_UINT   ("j",            j,                                       NULL);
+        TEXT_MACRO_X_UINT   ("j1",           (j > 1) ? j-1 : 1,                       NULL);
+      }
+
+      // execute command
       String commandLine = String_new();
       StringList_clear(&executeIOInfo.stderrList);
       error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.imageCommand),
@@ -2172,15 +2673,42 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
     messageSet(&storageInfo->progress.message,MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES,NULL);
     updateStorageRunningInfo(storageInfo);
 
+    // get number of writable disc sectors
+    uint64 writeableDiscSectors;
+    if (error == ERROR_NONE)
+    {
+      error = getWritebaleDiscSectors(&writeableDiscSectors,storageInfo);
+    }
+
     // error-correction codes pre-processing
     if (error == ERROR_NONE)
     {
       if (!String_isEmpty(storageInfo->opticalDisk.write.eccPreProcessCommand))
       {
         printInfo(1,"Add ECC pre-processing to image of volume #%u...",storageInfo->volumeNumber);
+
+        // init macros
+        uint j = Thread_getNumberOfCores();
+        TextMacros (textMacros,11);
+        TEXT_MACROS_INIT(textMacros)
+        {
+          TEXT_MACRO_X_CSTRING("device",       deviceName,                              NULL);
+          TEXT_MACRO_X_STRING ("directory",    storageInfo->opticalDisk.write.directory,NULL);
+          TEXT_MACRO_X_STRING ("image",        imageFileName,                           NULL);
+          TEXT_MACRO_X_UINT64 ("size",         fileInfo.size,                           NULL);
+          TEXT_MACRO_X_UINT64 ("sectors",      (uint64)(fileInfo.size/ISO_SECTOR_SIZE), NULL);
+          TEXT_MACRO_X_UINT64 ("discSectors",  writeableDiscSectors,                    NULL);
+          TEXT_MACRO_X_UINT64 ("discSectors97",(writeableDiscSectors * 97) / 100,       NULL);
+          TEXT_MACRO_X_STRING ("file",         archiveName,                             NULL);
+          TEXT_MACRO_X_UINT   ("number",       storageInfo->volumeNumber,               NULL);
+          TEXT_MACRO_X_UINT   ("j",            j,                                       NULL);
+          TEXT_MACRO_X_UINT   ("j1",           (j > 1) ? j-1 : 1,                       NULL);
+        }
+
+        // execute command
         String commandLine = String_new();
         StringList_clear(&executeIOInfo.stderrList);
-        error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.eccPreProcessCommand ),
+        error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.eccPreProcessCommand),
                                     textMacros.data,
                                     textMacros.count,
                                     commandLine,
@@ -2222,6 +2750,26 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
       if (!String_isEmpty(storageInfo->opticalDisk.write.eccCommand))
       {
         printInfo(1,"Add ECC to image of volume #%u...",storageInfo->volumeNumber);
+
+        // init macros
+        uint j = Thread_getNumberOfCores();
+        TextMacros (textMacros,11);
+        TEXT_MACROS_INIT(textMacros)
+        {
+          TEXT_MACRO_X_CSTRING("device",       deviceName,                              NULL);
+          TEXT_MACRO_X_STRING ("directory",    storageInfo->opticalDisk.write.directory,NULL);
+          TEXT_MACRO_X_STRING ("image",        imageFileName,                           NULL);
+          TEXT_MACRO_X_UINT64 ("size",         fileInfo.size,                           NULL);
+          TEXT_MACRO_X_UINT64 ("sectors",      (uint64)(fileInfo.size/ISO_SECTOR_SIZE), NULL);
+          TEXT_MACRO_X_UINT64 ("discSectors",  writeableDiscSectors,                    NULL);
+          TEXT_MACRO_X_UINT64 ("discSectors97",(writeableDiscSectors * 97) / 100,       NULL);
+          TEXT_MACRO_X_STRING ("file",         archiveName,                             NULL);
+          TEXT_MACRO_X_UINT   ("number",       storageInfo->volumeNumber,               NULL);
+          TEXT_MACRO_X_UINT   ("j",            j,                                       NULL);
+          TEXT_MACRO_X_UINT   ("j1",           (j > 1) ? j-1 : 1,                       NULL);
+        }
+
+        // execute command
         String commandLine = String_new();
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.eccCommand),
@@ -2266,6 +2814,26 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
       if (!String_isEmpty(storageInfo->opticalDisk.write.eccPostProcessCommand))
       {
         printInfo(1,"Add ECC post-processing to image of volume #%u...",storageInfo->volumeNumber);
+
+        // init macros
+        uint j = Thread_getNumberOfCores();
+        TextMacros (textMacros,11);
+        TEXT_MACROS_INIT(textMacros)
+        {
+          TEXT_MACRO_X_CSTRING("device",       deviceName,                              NULL);
+          TEXT_MACRO_X_STRING ("directory",    storageInfo->opticalDisk.write.directory,NULL);
+          TEXT_MACRO_X_STRING ("image",        imageFileName,                           NULL);
+          TEXT_MACRO_X_UINT64 ("size",         fileInfo.size,                           NULL);
+          TEXT_MACRO_X_UINT64 ("sectors",      (uint64)(fileInfo.size/ISO_SECTOR_SIZE), NULL);
+          TEXT_MACRO_X_UINT64 ("discSectors",  0,                                       NULL);
+          TEXT_MACRO_X_UINT64 ("discSectors97",0,                                       NULL);
+          TEXT_MACRO_X_STRING ("file",         archiveName,                             NULL);
+          TEXT_MACRO_X_UINT   ("number",       storageInfo->volumeNumber,               NULL);
+          TEXT_MACRO_X_UINT   ("j",            j,                                       NULL);
+          TEXT_MACRO_X_UINT   ("j1",           (j > 1) ? j-1 : 1,                       NULL);
+        }
+
+        // execute command
         String commandLine = String_new();
         StringList_clear(&executeIOInfo.stderrList);
         error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.eccPostProcessCommand ),
@@ -2317,6 +2885,26 @@ LOCAL Errors createISOImage(StorageInfo *storageInfo, ConstString imageFileName,
     if (!String_isEmpty(storageInfo->opticalDisk.write.imagePostProcessCommand))
     {
       printInfo(1,"Image post-processing of volume #%u...",storageInfo->volumeNumber);
+
+      // init macros
+      uint j = Thread_getNumberOfCores();
+      TextMacros (textMacros,11);
+      TEXT_MACROS_INIT(textMacros)
+      {
+        TEXT_MACRO_X_CSTRING("device",       deviceName,                              NULL);
+        TEXT_MACRO_X_STRING ("directory",    storageInfo->opticalDisk.write.directory,NULL);
+        TEXT_MACRO_X_STRING ("image",        imageFileName,                           NULL);
+        TEXT_MACRO_X_UINT64 ("size",         fileInfo.size,                           NULL);
+        TEXT_MACRO_X_UINT64 ("sectors",      (uint64)(fileInfo.size/ISO_SECTOR_SIZE), NULL);
+        TEXT_MACRO_X_UINT64 ("discSectors",  0,                                       NULL);
+        TEXT_MACRO_X_UINT64 ("discSectors97",0,                                       NULL);
+        TEXT_MACRO_X_STRING ("file",         archiveName,                             NULL);
+        TEXT_MACRO_X_UINT   ("number",       storageInfo->volumeNumber,               NULL);
+        TEXT_MACRO_X_UINT   ("j",            j,                                       NULL);
+        TEXT_MACRO_X_UINT   ("j1",           (j > 1) ? j-1 : 1,                       NULL);
+      }
+
+      // execute command
       String commandLine = String_new();
       StringList_clear(&executeIOInfo.stderrList);
       error = Misc_executeCommand(String_cString(storageInfo->opticalDisk.write.imagePostProcessCommand ),
@@ -2384,8 +2972,6 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
   messageSet(&storageInfo->progress.message,MESSAGE_CODE_WRITE_VOLUME,NULL);
   updateStorageRunningInfo(storageInfo);
 
-  (void)loadOpticalVolume(storageInfo);
-
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
   #ifndef NDEBUG
     const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
@@ -2395,7 +2981,6 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
     }
   #endif
 
-  printInfo(1,"Write image to volume #%u...",storageInfo->opticalDisk.write.number);
   if (String_isEmpty(storageInfo->opticalDisk.write.writeImageCommand))
   {
     #ifdef HAVE_BURN
@@ -2407,18 +2992,18 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
         struct burn_drive_info *burnDriveInfo;
         if (burn_drive_scan_and_grab(&burnDriveInfo,(char*)deviceName,1) == 1)
         {
-          // get media info
+          // wait for drive
+          while (burn_drive_get_status(burnDriveInfo->drive,NULL) != BURN_DRIVE_IDLE)
+          {
+            Misc_mdelay(100);
+          }
+
+          // get media status
           enum burn_disc_status burnDiscStatus = burn_disc_get_status(burnDriveInfo->drive);
           if (   (burnDiscStatus == BURN_DISC_BLANK)
               || (burnDiscStatus == BURN_DISC_APPENDABLE)
              )
           {
-            struct burn_disc    *burnDisc    = burn_disc_create();
-            assert(burnDisc != NULL);
-            struct burn_session *burnSession = burn_session_create();
-            assert(burnSession != NULL);
-            burn_disc_add_session(burnDisc, burnSession, BURN_POS_END);
-
             // create ISO source form image file
             ISOSourceHandle isoSourceHandle;
             error = createISOSourceFromImage(&isoSourceHandle,imageFileName);
@@ -2427,22 +3012,19 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
               error = writeISOSource(storageInfo,burnDriveInfo,&isoSourceHandle);
               deleteISOSource(&isoSourceHandle);
             }
-
-            burn_session_free(burnSession);
-            burn_disc_free(burnDisc);
           }
           else
           {
             error = ERRORX_(WRITE_OPTICAL_DISK,burnDiscStatus,"disc not writable");
           }
 
-          burn_drive_release(burnDriveInfo->drive,0);
+          burn_drive_release(burnDriveInfo->drive,0);  // Note: keep tray closed, just unlock
 
           burn_drive_info_free(burnDriveInfo);
         }
         else
         {
-          error = ERRORX_(OPTICAL_DRIVE_NOT_FOUND,errno,"%s",strerror(errno));
+          error = ERRORX_(OPEN_OPTICAL_DRIVE,errno,"%s",strerror(errno));
         }
       #ifndef NDEBUG
       }
@@ -2454,12 +3036,12 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
 
       if (error == ERROR_NONE)
       {
-        printInfo(1,"OK\n");
+        printInfo(1,"Written image to volume #%u\n",storageInfo->opticalDisk.write.number);
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written image to volume #%u",storageInfo->volumeNumber);
       }
       else
       {
-        printInfo(1,"FAIL (error: %s)\n",Error_getText(error));
+        printInfo(1,"Write image to volume #%u failed (error: %s)\n",storageInfo->opticalDisk.write.number,Error_getText(error));
         logMessage(storageInfo->logHandle,
                    LOG_TYPE_ERROR,
                    "Write image to volume #%u fail: %s",
@@ -2479,13 +3061,14 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
 
     // init macros
     uint j = Thread_getNumberOfCores();
-    TextMacros (textMacros,8);
+    TextMacros (textMacros,9);
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
       TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
       TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
-      TEXT_MACRO_X_UINT64 ("sectors",  (ulong)(fileInfo.size/ISO_SECTOR_SIZE),  NULL);
+      TEXT_MACRO_X_UINT64 ("size",     fileInfo.size,                           NULL);
+      TEXT_MACRO_X_UINT64 ("sectors",  (uint64)(fileInfo.size/ISO_SECTOR_SIZE), NULL);
       TEXT_MACRO_X_STRING ("file",     archiveName,                             NULL);
       TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
       TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
@@ -2508,13 +3091,13 @@ LOCAL Errors writeISOImage(StorageInfo *storageInfo, ConstString imageFileName, 
                                );
     if (error == ERROR_NONE)
     {
-      printInfo(1,"OK\n");
+      printInfo(1,"Written image to volume #%u OK\n",storageInfo->opticalDisk.write.number);
       logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
       logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written image to volume #%u",storageInfo->volumeNumber);
     }
     else
     {
-      printInfo(1,"FAIL (error: %s)\n",Error_getText(error));
+      printInfo(1,"Write image to volume #%u failed (error: %s)\n",storageInfo->opticalDisk.write.number,Error_getText(error));
       logMessage(storageInfo->logHandle,
                  LOG_TYPE_ERROR,
                  "Write image to volume #%u fail: %s",
@@ -2560,8 +3143,6 @@ LOCAL Errors writeDirectory(StorageInfo *storageInfo, ConstString archiveName)
   messageSet(&storageInfo->progress.message,MESSAGE_CODE_WRITE_VOLUME,NULL);
   updateStorageRunningInfo(storageInfo);
 
-  (void)loadOpticalVolume(storageInfo);
-
   const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
   #ifndef NDEBUG
     const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
@@ -2583,7 +3164,13 @@ LOCAL Errors writeDirectory(StorageInfo *storageInfo, ConstString archiveName)
         struct burn_drive_info *burnDriveInfo;
         if (burn_drive_scan_and_grab(&burnDriveInfo,(char*)deviceName,1) == 1)
         {
-          // get media info
+          // wait for drive
+          while (burn_drive_get_status(burnDriveInfo->drive,NULL) != BURN_DRIVE_IDLE)
+          {
+            Misc_mdelay(100);
+          }
+
+          // get media status
           enum burn_disc_status burnDiscStatus = burn_disc_get_status(burnDriveInfo->drive);
           if (   (burnDiscStatus == BURN_DISC_BLANK)
               || (burnDiscStatus == BURN_DISC_APPENDABLE)
@@ -2602,13 +3189,13 @@ LOCAL Errors writeDirectory(StorageInfo *storageInfo, ConstString archiveName)
             error = ERRORX_(WRITE_OPTICAL_DISK,burnDiscStatus,"disc not writable");
           }
 
-          burn_drive_release(burnDriveInfo->drive,0);
+          burn_drive_release(burnDriveInfo->drive,0);  // Note: keep tray closed, just unlock
 
           burn_drive_info_free(burnDriveInfo);
         }
         else
         {
-          error = ERRORX_(OPTICAL_DRIVE_NOT_FOUND,errno,"%s",strerror(errno));
+          error = ERRORX_(OPEN_OPTICAL_DRIVE,errno,"%s",strerror(errno));
         }
       #ifndef NDEBUG
       }
@@ -2660,14 +3247,12 @@ LOCAL Errors writeDirectory(StorageInfo *storageInfo, ConstString archiveName)
   {
     // init macros
     uint j = Thread_getNumberOfCores();
-    TextMacros (textMacros,8);
+    TextMacros (textMacros,6);
     TEXT_MACROS_INIT(textMacros)
     {
       TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
       TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
-  //    TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
       TEXT_MACRO_X_STRING ("sectors",  0,                                       NULL);
-      TEXT_MACRO_X_STRING ("file",     archiveName,                             NULL);
       TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
       TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
       TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
@@ -2753,11 +3338,11 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
       HALT_INSUFFICIENT_MEMORY();
     }
 
-    printInfo(1,"Verify volume #%u...",storageInfo->opticalDisk.write.number);
-
     // unload+load volume to clear caches
     (void)unloadOpticalVolume(storageInfo);
     (void)loadOpticalVolume(storageInfo);
+
+    printInfo(1,"Verify volume #%u...",storageInfo->opticalDisk.write.number);
 
     // get file names
     StringList fileNameList;
@@ -2798,7 +3383,7 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
       #endif
       TimeoutInfo timeoutInfo;
       iso9660_t   *iso9660Handle;
-      Misc_initTimeout(&timeoutInfo,60*MS_PER_SECOND);
+      Misc_initTimeout(&timeoutInfo,2*S_PER_MINUTE*MS_PER_SECOND);
       do
       {
         iso9660Handle = iso9660_open_ext(deviceName,
@@ -2874,15 +3459,15 @@ LOCAL Errors verifyVolume(StorageInfo *storageInfo)
 
           n++;
 
-          double percentage = ((double)n*100.0)/(double)(size_t)StringList_count(&fileNameList);
+          double percentageDone = ((double)n*100.0)/(double)(size_t)StringList_count(&fileNameList);
           switch (globalOptions.runMode)
           {
             case RUN_MODE_INTERACTIVE:
-              printInfo(1,"%3u%%\b\b\b\b",(uint)percentage);
+              printInfo(1,"%3u%%\b\b\b\b",(uint)percentageDone);
               break;
             case RUN_MODE_BATCH:
             case RUN_MODE_SERVER:
-              updateVolumeDone(storageInfo,0,percentage);
+              updateVolumeDone(storageInfo,0,percentageDone);
               updateStorageRunningInfo(storageInfo);
               break;
           }
@@ -3077,10 +3662,20 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
     {
       // create and write image
 
-      // create image pre-processing
+      // create ISO image
       if (error == ERROR_NONE)
       {
         error = createISOImage(storageInfo,imageFileName,archiveName);
+      }
+
+      // load medium
+      if (error == ERROR_NONE)
+      {
+        error = loadOpticalVolume(storageInfo);
+        if (error != ERROR_NONE)
+        {
+          printInfo(1,"Load medium failed (error: %s)\n",Error_getText(error));
+        }
       }
 
       // blank+write image to medium+verify
@@ -3094,11 +3689,19 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           storageInfo->opticalDisk.write.step = saveStep;
           retryFlag = FALSE;
 
+#if 0
           // blank volume
           if (error == ERROR_NONE)
           {
             error = blankVolume(storageInfo,imageFileName,archiveName);
           }
+
+          // format media
+          if (error == ERROR_NONE)
+          {
+            error = formatVolume(storageInfo);
+          }
+#endif
 
           // write image
           if (error == ERROR_NONE)
@@ -3151,7 +3754,7 @@ LOCAL Errors StorageOptical_postProcess(StorageInfo *storageInfo,
           // blank volume
           if (error == ERROR_NONE)
           {
-            error = blankVolume(storageInfo,imageFileName,archiveName);
+            error = blankVolume(storageInfo);
           }
 
           // write medium
@@ -3622,7 +4225,7 @@ LOCAL Errors StorageOptical_open(StorageHandle *storageHandle,
     if (!Device_exists(storageHandle->storageInfo->storageSpecifier.deviceName))
     {
       free(storageHandle->opticalDisk.read.buffer.data);
-      return ERRORX_(OPTICAL_DRIVE_NOT_FOUND,0,"%s",String_cString(storageHandle->storageInfo->storageSpecifier.deviceName));
+      return ERRORX_(OPEN_OPTICAL_DRIVE,0,"%s",String_cString(storageHandle->storageInfo->storageSpecifier.deviceName));
     }
 
     // open optical disk/ISO 9660 file
@@ -4055,7 +4658,7 @@ LOCAL Errors StorageOptical_openDirectoryList(StorageDirectoryListHandle *storag
     }
     if (!File_exists(storageDirectoryListHandle->storageSpecifier.deviceName))
     {
-      error = ERRORX_(OPTICAL_DRIVE_NOT_FOUND,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
+      error = ERRORX_(OPEN_OPTICAL_DRIVE,0,"%s",String_cString(storageDirectoryListHandle->storageSpecifier.deviceName));
       AutoFree_cleanup(&autoFreeList);
       return error;
     }

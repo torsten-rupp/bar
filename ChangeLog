@@ -1,8 +1,15 @@
 2026-08-23 28
+  * add option --cd-format-command, --dvd-format-command,
+    --bd-format-command
+  * add macro %discSectors, %discSectors97
+  * fix add error correction command: use 97% of medium sectors
+    for final image (bug #50)
+  * fix list archive entries/diretory entries
+  * fix burn CD/DVD/BD with internal commands
   * fix clean-up index with invalid states (bug #48)
   * fix schedule job when day light saving changes (bug #49)
   * fix various warnings
-  * fix build dynamic linked
+  * fix build dynamic linked executable
   * fix usage of regex+pcre
   * fix write CD/DVD/BD: special files
   * add libisofs+libburn debug output on verbose >= 4

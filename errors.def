@@ -618,8 +618,15 @@ ERROR IO
   }
 
 // --- optical disk i/o -------------------------------------------------
-ERROR OPTICAL_DRIVE_NOT_FOUND
-  stringSet(errorText,sizeof(errorText),TR("CD/DVD/BD device not found"));
+ERROR OPEN_OPTICAL_DRIVE
+  stringSet(errorText,sizeof(errorText),TR("open CD/DVD/BD drive failed"));
+  if (!stringIsEmpty(ERROR_DATA))
+  {
+    stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);
+  }
+
+ERROR OPTICAL_DISK_NOT_FOUND
+  stringSet(errorText,sizeof(errorText),TR("No CD/DVD/BD disc found"));
   if (!stringIsEmpty(ERROR_DATA))
   {
     stringAppendFormat(errorText,sizeof(errorText),": %s",ERROR_DATA);

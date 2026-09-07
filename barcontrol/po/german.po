@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 0.19\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-04 14:16+0200\n"
+"POT-Creation-Date: 2026-09-11 08:56+0200\n"
 "PO-Revision-Date: 2025-09-14 09:40+0200\n"
 "Last-Translator: Torsten Rupp <torsten.rupp@macio.de>\n"
 "Language-Team: \n"
@@ -1660,8 +1660,9 @@ msgid "i/o error"
 msgstr "Ein-/Ausgabefehler"
 
 #: src/BARException.java:1039
-msgid "CD/DVD/BD device not found"
-msgstr "CD/DVD/BD-Gerät nicht gefunden"
+#, fuzzy
+msgid "open CD/DVD/BD drive failed"
+msgstr "Öffnen des CD/DVD/BD-Mediums fehlgeschlagen"
 
 #: src/BARException.java:1046
 #, fuzzy
@@ -6901,6 +6902,9 @@ msgstr "Anzahl"
 #: src/TabStatus.java:3811
 msgid "Average time"
 msgstr "Durchschnittliche Ausführungszeit"
+
+#~ msgid "CD/DVD/BD device not found"
+#~ msgstr "CD/DVD/BD-Gerät nicht gefunden"
 
 #, fuzzy, java-format
 #~ msgid ""

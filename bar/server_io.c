@@ -608,8 +608,6 @@ LOCAL Errors receiveResult(ServerIO  *serverIO,
   String data = String_new();
   do
   {
-// TODO: remove
-fprintf(stderr,"%s, %d: serverIO->line=%s\n",__FILE__,__LINE__,String_cString(serverIO->line));
     while (   !getLine(serverIO)
            && !Misc_isTimeout(&timeoutInfo)
           )
