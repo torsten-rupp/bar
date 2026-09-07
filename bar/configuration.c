@@ -2706,7 +2706,7 @@ LOCAL bool cmdOptionParseKey(void *variable, const char *name, const char *value
   if (File_existsCString(value))
   {
     // read key data from file
-    Key *key = (Key*)variable;
+    Key *key = (Key*)variable;\
     assert(key != NULL);
     error = readBase64KeyFileCString(key,value);
     if (error != ERROR_NONE)

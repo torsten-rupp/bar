@@ -595,19 +595,12 @@ LOCAL const Password *getNextDecryptPassword(PasswordHandle *passwordHandle)
                  // add to password list
                  password = Archive_appendDecryptPassword(&newPassword);
                }
-               else
-               {
-                 // next password mode is: none
-                 passwordHandle->passwordMode = PASSWORD_MODE_NONE;
-               }
                Password_done(&newPassword);
                String_delete(printableStorageName);
              }
-             else
-             {
-               // next password mode is: none
-               passwordHandle->passwordMode = PASSWORD_MODE_NONE;
-             }
+
+             // next password mode is: none
+             passwordHandle->passwordMode = PASSWORD_MODE_NONE;
              break;
            default:
              #ifndef NDEBUG

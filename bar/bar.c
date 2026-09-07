@@ -1062,9 +1062,9 @@ LOCAL void saveConsole(FILE *file, String *saveLine)
 
   if (File_isTerminal(file))
   {
-    // wipe-out last line
     if (lastConsoleOutput != NULL)
     {
+      // wipe-out last line
       for (size_t i = 0; i < String_length(lastConsoleOutput->line); i++)
       {
         UNUSED_RESULT(fwrite("\b",1,1,file));
@@ -1078,10 +1078,10 @@ LOCAL void saveConsole(FILE *file, String *saveLine)
         UNUSED_RESULT(fwrite("\b",1,1,file));
       }
       fflush(file);
-    }
 
-    // save last line
-    String_set(*saveLine,lastConsoleOutput->line);
+      // save last line
+      String_set(*saveLine,lastConsoleOutput->line);
+    }
   }
 }
 
@@ -1953,7 +1953,7 @@ Errors getPasswordFromConsole(String        name,
           {
             String_appendFormat(title1,_(" for '%s'"),text);
           }
-          if (!Password_input(password,String_cString(title1),PASSWORD_INPUT_MODE_ANY) || (Password_length(password) <= 0))
+          if (!Password_input(password,String_cString(title1),PASSWORD_INPUT_MODE_ANY))
           {
             restoreConsole(stdout,&saveLine);
             String_delete(title2);
@@ -2618,7 +2618,7 @@ LOCAL int errorToExitcode(Errors error)
 
 /***********************************************************************\
 * Name   : generateEncryptionKeys
-* Purpose: generate key pairs for encryption
+* Purpose: generate key pair for encryption
 * Input  : keyFileBaseName - key base file name or NULL
 *          cryptPassword   - crypt password for private key
 * Output : -
@@ -2665,13 +2665,13 @@ LOCAL Errors generateEncryptionKeys(const char *keyFileBaseName,
   if (Password_isEmpty(cryptPassword))
   {
     error = getPasswordFromConsole(NULL,  // name
-                                        cryptPassword,
-                                        PASSWORD_TYPE_CRYPT,
-                                        String_cString(privateKeyFileName),
-                                        TRUE,  // validateFlag
-                                        FALSE, // weakCheckFlag
-                                        NULL  // userData
-                                       );
+                                   cryptPassword,
+                                   PASSWORD_TYPE_CRYPT,
+                                   String_cString(privateKeyFileName),
+                                   TRUE,  // validateFlag
+                                   FALSE, // weakCheckFlag
+                                   NULL  // userData
+                                  );
     if (error != ERROR_NONE)
     {
       printError(_("no password given for private key!"));

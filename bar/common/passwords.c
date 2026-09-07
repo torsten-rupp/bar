@@ -769,6 +769,7 @@ void Password_dump(const Password *password)
     #endif /* HAVE_GCRYPT */
   }
   fputs("\n",stderr);
+  fputs("'",stderr);
   for (size_t i = 0; i < password->dataLength; i++)
   {
     #ifdef HAVE_GCRYPT
@@ -777,7 +778,7 @@ void Password_dump(const Password *password)
       fprintf(stderr,"%c ",isprint(password->data[i]^obfuscator[i]) ? password->data[i]^obfuscator[i] : '.');
     #endif /* HAVE_GCRYPT */
   }
-  fputs("\n",stderr);
+  fputs("'\n",stderr);
 }
 #endif /* not NDEBUG */
 
