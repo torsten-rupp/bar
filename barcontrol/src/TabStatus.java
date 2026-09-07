@@ -1691,7 +1691,7 @@ public class TabStatus
 
       Widgets.addMenuItemSeparator(widgetJobTableBodyMenu,BARServer.isMaster());
 
-      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Volume"),BARServer.isMaster());
+      menuItem = Widgets.addMenuItem(widgetJobTableBodyMenu,BARControl.tr("Volume")+"\u2026",BARServer.isMaster());
       menuItem.addSelectionListener(new SelectionListener()
       {
         @Override
@@ -2387,7 +2387,7 @@ public class TabStatus
         }
       });
 
-      widgetButtonVolume = Widgets.newButton(composite,null,BARControl.tr("Volume"),BARServer.isMaster());
+      widgetButtonVolume = Widgets.newButton(composite,null,BARControl.tr("Volume")+"\u2026",BARServer.isMaster());
       widgetButtonVolume.setToolTipText(BARControl.tr("Click when a new volume is available in drive."));
       widgetButtonVolume.setEnabled(false);
       Widgets.layout(widgetButtonVolume,0,4,TableLayoutData.W,0,0,0,0,120,SWT.DEFAULT);
