@@ -2349,7 +2349,7 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
 /***********************************************************************\
 * Name   : listArchiveContent
 * Purpose: list archive content
-* Input  : storageSpecifier         - storage specifier
+* Input  : storageInfo              - storage info
 *          archiveName              - archive name (can be NULL)
 *          includeEntryList         - include entry list
 *          excludePatternList       - exclude pattern list
@@ -2363,7 +2363,7 @@ LOCAL uint printArchiveContentList(uint prefixWidth)
 * Notes  : -
 \***********************************************************************/
 
-LOCAL Errors listArchiveContent(StorageSpecifier        *storageSpecifier,
+LOCAL Errors listArchiveContent(StorageInfo             *storageInfo,
                                 ConstString             archiveName,
                                 const EntryList         *includeEntryList,
                                 const PatternList       *excludePatternList,
@@ -2374,7 +2374,7 @@ LOCAL Errors listArchiveContent(StorageSpecifier        *storageSpecifier,
                                 LogHandle               *logHandle
                                )
 {
-  assert(storageSpecifier != NULL);
+  assert(storageInfo != NULL);
   assert(includeEntryList != NULL);
   assert(excludePatternList != NULL);
   assert(jobOptions != NULL);
@@ -2387,13 +2387,16 @@ bool remoteBarFlag=FALSE;
   Errors error = ERROR_NONE;
 
   // get printable storage name
-  String printableStorageName = Storage_getPrintableName(String_new(),storageSpecifier,archiveName);
+  String printableStorageName = Storage_getPrintableName(String_new(),
+                                                         Storage_getStorageSpecifier(storageInfo),
+                                                         archiveName
+                                                        );
 
   CryptSignatureStates allCryptSignatureState = CRYPT_SIGNATURE_STATE_NONE;
   bool                 printedHeaderFlag      = FALSE;
   bool                 printedMetaInfoFlag    = FALSE;
   ulong                fileCount              = 0L;
-  switch (storageSpecifier->type)
+  switch (Storage_getStorageSpecifier(storageInfo)->type)
   {
     case STORAGE_TYPE_FILESYSTEM:
     case STORAGE_TYPE_FTP:
@@ -2406,30 +2409,10 @@ bool remoteBarFlag=FALSE;
     case STORAGE_TYPE_DVD:
     case STORAGE_TYPE_BD:
       {
-        // init storage
-        StorageInfo storageInfo;
-        error = Storage_init(&storageInfo,
-NULL, // masterSocketHandle
-                             storageSpecifier,
-                             jobOptions,
-                             &globalOptions.maxBandWidthList,
-                             SERVER_CONNECTION_PRIORITY_HIGH,
-                             CALLBACK_(NULL,NULL),  // storageUpdateProgress
-                             CALLBACK_(NULL,NULL),  // getPassword
-                             CALLBACK_(NULL,NULL),  // requestVolume
-                             CALLBACK_(NULL,NULL),  // isPause
-                             CALLBACK_(NULL,NULL),  // isAborted
-                             NULL  // logHandle
-                            );
-        if (error != ERROR_NONE)
-        {
-          break;
-        }
-
         // open archive
         ArchiveHandle archiveHandle;
         error = Archive_open(&archiveHandle,
-                             &storageInfo,
+                             storageInfo,
                              archiveName,
                              NULL,  // deltaSourceList
                              ARCHIVE_FLAG_SKIP_UNKNOWN_CHUNKS|ARCHIVE_FLAG_PRINT_UNKNOWN_CHUNKS,
@@ -2438,7 +2421,6 @@ NULL, // masterSocketHandle
                             );
         if (error != ERROR_NONE)
         {
-          (void)Storage_done(&storageInfo);
           break;
         }
 
@@ -2458,7 +2440,6 @@ NULL, // masterSocketHandle
             {
               // signature error
               (void)Archive_close(&archiveHandle,FALSE);
-              (void)Storage_done(&storageInfo);
               break;
             }
           }
@@ -2471,7 +2452,6 @@ NULL, // masterSocketHandle
                          String_cString(printableStorageName)
                         );
               (void)Archive_close(&archiveHandle,FALSE);
-              (void)Storage_done(&storageInfo);
               String_delete(printableStorageName);
               return ERROR_INVALID_SIGNATURE;
             }
@@ -2568,7 +2548,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add file info to list
-                      addListFileInfo(Storage_getName(NULL,storageSpecifier,NULL),
+                      addListFileInfo(Storage_getName(NULL,Storage_getStorageSpecifier(storageInfo),NULL),
                                       fileName,
                                       fileInfo.size,
                                       fileInfo.timeModified,
@@ -2685,7 +2665,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add image info to list
-                      addListImageInfo(Storage_getName(NULL,storageSpecifier,NULL),
+                      addListImageInfo(Storage_getName(NULL,Storage_getStorageSpecifier(storageInfo),NULL),
                                        deviceName,
                                        deviceInfo.size,
                                        archiveEntryInfo.image.chunkImageData.info.size,
@@ -2785,7 +2765,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add directory info to list
-                      addListDirectoryInfo(Storage_getName(NULL,storageSpecifier,NULL),
+                      addListDirectoryInfo(Storage_getName(NULL,Storage_getStorageSpecifier(storageInfo),NULL),
                                            directoryName,
                                            fileInfo.timeModified,
                                            fileInfo.userId,
@@ -2876,7 +2856,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add link info to list
-                      addListLinkInfo(Storage_getName(NULL,storageSpecifier,NULL),
+                      addListLinkInfo(Storage_getName(NULL,Storage_getStorageSpecifier(storageInfo),NULL),
                                       linkName,
                                       fileName,
                                       fileInfo.timeModified,
@@ -2982,7 +2962,7 @@ NULL, // masterSocketHandle
                       if (globalOptions.groupFlag)
                       {
                         // add file info to list
-                        addListHardLinkInfo(Storage_getName(NULL,storageSpecifier,NULL),
+                        addListHardLinkInfo(Storage_getName(NULL,Storage_getStorageSpecifier(storageInfo),NULL),
                                             fileName,
                                             fileInfo.size,
                                             fileInfo.timeModified,
@@ -3088,7 +3068,7 @@ NULL, // masterSocketHandle
                     if (globalOptions.groupFlag)
                     {
                       // add special info to list
-                      addListSpecialInfo(Storage_getName(NULL,storageSpecifier,NULL),
+                      addListSpecialInfo(Storage_getName(NULL,Storage_getStorageSpecifier(storageInfo),NULL),
                                          fileName,
                                          fileInfo.userId,
                                          fileInfo.groupId,
@@ -3236,9 +3216,6 @@ NULL, // masterSocketHandle
 
         // close archive
         (void)Archive_close(&archiveHandle,FALSE);
-
-        // done storage
-        (void)Storage_done(&storageInfo);
       }
       break;
     case STORAGE_TYPE_DEVICE:
@@ -3610,8 +3587,7 @@ Errors Command_list(StringList              *storageNameList,
   Storage_initSpecifier(&storageSpecifier);
 
   // list archive content
-  Errors      failError    = ERROR_NONE;
-  bool        anyFileFound = FALSE;
+  Errors      failError = ERROR_NONE;
   ConstString storageName;
   STRINGLIST_ITERATE(storageNameList,storageName)
   {
@@ -3629,31 +3605,58 @@ Errors Command_list(StringList              *storageNameList,
       continue;
     }
 
-    error = ERROR_UNKNOWN;
-
-    // try list archives content
+    StorageInfo storageInfo;
+    error = Storage_init(&storageInfo,
+NULL, // masterSocketHandle
+                         &storageSpecifier,
+                         jobOptions,
+                         &globalOptions.maxBandWidthList,
+                         SERVER_CONNECTION_PRIORITY_HIGH,
+                         CALLBACK_(NULL,NULL),  // storageUpdateProgress
+                         CALLBACK_(NULL,NULL),  // getPassword
+                         CALLBACK_(NULL,NULL),  // requestVolume
+                         CALLBACK_(NULL,NULL),  // isPause
+                         CALLBACK_(NULL,NULL),  // isAborted
+                         NULL  // logHandle
+                        );
     if (error != ERROR_NONE)
     {
-      if (   !String_isEmpty(storageSpecifier.archiveName)
-          && String_isEmpty(storageSpecifier.archivePatternString)
-         )
+      printError(_("invalid storage '%s' (error: %s)!"),
+                 String_cString(storageName),
+                 Error_getText(error)
+                );
+      if (failError == ERROR_NONE) failError = error;
+      continue;
+    }
+
+    error = ERROR_UNKNOWN;
+
+    if      (Storage_isFile(&storageInfo,NULL))
+    {
+      // list archives content
+      if (error != ERROR_NONE)
       {
-        error = listArchiveContent(&storageSpecifier,
-                                   NULL,  // fileName
-                                   includeEntryList,
-                                   excludePatternList,
-                                   showEntriesFlag,
-                                   jobOptions,
-                                   CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                                   logHandle
-                                  );
-        if (error == ERROR_NONE)
+        if (   !String_isEmpty(storageSpecifier.archiveName)
+            && String_isEmpty(storageSpecifier.archivePatternString)
+           )
         {
-          someFileFound = TRUE;
+          error = listArchiveContent(&storageInfo,
+                                     NULL,  // fileName
+                                     includeEntryList,
+                                     excludePatternList,
+                                     showEntriesFlag,
+                                     jobOptions,
+                                     CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
+                                     logHandle
+                                    );
+          if (error == ERROR_NONE)
+          {
+            someFileFound = TRUE;
+          }
         }
       }
     }
-    if (error != ERROR_NONE)
+    else if (Storage_isDirectory(&storageInfo,NULL))
     {
       StorageDirectoryListHandle storageDirectoryListHandle;
       error = Storage_openDirectoryList(&storageDirectoryListHandle,
@@ -3690,7 +3693,7 @@ Errors Command_list(StringList              *storageNameList,
               || (fileInfo.type == FILE_TYPE_HARDLINK)
              )
           {
-            error = listArchiveContent(&storageSpecifier,
+            error = listArchiveContent(&storageInfo,
                                        fileName,
                                        includeEntryList,
                                        excludePatternList,
@@ -3709,81 +3712,6 @@ Errors Command_list(StringList              *storageNameList,
       }
     }
 
-    // try list directory content
-    if (!someFileFound)
-    {
-      // open directory list
-      StorageDirectoryListHandle storageDirectoryListHandle;
-      error = Storage_openDirectoryList(&storageDirectoryListHandle,
-                                        &storageSpecifier,
-                                        NULL,  // fileName
-                                        jobOptions,
-                                        SERVER_CONNECTION_PRIORITY_HIGH
-                                       );
-      if (error == ERROR_NONE)
-      {
-        if (String_isEmpty(storageSpecifier.archivePatternString))
-        {
-          // list directory
-          error = listDirectoryContent(&storageDirectoryListHandle,
-                                       &storageSpecifier,
-                                       includeEntryList,
-                                       excludePatternList
-                                      );
-          if (error == ERROR_NONE)
-          {
-            someFileFound = TRUE;
-          }
-        }
-        else
-        {
-          // list content of matching archives
-          String fileName = String_new();
-          while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
-          {
-            // read next directory entry
-            FileInfo fileInfo;
-            error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
-            if (error != ERROR_NONE)
-            {
-              continue;
-            }
-
-            // match pattern
-            if (!String_isEmpty(storageSpecifier.archivePatternString))
-            {
-              if (!Pattern_match(&storageSpecifier.archivePattern,fileName,STRING_BEGIN,PATTERN_MATCH_MODE_EXACT,NULL,NULL))
-              {
-                continue;
-              }
-            }
-
-            // list archive content
-            if (   (fileInfo.type == FILE_TYPE_FILE)
-                || (fileInfo.type == FILE_TYPE_LINK)
-                || (fileInfo.type == FILE_TYPE_HARDLINK)
-               )
-            {
-              error = listArchiveContent(&storageSpecifier,
-                                         fileName,
-                                         includeEntryList,
-                                         excludePatternList,
-                                         showEntriesFlag,
-                                         jobOptions,
-                                         CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
-                                         logHandle
-                                        );
-            }
-
-            someFileFound = TRUE;
-          }
-          String_delete(fileName);
-        }
-
-        Storage_closeDirectoryList(&storageDirectoryListHandle);
-      }
-    }
-
     if (error != ERROR_NONE)
     {
       printError(_("cannot read storage '%s' (error: %s)!"),
@@ -3793,12 +3721,7 @@ Errors Command_list(StringList              *storageNameList,
       if (failError == ERROR_NONE) failError = error;
     }
 
-    anyFileFound |= someFileFound;
-  }
-  if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !anyFileFound)
-  {
-    printError(_("no matching storage files found!"));
-    failError = ERROR_FILE_NOT_FOUND_;
+    (void)Storage_done(&storageInfo);
   }
 
   // output grouped list
