@@ -2642,6 +2642,7 @@ public class TabJobs
   private WidgetVariable               maxBandWidth              = new WidgetVariable<Long>              ("max-band-width",0L);
   private WidgetVariable               volumeSize                = new WidgetVariable<String>            ("volume-size","");
   private WidgetVariable               ecc                       = new WidgetVariable<Boolean>           ("ecc",false);
+  private WidgetVariable               format                    = new WidgetVariable<Boolean>           ("format",false);
   private WidgetVariable               blank                     = new WidgetVariable<Boolean>           ("blank",false);
   private WidgetVariable               waitFirstVolume           = new WidgetVariable<Boolean>           ("wait-first-volume",false);
   private WidgetVariable               skipUnreadable            = new WidgetVariable<Boolean>           ("skip-unreadable",false);
@@ -8079,6 +8080,7 @@ public class TabJobs
                                                                   storageDeviceName,
                                                                   volumeSize,
                                                                   ecc,
+                                                                  format,
                                                                   blank,
                                                                   waitFirstVolume,
                                                                   archivePartSizeFlag,
@@ -8124,6 +8126,21 @@ public class TabJobs
               try
               {
                 BARServer.setJobOption(selectedJobData.uuid,ecc);
+              }
+              catch (Exception exception)
+              {
+                // ignored
+              }
+            }
+          });
+          Widgets.addModifyListener(new WidgetModifyListener(widgetOptical.format,format)
+          {
+            @Override
+            public void modified(Control control, WidgetVariable variable)
+            {
+              try
+              {
+                BARServer.setJobOption(selectedJobData.uuid,format);
               }
               catch (Exception exception)
               {
@@ -10214,6 +10231,7 @@ throw new Error("NYI");
 */
         BARServer.getJobOption(selectedJobData.uuid,volumeSize);
         BARServer.getJobOption(selectedJobData.uuid,ecc);
+        BARServer.getJobOption(selectedJobData.uuid,format);
         BARServer.getJobOption(selectedJobData.uuid,blank);
         BARServer.getJobOption(selectedJobData.uuid,waitFirstVolume);
         BARServer.getJobOption(selectedJobData.uuid,skipUnreadable);

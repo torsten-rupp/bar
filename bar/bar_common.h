@@ -121,15 +121,15 @@
 #ifdef HAVE_BURN
 #define CD_UNLOAD_VOLUME_COMMAND                  ""
 #define CD_LOAD_VOLUME_COMMAND                    ""
-#define CD_BLANK_COMMAND                          ""
 #define CD_FORMAT_COMMAND                         ""
+#define CD_BLANK_COMMAND                          ""
 #define CD_WRITE_COMMAND                          ""
 #define CD_WRITE_IMAGE_COMMAND                    ""
 #else
 #define CD_UNLOAD_VOLUME_COMMAND                  "eject %device"
 #define CD_LOAD_VOLUME_COMMAND                    "eject -t %device"
-#define CD_BLANK_COMMAND                          "nice dvd+rw-format -force %device"
 #define CD_FORMAT_COMMAND                         "nice dvd+rw-format -force %device"
+#define CD_BLANK_COMMAND                          "nice dvd+rw-format -force %device"
 #define CD_WRITE_COMMAND                          "nice sh -c 'mkisofs -V Backup -volset %number -J -r -o %image %directory && cdrecord dev=%device %image'"
 #define CD_WRITE_IMAGE_COMMAND                    "nice cdrecord dev=%device %image"
 #endif
@@ -143,15 +143,15 @@
 #ifdef HAVE_BURN
 #define DVD_UNLOAD_VOLUME_COMMAND                 ""
 #define DVD_LOAD_VOLUME_COMMAND                   ""
-#define DVD_BLANK_COMMAND                         ""
 #define DVD_FORMAT_COMMAND                        ""
+#define DVD_BLANK_COMMAND                         ""
 #define DVD_WRITE_COMMAND                         ""
 #define DVD_WRITE_IMAGE_COMMAND                   ""
 #else
 #define DVD_UNLOAD_VOLUME_COMMAND                 "eject %device"
 #define DVD_LOAD_VOLUME_COMMAND                   "eject -t %device"
-#define DVD_BLANK_COMMAND                         "nice dvd+rw-format -force %device"
 #define DVD_FORMAT_COMMAND                        "nice dvd+rw-format -force %device"
+#define DVD_BLANK_COMMAND                         "nice dvd+rw-format -force %device"
 #define DVD_WRITE_COMMAND                         "nice growisofs -Z %device -A BAR -V Backup -volset %number -J -r %directory -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
 #define DVD_WRITE_IMAGE_COMMAND                   "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
 #endif
@@ -165,15 +165,15 @@
 #ifdef HAVE_BURN
 #define BD_UNLOAD_VOLUME_COMMAND                  ""
 #define BD_LOAD_VOLUME_COMMAND                    ""
-#define BD_BLANK_COMMAND                          ""
 #define BD_FORMAT_COMMAND                         ""
+#define BD_BLANK_COMMAND                          ""
 #define BD_WRITE_COMMAND                          ""
 #define BD_WRITE_IMAGE_COMMAND                    ""
 #else
 #define BD_UNLOAD_VOLUME_COMMAND                  "eject %device"
 #define BD_LOAD_VOLUME_COMMAND                    "eject -t %device"
-#define BD_BLANK_COMMAND                          "nice dvd+rw-format -force %device"
 #define BD_FORMAT_COMMAND                         "nice dvd+rw-format -force %device"
+#define BD_BLANK_COMMAND                          "nice dvd+rw-format -force %device"
 #define BD_WRITE_COMMAND                          "nice growisofs -Z %device -A BAR -V Backup -volset %number -J -r %directory -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
 #define BD_WRITE_IMAGE_COMMAND                    "nice growisofs -Z %device=%image -use-the-force-luke=dao -dvd-compat -use-the-force-luke=noload -use-the-force-luke=tty"
 #endif
@@ -341,6 +341,7 @@ typedef enum
 {
   MESSAGE_CODE_NONE,
   MESSAGE_CODE_WAIT_FOR_TEMPORARY_SPACE,
+  MESSAGE_CODE_FORMAT_VOLUME,
   MESSAGE_CODE_BLANK_VOLUME,
   MESSAGE_CODE_CREATE_IMAGE,
   MESSAGE_CODE_ADD_ERROR_CORRECTION_CODES,
@@ -744,8 +745,8 @@ typedef struct
   String eccPreProcessCommand;                                // command to execute before ECC calculation
   String eccPostProcessCommand;                               // command to execute after ECC calculation
   String eccCommand;                                          // command for ECC calculation
-  String blankCommand;                                        // command to blank medium
   String formatCommand;                                       // command to format medium
+  String blankCommand;                                        // command to blank medium
   String writePreProcessCommand;                              // command to execute before writing medium
   String writePostProcessCommand;                             // command to execute after writing medium
   String writeCommand;                                        // command to write medium
@@ -770,8 +771,8 @@ typedef struct DeviceNode
   String      eccPreProcessCommand;                           // command to execute before ECC calculation
   String      eccPostProcessCommand;                          // command to execute after ECC calculation
   String      eccCommand;                                     // command for ECC calculation
-  String      blankCommand;                                   // command to blank medium
   String      formatCommand;                                  // command to format medium
+  String      blankCommand;                                   // command to blank medium
   String      writePreProcessCommand;                         // command to execute before writing volume
   String      writePostProcessCommand;                        // command to execute after writing volume
   String      writeCommand;                                   // command to write volume
@@ -1005,7 +1006,8 @@ typedef struct
   bool                        forceDeltaCompressionFlag;      // TRUE to force delta compression of files
   bool                        ignoreNoDumpAttributeFlag;      // TRUE for ignoring no-dump attribute
   bool                        alwaysCreateImageFlag;          // TRUE iff always create image for CD/DVD/BD/device
-  bool                        blankFlag;                      // TRUE to blank medium before writing
+  bool                        formatFlag;                     // TRUE to force format medium before writing
+  bool                        blankFlag;                      // TRUE to force blank medium before writing
   bool                        rawImagesFlag;                  // TRUE for storing raw images
   bool                        noFragmentsCheckFlag;           // TRUE to skip checking file fragments for completeness
   bool                        noIndexDatabaseFlag;            // TRUE for do not store index database for archives

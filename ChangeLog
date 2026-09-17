@@ -1,6 +1,7 @@
 2026-08-23 28
   * add option --cd-format-command, --dvd-format-command,
     --bd-format-command
+  * add option --format
   * add macro %discSectors, %discSectors97
   * fix add error correction command: use 97% of medium sectors
     for final image (bug #50)

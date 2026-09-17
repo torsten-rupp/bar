@@ -395,6 +395,7 @@ const char *messageCodeToString(MessageCodes messageCode)
   {
     "NONE",
     "WAIT_FOR_TEMPORARY_SPACE",
+    "FORMAT_VOLUME",
     "BLANK_VOLUME",
     "CREATE_IMAGE",
     "ADD_ERROR_CORRECTION_CODES",

@@ -102,7 +102,8 @@ struct JobOptions
   bool                        sparseFlag;                    // TRUE to create sparse files
   bool                        errorCorrectionCodesFlag;      // TRUE iff error correction codes should be added
   bool                        alwaysCreateImageFlag;         // TRUE iff always create image for CD/DVD/BD/device
-  bool                        blankFlag;                     // TRUE to blank medium before writing
+  bool                        formatFlag;                    // TRUE to force format medium before writing
+  bool                        blankFlag;                     // TRUE to force blank medium before writing
   bool                        waitFirstVolumeFlag;           // TRUE for wait for first volume
   bool                        rawImagesFlag;                 // TRUE for storing raw images
   bool                        noFragmentsCheckFlag;          // TRUE to skip checking file fragments for completeness

@@ -4558,6 +4558,7 @@ public class BARWidgets
     {
       VOLUME_SIZE,
       ECC,
+      FORMAT,
       BLANK,
       WAIT_FIRST_VOLUME,
       ARCHIVE_PART_SIZE
@@ -4569,8 +4570,11 @@ public class BARWidgets
     Text   deviceName;
     Combo  volumeSize;
     Button ecc;
+    Button format;
     Button blank;
     Button waitFirstVolume;
+
+    private WidgetEvent formatEvent = new WidgetEvent<Boolean>();  // triggered when check format
 
     /** create optical super widget
      * @param composite parent composite
@@ -4578,6 +4582,7 @@ public class BARWidgets
      * @param deviceNameVariable device name variable (can be null)
      * @param volumeSizeVariable volume size variable (can be null)
      * @param eccVariable add error correction codes variable (can be null)
+     * @param formatVariable format volume variable (can be null)
      * @param blankVariable blank volume variable (can be null)
      * @param waitFirstVolumeVariable wait for first volume variable (can be null)
      * @param archivePartSizeFlag archive parts enable variable (can be null)
@@ -4588,6 +4593,7 @@ public class BARWidgets
                    final WidgetVariable deviceNameVariable,
                    final WidgetVariable volumeSizeVariable,
                    final WidgetVariable eccVariable,
+                   final WidgetVariable formatVariable,
                    final WidgetVariable blankVariable,
                    final WidgetVariable waitFirstVolumeVariable,
                    final WidgetVariable archivePartSizeFlag,
@@ -4781,7 +4787,7 @@ public class BARWidgets
         row++;
       }
 
-      if (widgets.contains(WidgetTypes.ECC) || widgets.contains(WidgetTypes.BLANK) || widgets.contains(WidgetTypes.WAIT_FIRST_VOLUME))
+      if (widgets.contains(WidgetTypes.ECC) || widgets.contains(WidgetTypes.FORMAT) || widgets.contains(WidgetTypes.BLANK) || widgets.contains(WidgetTypes.WAIT_FIRST_VOLUME))
       {
         label = Widgets.newLabel(this,BARControl.tr("Options")+":");
         Widgets.layout(label,row,0,TableLayoutData.NW);
@@ -4841,11 +4847,48 @@ public class BARWidgets
             }
           }
 
+          if (widgets.contains(WidgetTypes.FORMAT))
+          {
+            format = Widgets.newCheckbox(subComposite,BARControl.tr("format medium"));
+            format.setToolTipText(BARControl.tr("Force format medium before writing."));
+            Widgets.layout(format,0,1,TableLayoutData.W);
+            format.addSelectionListener(new SelectionListener()
+            {
+              @Override
+              public void widgetDefaultSelected(SelectionEvent selectionEvent)
+              {
+              }
+              @Override
+              public void widgetSelected(SelectionEvent selectionEvent)
+              {
+                Button  widget      = (Button)selectionEvent.widget;
+                boolean checkedFlag = widget.getSelection();
+
+                if (formatVariable != null)
+                {
+                  formatVariable.set(checkedFlag);
+                }
+              }
+            });
+            if (formatVariable != null)
+            {
+              Widgets.addModifyListener(new WidgetModifyListener(format,formatVariable));
+            }
+          }
+
           if (widgets.contains(WidgetTypes.BLANK))
           {
             blank = Widgets.newCheckbox(subComposite,BARControl.tr("blank medium"));
-            blank.setToolTipText(BARControl.tr("Blank medium before writing."));
-            Widgets.layout(blank,0,1,TableLayoutData.W);
+            blank.setToolTipText(BARControl.tr("Force blank medium before writing."));
+            Widgets.layout(blank,0,2,TableLayoutData.W);
+            Widgets.addModifyListener(new WidgetModifyListener(blank,formatVariable)
+            {
+              @Override
+              public void modified(Control control, WidgetVariable formatVariable)
+              {
+                control.setEnabled((formatVariable == null) || !formatVariable.getBoolean());
+              }
+            });
             blank.addSelectionListener(new SelectionListener()
             {
               @Override
@@ -4911,6 +4954,7 @@ public class BARWidgets
      * @param deviceNameVariable device name variable (can be null)
      * @param volumeSizeVariable volume size variable (can be null)
      * @param eccVariable add error correction codes variable (can be null)
+     * @param formatVariable format medium variable (can be null)
      * @param blankVariable blank medium variable (can be null)
      * @param waitFirstVolumeVariable wait for first medium variable (can be null)
      * @param archivePartSizeFlag archive parts enable variable (can be null)
@@ -4920,6 +4964,7 @@ public class BARWidgets
                    WidgetVariable deviceNameVariable,
                    WidgetVariable volumeSizeVariable,
                    WidgetVariable eccVariable,
+                   WidgetVariable formatVariable,
                    WidgetVariable blankVariable,
                    WidgetVariable waitFirstVolumeVariable,
                    WidgetVariable archivePartSizeFlag,
@@ -4931,6 +4976,7 @@ public class BARWidgets
            deviceNameVariable,
            volumeSizeVariable,
            eccVariable,
+           formatVariable,
            blankVariable,
            waitFirstVolumeVariable,
            archivePartSizeFlag,
@@ -4948,6 +4994,7 @@ public class BARWidgets
     {
       this(composite,
            widgets,
+           (WidgetVariable)null,
            (WidgetVariable)null,
            (WidgetVariable)null,
            (WidgetVariable)null,

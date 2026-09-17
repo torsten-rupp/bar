@@ -130,6 +130,7 @@ class JobData implements Comparable<JobData>
 //    REQUEST_CRYPT_PASSWORD,
 //    REQUEST_VOLUME,
 //    REQUEST_REPLACEMENT_VOLUME,
+    FORMAT_VOLUME,
     BLANK_VOLUME,
     CREATE_IMAGE,
     ADD_ERROR_CORRECTION_CODES,
@@ -145,6 +146,7 @@ class JobData implements Comparable<JobData>
       {
         case NONE:                       return "";
         case WAIT_FOR_TEMPORARY_SPACE:   return BARControl.tr("Waiting for temporary space");
+        case FORMAT_VOLUME:              return BARControl.tr("Format volume")+"\u2026";
         case BLANK_VOLUME:               return BARControl.tr("Blanking volume")+"\u2026";
         case CREATE_IMAGE:               return BARControl.tr("Creating image")+"\u2026";
         case ADD_ERROR_CORRECTION_CODES: return BARControl.tr("Adding error correction codes")+"\u2026";

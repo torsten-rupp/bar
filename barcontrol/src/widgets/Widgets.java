@@ -13672,7 +13672,7 @@ Dprintf.dprintf("");
   public static void addModifyListener(WidgetModifyListener widgetModifyListener)
   {
     widgetModifyListenerHashSet.add(widgetModifyListener);
-// TODO: move to constructpr?
+// TODO: move to constructor?
     widgetModifyListener.modified();
   }
 

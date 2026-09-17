@@ -38,14 +38,6 @@
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
-/* file data buffer size */
-#define BUFFER_SIZE (64*1024)
-
-#define INITIAL_BUFFER_SIZE   (64*1024)
-#define INCREMENT_BUFFER_SIZE ( 8*1024)
-#define MAX_BUFFER_SIZE       (64*1024)
-#define MAX_FILENAME_LENGTH   ( 8*1024)
-
 #define DEVICE_UNLOAD_VOLUME_DELAY_TIME (10LL*MS_PER_SECOND) /* [ms] */
 #define DEVICE_LOAD_VOLUME_DELAY_TIME   (10LL*MS_PER_SECOND) /* [ms] */
 
@@ -62,6 +54,30 @@
 #ifdef __cplusplus
   extern "C" {
 #endif
+
+/***********************************************************************\
+* Name   : getDeviceName
+* Purpose: get device name from storage specifider or global device name
+* Input  : storageSpecifier - storage specifier
+* Output : -
+* Return : device name
+* Notes  : -
+\***********************************************************************/
+
+LOCAL const char *getDeviceName(const StorageSpecifier *storageSpecifier)
+{
+  const char *deviceName = NULL;
+  if (!String_isEmpty(storageSpecifier->deviceName))
+  {
+    deviceName = String_cString(storageSpecifier->deviceName);
+  }
+  else
+  {
+    deviceName = String_cString(globalOptions.device->name);
+  }
+
+  return deviceName;
+}
 
 /***********************************************************************\
 * Name   : loadDeviceVolume
@@ -663,6 +679,15 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
 
   error = ERROR_NONE;
 
+  const char *deviceName = getDeviceName(&storageInfo->storageSpecifier);
+  #ifndef NDEBUG
+    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+    if (debugEmulateBlockDevice != NULL)
+    {
+      deviceName = debugEmulateBlockDevice;
+    }
+  #endif
+
   // request next volume
   if (storageInfo->device.write.newVolumeFlag)
   {
@@ -683,11 +708,11 @@ LOCAL Errors StorageDevice_preProcess(StorageInfo *storageInfo,
   TextMacros (textMacros,5);
   TEXT_MACROS_INIT(textMacros)
   {
-    TEXT_MACRO_X_STRING("device",storageInfo->storageSpecifier.deviceName,NULL);
-    TEXT_MACRO_X_STRING("file",  archiveName,                             NULL);
-    TEXT_MACRO_X_UINT  ("number",storageInfo->volumeRequestNumber,        NULL);
-    TEXT_MACRO_X_UINT  ("j",     j,                                       NULL);
-    TEXT_MACRO_X_UINT  ("j1",    (j > 1) ? j-1 : 1,                       NULL);
+    TEXT_MACRO_X_CSTRING("device",deviceName,                              NULL);
+    TEXT_MACRO_X_STRING ("file",  archiveName,                             NULL);
+    TEXT_MACRO_X_UINT   ("number",storageInfo->volumeRequestNumber,        NULL);
+    TEXT_MACRO_X_UINT   ("j",     j,                                       NULL);
+    TEXT_MACRO_X_UINT   ("j1",    (j > 1) ? j-1 : 1,                       NULL);
   }
 
   // write pre-processing
@@ -717,6 +742,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_DEVICE);
   assert(globalOptions.device != NULL);
 
+  UNUSED_VARIABLE(archiveName);
+
   Errors error = ERROR_NONE;
 
   if (storageInfo->device.write.volumeSize == 0LL)
@@ -730,11 +757,20 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
   {
     // device size limit reached -> write to device volume and request new volume
 
+    const char *deviceName = getOpticalDeviceName(&storageInfo->storageSpecifier);
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        deviceName = debugEmulateBlockDevice;
+      }
+    #endif
+
     // init variables
 // TODO:
 //    storageInfo->device.write.step = 0;
     ExecuteIOInfo executeIOInfo;
-    executeIOInfo.storageInfo      = storageInfo;
+    executeIOInfo.storageInfo = storageInfo;
     StringList_init(&executeIOInfo.stderrList);
 
     // update running info
@@ -764,26 +800,28 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       return error;
     }
 
-    // init macros
-    size_t j = Thread_getNumberOfCores();
-    TextMacros (textMacros,7);
-    TEXT_MACROS_INIT(textMacros)
-    {
-      TEXT_MACRO_X_STRING ("device",   storageInfo->storageSpecifier.deviceName,NULL);
-      TEXT_MACRO_X_STRING ("directory",storageInfo->device.write.directory,     NULL);
-      TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
-      TEXT_MACRO_X_STRING ("file",     archiveName,                             NULL);
-      TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
-      TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
-      TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
-    }
-
     // create image pre-processing
     if (error == ERROR_NONE)
     {
       if (!String_isEmpty(storageInfo->device.write.imagePreProcessCommand))
       {
         printInfo(1,"Image pre-processing of volume #%u...",storageInfo->volumeNumber);
+
+        // init macros
+        size_t j = Thread_getNumberOfCores();
+        TextMacros (textMacros,7);
+        TEXT_MACROS_INIT(textMacros)
+        {
+          TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
+          TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
+          TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
+          TEXT_MACRO_X_UINT64 ("size",     0,                                       NULL);
+          TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+          TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+          TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+        }
+
+        // execute command
         String commandLine = String_new();
         error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePreProcessCommand ),
                                     textMacros.data,
@@ -824,6 +862,21 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       {
         printInfo(1,"Create image volume #%u...",storageInfo->volumeNumber);
 
+        // init macros
+        size_t j = Thread_getNumberOfCores();
+        TextMacros (textMacros,7);
+        TEXT_MACROS_INIT(textMacros)
+        {
+          TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
+          TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
+          TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
+          TEXT_MACRO_X_UINT64 ("size",     0,                                       NULL);
+          TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+          TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+          TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+        }
+
+        // execute command
         String   commandLine = String_new();
         FileInfo fileInfo;
         error = Misc_executeCommand(String_cString(storageInfo->device.write.imageCommand),
@@ -863,6 +916,10 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       }
     }
 
+    // get image size
+    FileInfo fileInfo;
+    File_getInfo(&fileInfo,imageFileName);
+
     // error-correction codes
     if (storageInfo->jobOptions->errorCorrectionCodesFlag)
     {
@@ -871,8 +928,23 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       {
         if (!String_isEmpty(storageInfo->device.write.eccPreProcessCommand))
         {
-          printInfo(1,"Add ECC pre-processing to image of volume #%u...",storageInfo->volumeNumber);
+          printInfo(1,"Add error correction codes pre-processing to image of volume #%u...",storageInfo->volumeNumber);
 
+          // init macros
+          size_t j = Thread_getNumberOfCores();
+          TextMacros (textMacros,7);
+          TEXT_MACROS_INIT(textMacros)
+          {
+            TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
+            TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
+            TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
+            TEXT_MACRO_X_UINT64 ("size",     fileInfo.size,                           NULL);
+            TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+            TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+            TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+          }
+
+          // execute command
           String commandLine = String_new();
           error = Misc_executeCommand(String_cString(storageInfo->device.write.eccPreProcessCommand ),
                                       textMacros.data,
@@ -891,7 +963,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
             printInfo(1,"FAIL\n");
             logMessage(storageInfo->logHandle,
                        LOG_TYPE_ERROR,
-                       "Add ECC pre-processing to image of volume #%u fail: %s",
+                       "Add error correction codes pre-processing to image of volume #%u fail: %s",
                        storageInfo->volumeNumber,
                        Error_getText(error)
                       );
@@ -911,16 +983,31 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       {
         if (!String_isEmpty(storageInfo->device.write.eccCommand))
         {
-          printInfo(1,"Add ECC to image of volume #%u...",storageInfo->volumeNumber);
+          printInfo(1,"Add error correction codes to image of volume #%u...",storageInfo->volumeNumber);
 
+          // init macros
+          size_t j = Thread_getNumberOfCores();
+          TextMacros (textMacros,7);
+          TEXT_MACROS_INIT(textMacros)
+          {
+            TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
+            TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
+            TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
+            TEXT_MACRO_X_UINT64 ("size",     fileInfo.size,                           NULL);
+            TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+            TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+            TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+          }
+
+          // execute command
           String commandLine = String_new();
           StringList_clear(&executeIOInfo.stderrList);
           error = Misc_executeCommand(String_cString(storageInfo->device.write.eccCommand),
                                       textMacros.data,
                                       textMacros.count,
                                       commandLine,
-                                      CALLBACK_(executeIOdvdisasterStdout,&executeIOInfo),
-                                      CALLBACK_(executeIOdvdisasterStderr,&executeIOInfo),
+                                      CALLBACK_(executeIOOutput,&executeIOInfo),
+                                      CALLBACK_(executeIOOutput,&executeIOInfo),
                                       WAIT_FOREVER
                                      );
           if (error == ERROR_NONE)
@@ -932,7 +1019,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
             printInfo(1,"FAIL\n");
             logMessage(storageInfo->logHandle,
                        LOG_TYPE_ERROR,
-                       "Add ECC to image of volume #%u fail: %s",
+                       "Add error correction codes to image of volume #%u fail: %s",
                        storageInfo->volumeNumber,
                        Error_getText(error)
                       );
@@ -952,8 +1039,23 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       {
         if (!String_isEmpty(storageInfo->device.write.eccPostProcessCommand))
         {
-          printInfo(1,"Add ECC post-processing to image of volume #%u...",storageInfo->volumeNumber);
+          printInfo(1,"Add error correction codes post-processing to image of volume #%u...",storageInfo->volumeNumber);
 
+          // init macros
+          size_t j = Thread_getNumberOfCores();
+          TextMacros (textMacros,7);
+          TEXT_MACROS_INIT(textMacros)
+          {
+            TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
+            TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
+            TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
+            TEXT_MACRO_X_UINT64 ("size",     fileInfo.size,                           NULL);
+            TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+            TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+            TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+          }
+
+          // execute command
           String commandLine = String_new();
           error = Misc_executeCommand(String_cString(storageInfo->device.write.eccPostProcessCommand ),
                                       textMacros.data,
@@ -973,7 +1075,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
 
             logMessage(storageInfo->logHandle,
                        LOG_TYPE_ERROR,
-                       "Add ECC post-processing to image of volume #%u fail: %s",
+                       "Add error correction codes post-processing to image of volume #%u fail: %s",
                        storageInfo->volumeNumber,
                        Error_getText(error)
                       );
@@ -989,6 +1091,9 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       }
     }
 
+    // update image size
+    File_getInfo(&fileInfo,imageFileName);
+
     // create image post-processing
     if (error == ERROR_NONE)
     {
@@ -996,6 +1101,21 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       {
         printInfo(1,"Image post-processing of volume #%u...",storageInfo->volumeNumber);
 
+        // init macros
+        size_t j = Thread_getNumberOfCores();
+        TextMacros (textMacros,7);
+        TEXT_MACROS_INIT(textMacros)
+        {
+          TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
+          TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
+          TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
+          TEXT_MACRO_X_UINT64 ("size",     fileInfo.size,                           NULL);
+          TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+          TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+          TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+        }
+
+        // execute command
         String commandLine = String_new();
         error = Misc_executeCommand(String_cString(storageInfo->device.write.imagePostProcessCommand),
                                     textMacros.data,
@@ -1029,6 +1149,70 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
       }
     }
 
+    // format mediuam
+    if (storageInfo->jobOptions->formatFlag)
+    {
+      if (error == ERROR_NONE)
+      {
+        if (!String_isEmpty(storageInfo->device.write.formatCommand))
+        {
+          printInfo(1,"Format volume #%u...",storageInfo->device.write.number);
+
+          // init macros
+          size_t j = Thread_getNumberOfCores();
+          TextMacros (textMacros,7);
+          TEXT_MACROS_INIT(textMacros)
+          {
+            TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
+            TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
+            TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
+            TEXT_MACRO_X_UINT64 ("size",     fileInfo.size,                           NULL);
+            TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+            TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+            TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+          }
+
+          // execute command
+          String commandLine = String_new();
+          StringList_clear(&executeIOInfo.stderrList);
+          error = Misc_executeCommand(String_cString(storageInfo->device.write.formatCommand),
+                                      textMacros.data,
+                                      textMacros.count,
+                                      commandLine,
+                                      CALLBACK_(executeIOOutput,&executeIOInfo),
+                                      CALLBACK_(executeIOOutput,&executeIOInfo),
+                                      WAIT_FOREVER
+                                     );
+          if (error == ERROR_NONE)
+          {
+            printInfo(1,"OK\n");
+            logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Formatted volume #%u",storageInfo->volumeNumber);
+            logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
+            updateVolumeDone(storageInfo,1,0);
+            updateStorageRunningInfo(storageInfo);
+          }
+          else
+          {
+            printInfo(1,"FAIL\n");
+
+            logMessage(storageInfo->logHandle,
+                       LOG_TYPE_ERROR,
+                       "Format volume #%u fail: %s",
+                       storageInfo->volumeNumber,
+                       Error_getText(error)
+                      );
+            logMessage(storageInfo->logHandle,LOG_TYPE_ERROR,"Command '%s'",String_cString(commandLine));
+            logLines(storageInfo->logHandle,
+                     LOG_TYPE_ERROR,
+                     "  ",
+                     &executeIOInfo.stderrList
+                    );
+          }
+          String_delete(commandLine);
+        }
+      }
+    }
+
     // blank mediuam
     if (storageInfo->jobOptions->blankFlag)
     {
@@ -1038,14 +1222,29 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
         {
           printInfo(1,"Blank volume #%u...",storageInfo->device.write.number);
 
+          // init macros
+          size_t j = Thread_getNumberOfCores();
+          TextMacros (textMacros,7);
+          TEXT_MACROS_INIT(textMacros)
+          {
+            TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
+            TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
+            TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
+            TEXT_MACRO_X_UINT64 ("size",     fileInfo.size,                           NULL);
+            TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+            TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+            TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+          }
+
+          // execute command
           String commandLine = String_new();
           StringList_clear(&executeIOInfo.stderrList);
           error = Misc_executeCommand(String_cString(storageInfo->device.write.blankCommand),
                                       textMacros.data,
                                       textMacros.count,
                                       commandLine,
-                                      CALLBACK_(executeIOblankStdout,&executeIOInfo),
-                                      CALLBACK_(executeIOblankStderr,&executeIOInfo),
+                                      CALLBACK_(executeIOOutput,&executeIOInfo),
+                                      CALLBACK_(executeIOOutput,&executeIOInfo),
                                       WAIT_FOREVER
                                      );
           if (error == ERROR_NONE)
@@ -1090,6 +1289,21 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
 
         printInfo(1,"Write device volume #%u...",storageInfo->volumeNumber);
 
+        // init macros
+        size_t j = Thread_getNumberOfCores();
+        TextMacros (textMacros,7);
+        TEXT_MACROS_INIT(textMacros)
+        {
+          TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
+          TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
+          TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
+          TEXT_MACRO_X_UINT64 ("size",     fileInfo.size,                           NULL);
+          TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+          TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+          TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+        }
+
+        // execute command
         error = Misc_executeCommand(String_cString(storageInfo->device.write.writeCommand),
                                     textMacros.data,
                                     textMacros.count,
@@ -1184,8 +1398,23 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     // write post-processing
     if (!String_isEmpty(storageInfo->device.write.writePostProcessCommand))
     {
-      // get script
       printInfo(1,"Write device post-processing of volume #%u...",storageInfo->volumeNumber);
+
+      // init macros
+      size_t j = Thread_getNumberOfCores();
+      TextMacros (textMacros,7);
+      TEXT_MACROS_INIT(textMacros)
+      {
+        TEXT_MACRO_X_CSTRING("device",   deviceName,                              NULL);
+        TEXT_MACRO_X_STRING ("directory",storageInfo->opticalDisk.write.directory,NULL);
+        TEXT_MACRO_X_STRING ("image",    imageFileName,                           NULL);
+        TEXT_MACRO_X_UINT64 ("size",     fileInfo.size,                           NULL);
+        TEXT_MACRO_X_UINT   ("number",   storageInfo->volumeNumber,               NULL);
+        TEXT_MACRO_X_UINT   ("j",        j,                                       NULL);
+        TEXT_MACRO_X_UINT   ("j1",       (j > 1) ? j-1 : 1,                       NULL);
+      }
+
+      // execute command
       error = executeTemplate(String_cString(storageInfo->device.write.writePostProcessCommand),
                               timestamp,
                               textMacros.data,
