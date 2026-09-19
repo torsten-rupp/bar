@@ -1553,16 +1553,14 @@ if test "$ENABLE_GUI" = "yes"; then
   if test -n "$JAVA"; then
     AC_JAVAC_VERSION(JAVA_VERSION)
     case "$JAVA_VERSION" in
-      1.6*)
-        ;;
-      1.7*)
-        ;;
       1.8*)
         ;;
       11.0*)
         ;;
+      21.0*)
+        ;;
       *)
-        AC_MSG_WARN([Insufficient Java version (found $JAVA_VERSION, require 1.6, 1.7 or 1.8) - disabled compile GUI])
+        AC_MSG_WARN([Insufficient Java version (found $JAVA_VERSION, require 1.8 or newer) - disabled compile GUI])
         ENABLE_GUI="no"
         ENABLE_GUI_I18N="no"
         ;;
@@ -1781,7 +1779,6 @@ dnl -------- mandatory headers/functions/definitions/libraries ---------
 
 case $host_os in
   linux-*)
-    AC_SEARCH_LIBRARIES(xmalloc,iberty,[LIBRARIES="$LIBRARIES iberty"],AC_ERROR([iberty library not found]))
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
@@ -1789,7 +1786,6 @@ case $host_os in
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     ;;
   sunos | solaris*)
-    AC_SEARCH_LIBRARIES(xmalloc,iberty,[LIBRARIES="$LIBRARIES iberty"],AC_ERROR([iberty library not found]))
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
@@ -1797,7 +1793,6 @@ case $host_os in
     AC_SEARCH_LIBRARIES(ns_initparse,resolv,[LIBRARIES="$LIBRARIES resolv"])
     ;;
   darwin*)
-    AC_SEARCH_LIBRARIES(xmalloc,iberty,[LIBRARIES="$LIBRARIES iberty"],AC_ERROR([iberty library not found]))
     AC_SEARCH_LIBRARIES(round,m,[LIBRARIES="$LIBRARIES m"],AC_ERROR([m library not found]))
     AC_SEARCH_LIBRARIES(dlopen,dl,[LIBRARIES="$LIBRARIES dl"])
     AC_SEARCH_LIBRARIES(clock_gettime,rt,[LIBRARIES="$LIBRARIES rt"],AC_ERROR([rt library not found]))
@@ -5880,6 +5875,8 @@ AC_CHECK_STRUCT_MEMBER(struct stat,st_mtim.tv_nsec,AC_DEFINE(HAVE_STAT_MTIM_TV_N
 AC_CHECK_STRUCT_MEMBER(struct stat,st_ctim.tv_nsec,AC_DEFINE(HAVE_STAT_CTIM_TV_NSEC,1,[defined if struct stat.st_ctim.tv_nsec is available]),,[sys/types.h sys/stat.h fcntl.h])
 
 # check functions
+AC_CHECK_FUNCTION(xmalloc,AC_DEFINE(HAVE_XMALLOC,1,[xmalloc() available]))
+
 AC_CHECK_FUNCTION(pthread_attr_setname,AC_DEFINE(HAVE_PTHREAD_ATTR_SETNAME,1,[pthread_attr_setname() available]))
 AC_CHECK_FUNCTION(pthread_setname_np,  AC_DEFINE(HAVE_PTHREAD_SETNAME_NP,  1,[pthread_setname_np() available]  ))
 AC_CHECK_FUNCTION(pthread_setschedprio,AC_DEFINE(HAVE_PTHREAD_SETSCHEDPRIO,1,[pthread_setschedprio() available]))

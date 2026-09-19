@@ -832,6 +832,9 @@
 /* xfs installed (local) */
 #undef HAVE_XFS
 
+/* xmalloc() available */
+#undef HAVE_XMALLOC
+
 /* z installed */
 #undef HAVE_Z
 

@@ -2053,6 +2053,14 @@ public class TabStatus
         });
       }
 
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,1,11,TableLayoutData.WE);
+      {
+        label = Widgets.newLabel(subComposite,BARControl.tr("Volume"));
+        Widgets.layout(label,0,0,TableLayoutData.W);
+      }
+
       // skipped files/bytes
       label = Widgets.newLabel(composite,BARControl.tr("Skipped")+":");
       Widgets.layout(label,2,0,TableLayoutData.W);

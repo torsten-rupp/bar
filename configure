@@ -5798,17 +5798,15 @@ fi
 printf "%s\n" "$ac_cv_prog_java_version" >&6; }
 
     case "$JAVA_VERSION" in
-      1.6*)
-        ;;
-      1.7*)
-        ;;
       1.8*)
         ;;
       11.0*)
         ;;
+      21.0*)
+        ;;
       *)
-        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: Insufficient Java version (found $JAVA_VERSION, require 1.6, 1.7 or 1.8) - disabled compile GUI" >&5
-printf "%s\n" "$as_me: WARNING: Insufficient Java version (found $JAVA_VERSION, require 1.6, 1.7 or 1.8) - disabled compile GUI" >&2;}
+        { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: Insufficient Java version (found $JAVA_VERSION, require 1.8 or newer) - disabled compile GUI" >&5
+printf "%s\n" "$as_me: WARNING: Insufficient Java version (found $JAVA_VERSION, require 1.8 or newer) - disabled compile GUI" >&2;}
         ENABLE_GUI="no"
         ENABLE_GUI_I18N="no"
         ;;
@@ -10170,79 +10168,6 @@ case $host_os in
 
 
     ac_result=""
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing xmalloc" >&5
-printf %s "checking for library containing xmalloc... " >&6; }
-if test ${ac_cv_search_libraries_xmalloc+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_search_libraries_save_CFLAGS="$CFLAGS"
-      ac_search_libraries_save_LIBS="$LIBS"
-
-      CFLAGS="$CFLAGS -Wl,-t"
-      for define in $CC_DEFINES ""; do
-        if test -n "$define"; then
-          CFLAGS="$CFLAGS -D$define"
-        fi
-      done
-      for ac_library in iberty ""; do
-        LIBS="-Wl,-t -Wl,-Bdynamic"
-        if test -z "$ac_library"; then
-          ac_result="none"
-          LIBS="-Wl,-t -Wl,-Bdynamic $ac_search_libraries_save_LIBS"
-        else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-t -Wl,-Bdynamic -l$ac_library $ac_search_libraries_save_LIBS"
-        fi
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void xmalloc();"; fi`
-                                         return (int)xmalloc;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_libraries_xmalloc=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_libraries_xmalloc+y}
-then :
-
-else $as_nop
-  ac_cv_search_libraries_xmalloc=no
-fi
-
-            LIBS=$ac_search_libraries_save_LIBS
-      CFLAGS=$ac_search_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_xmalloc" >&5
-printf "%s\n" "$ac_cv_search_libraries_xmalloc" >&6; }
-  ac_result=$ac_cv_search_libraries_xmalloc
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES iberty"
-else $as_nop
-  as_fn_error $? "iberty library not found" "$LINENO" 5
-fi
-
-
-
-    ac_result=""
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing round" >&5
 printf %s "checking for library containing round... " >&6; }
 if test ${ac_cv_search_libraries_round+y}
@@ -10606,79 +10531,6 @@ fi
 
 
     ac_result=""
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing xmalloc" >&5
-printf %s "checking for library containing xmalloc... " >&6; }
-if test ${ac_cv_search_libraries_xmalloc+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_search_libraries_save_CFLAGS="$CFLAGS"
-      ac_search_libraries_save_LIBS="$LIBS"
-
-      CFLAGS="$CFLAGS -Wl,-t"
-      for define in $CC_DEFINES ""; do
-        if test -n "$define"; then
-          CFLAGS="$CFLAGS -D$define"
-        fi
-      done
-      for ac_library in iberty ""; do
-        LIBS="-Wl,-t -Wl,-Bdynamic"
-        if test -z "$ac_library"; then
-          ac_result="none"
-          LIBS="-Wl,-t -Wl,-Bdynamic $ac_search_libraries_save_LIBS"
-        else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-t -Wl,-Bdynamic -l$ac_library $ac_search_libraries_save_LIBS"
-        fi
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void xmalloc();"; fi`
-                                         return (int)xmalloc;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_libraries_xmalloc=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_libraries_xmalloc+y}
-then :
-
-else $as_nop
-  ac_cv_search_libraries_xmalloc=no
-fi
-
-            LIBS=$ac_search_libraries_save_LIBS
-      CFLAGS=$ac_search_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_xmalloc" >&5
-printf "%s\n" "$ac_cv_search_libraries_xmalloc" >&6; }
-  ac_result=$ac_cv_search_libraries_xmalloc
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES iberty"
-else $as_nop
-  as_fn_error $? "iberty library not found" "$LINENO" 5
-fi
-
-
-
-    ac_result=""
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing round" >&5
 printf %s "checking for library containing round... " >&6; }
 if test ${ac_cv_search_libraries_round+y}
@@ -11039,79 +10891,6 @@ fi
 
     ;;
   darwin*)
-
-
-    ac_result=""
-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing xmalloc" >&5
-printf %s "checking for library containing xmalloc... " >&6; }
-if test ${ac_cv_search_libraries_xmalloc+y}
-then :
-  printf %s "(cached) " >&6
-else $as_nop
-
-            ac_search_libraries_save_CFLAGS="$CFLAGS"
-      ac_search_libraries_save_LIBS="$LIBS"
-
-      CFLAGS="$CFLAGS -Wl,-t"
-      for define in $CC_DEFINES ""; do
-        if test -n "$define"; then
-          CFLAGS="$CFLAGS -D$define"
-        fi
-      done
-      for ac_library in iberty ""; do
-        LIBS="-Wl,-t -Wl,-Bdynamic"
-        if test -z "$ac_library"; then
-          ac_result="none"
-          LIBS="-Wl,-t -Wl,-Bdynamic $ac_search_libraries_save_LIBS"
-        else
-          ac_result=-l$ac_library
-          LIBS="-Wl,-t -Wl,-Bdynamic -l$ac_library $ac_search_libraries_save_LIBS"
-        fi
-        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-`echo |sed 's/ /\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
-int
-main (void)
-{
-`if test -z ""; then echo "extern void xmalloc();"; fi`
-                                         return (int)xmalloc;
-
-
-  ;
-  return 0;
-}
-
-_ACEOF
-if ac_fn_c_try_link "$LINENO"
-then :
-  ac_cv_search_libraries_xmalloc=$ac_result; break
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.beam \
-    conftest$ac_exeext conftest.$ac_ext
-      done
-      if test ${ac_cv_search_libraries_xmalloc+y}
-then :
-
-else $as_nop
-  ac_cv_search_libraries_xmalloc=no
-fi
-
-            LIBS=$ac_search_libraries_save_LIBS
-      CFLAGS=$ac_search_libraries_save_CFLAGS
-
-
-fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_libraries_xmalloc" >&5
-printf "%s\n" "$ac_cv_search_libraries_xmalloc" >&6; }
-  ac_result=$ac_cv_search_libraries_xmalloc
-  if test "$ac_result" != no
-then :
-  test "$ac_result" = "none" || LIBS="$ac_result $LIBS" LIBRARIES="$LIBRARIES iberty"
-else $as_nop
-  as_fn_error $? "iberty library not found" "$LINENO" 5
-fi
-
 
 
     ac_result=""
@@ -31074,6 +30853,63 @@ eval ac_res=\$ac_cv_member_`echo struct stat_st_ctim.tv_nsec|tr -c -d a-zA-Z0-9_
 printf "%s\n" "$ac_res" >&6; }
 
 # check functions
+
+
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for xmalloc" >&5
+printf %s "checking for xmalloc... " >&6; }
+if test ${ac_cv_func_xmalloc+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+      ac_cv_func_xmalloc="no"
+      echo > conftest.log
+
+      for ac_headers in  ""; do
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdint.h>
+                                         `echo $ac_headers|sed 's/+/\n/g'|while read s; do if test -n "$s"; then echo $s|sed 's/\(.*\)/#include <\\1>/g'; fi; done`
+
+int
+main (void)
+{
+`if test -z "$ac_headers"; then echo "extern void xmalloc();"; fi`
+                                         #ifdef xmalloc
+                                         #else
+                                           return (intptr_t)xmalloc;
+                                         #endif
+
+
+  ;
+  return 0;
+}
+
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+  ac_cv_func_xmalloc=yes; break
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+      done
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_func_xmalloc" >&5
+printf "%s\n" "$ac_cv_func_xmalloc" >&6; }
+  if test "$ac_cv_func_xmalloc" != no
+then :
+
+printf "%s\n" "#define HAVE_XMALLOC 1" >>confdefs.h
+
+elif :
+then :
+
+fi
+
+
 
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for pthread_attr_setname" >&5
