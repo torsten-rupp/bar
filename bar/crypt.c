@@ -1988,7 +1988,6 @@ fprintf(stderr,"%s:%d: crc=%x\n",__FILE__,__LINE__,crc);
 
     // get length
     size_t keyDataLength = ntohl(keyImportExportInfo->dataLength);
-fprintf(stderr,"%s:%d: keyDataLength=%d\n",__FILE__,__LINE__,keyDataLength);
     if (keyDataLength > encryptedKeyDataLength-sizeof(KeyImportExportInfo))
     {
       return ERROR_INVALID_KEY;

@@ -31,6 +31,10 @@
   #include <zstd.h>
 #endif /* HAVE_ZSTD */
 #ifdef HAVE_XDELTA3
+  // avoid warnings: xdelta3.h define these unconditionally
+  #undef _POSIX_SOURCE
+  #undef _ISOC99_SOURCE
+  #undef _C99_SOURCE
   #include "xdelta3.h"
 #endif /* HAVE_XDELTA3 */
 #include <assert.h>

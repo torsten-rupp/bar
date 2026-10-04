@@ -3591,8 +3591,6 @@ Errors Command_list(StringList              *storageNameList,
   ConstString storageName;
   STRINGLIST_ITERATE(storageNameList,storageName)
   {
-    bool someFileFound = FALSE;
-
     // parse storage name
     error = Storage_parseName(&storageSpecifier,storageName);
     if (error != ERROR_NONE)
@@ -3649,10 +3647,6 @@ NULL, // masterSocketHandle
                                      CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                      logHandle
                                     );
-          if (error == ERROR_NONE)
-          {
-            someFileFound = TRUE;
-          }
         }
       }
     }
@@ -3703,8 +3697,6 @@ NULL, // masterSocketHandle
                                        logHandle
                                       );
           }
-
-          someFileFound = TRUE;
         }
         String_delete(fileName);
 
