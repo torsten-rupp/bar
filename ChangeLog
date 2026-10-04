@@ -3,6 +3,7 @@
     --bd-format-command
   * add option --format
   * add macro %discSectors, %discSectors97
+  * removed limited retries when writing CD/DVD/BD/device
   * fix add error correction command: use 97% of medium sectors
     for final image (bug #50)
   * fix list archive entries/diretory entries

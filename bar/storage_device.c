@@ -774,7 +774,8 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     StringList_init(&executeIOInfo.stderrList);
 
     // update running info
-    storageInfo->progress.volumeDone = 0.0;
+    storageInfo->progress.volumeDone           = 0.0;
+    storageInfo->progress.volumeBytesPerSecond = 0.0;
     updateStorageRunningInfo(storageInfo);
 
     // check if new volume is required
@@ -1188,7 +1189,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
             printInfo(1,"OK\n");
             logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Formatted volume #%u",storageInfo->volumeNumber);
             logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
-            updateVolumeDone(storageInfo,1,0);
+            updateVolumeDone(storageInfo,1,0.0,0);
             updateStorageRunningInfo(storageInfo);
           }
           else
@@ -1252,7 +1253,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
             printInfo(1,"OK\n");
             logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Blanked volume #%u",storageInfo->volumeNumber);
             logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
-            updateVolumeDone(storageInfo,1,0);
+            updateVolumeDone(storageInfo,1,0.0,0);
             updateStorageRunningInfo(storageInfo);
           }
           else
@@ -1281,7 +1282,6 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     if (error == ERROR_NONE)
     {
       String commandLine = String_new();
-      size_t retryCount  = 3;
       bool   retryFlag   = TRUE;
       do
       {
@@ -1333,7 +1333,6 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
                    &executeIOInfo.stderrList
                   );
 
-          retryCount--;
           switch (globalOptions.runMode)
           {
             case RUN_MODE_INTERACTIVE:
@@ -1344,14 +1343,15 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
               retryFlag = (requestNewOpticalMedium(storageInfo,Error_getText(error),TRUE) == ERROR_NONE);
               break;
           }
+          if (retryFlag) error = ERROR_NONE;
         }
       }
-      while ((error != ERROR_NONE) && (retryCount > 0) && retryFlag);
+      while (retryFlag);
       if (error == ERROR_NONE)
       {
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Written image volume #%u",storageInfo->volumeNumber);
         logMessage(storageInfo->logHandle,LOG_TYPE_INFO,"Command '%s'",String_cString(commandLine));
-        updateVolumeDone(storageInfo,1,0);
+        updateVolumeDone(storageInfo,1,0.0,0.0);
         updateStorageRunningInfo(storageInfo);
       }
       String_delete(commandLine);
@@ -1362,7 +1362,7 @@ LOCAL Errors StorageDevice_postProcess(StorageInfo *storageInfo,
     String_delete(imageFileName);
 
     // update running info
-    updateVolumeDone(storageInfo,0,100.0);
+    updateVolumeDone(storageInfo,0,100.0,0);
     updateStorageRunningInfo(storageInfo);
 
     // delete stored files
