@@ -982,6 +982,7 @@ public class TabStatus
   private WidgetVariable                  bytesPerSecond          = new WidgetVariable<Double>(0.0);
   private WidgetVariable                  storageBytesPerSecond   = new WidgetVariable<Double>(0.0);
   private WidgetVariable                  compressionRatio        = new WidgetVariable<Double>(0.0);
+  private WidgetVariable                  volumeBytesPerSecond    = new WidgetVariable<Double>(0.0);
 
   private WidgetVariable                  fileName                = new WidgetVariable<String>("");
   private WidgetVariable                  fileProgress            = new WidgetVariable<Double>(0.0);
@@ -2053,12 +2054,39 @@ public class TabStatus
         });
       }
 
+// TODO:
       subComposite = Widgets.newComposite(composite);
       subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
-      Widgets.layout(subComposite,1,11,TableLayoutData.WE);
+      Widgets.layout(subComposite,2,9,TableLayoutData.WE);
       {
         label = Widgets.newLabel(subComposite,BARControl.tr("Volume"));
         Widgets.layout(label,0,0,TableLayoutData.W);
+      }
+
+      subComposite = Widgets.newComposite(composite);
+      subComposite.setLayout(new TableLayout(0.0,new double[]{1.0,0.0}));
+      Widgets.layout(subComposite,2,10,TableLayoutData.WE);
+      {
+        label = Widgets.newNumberView(subComposite);
+        Widgets.layout(label,0,0,TableLayoutData.WE);
+        Widgets.addModifyListener(new WidgetModifyListener(label,volumeBytesPerSecond)
+        {
+          @Override
+          public String getString(WidgetVariable variable)
+          {
+            return Units.getSize(variable.getDouble());
+          }
+        });
+        label = Widgets.newLabel(subComposite,BARControl.tr("bytes/s"));
+        Widgets.layout(label,0,1,TableLayoutData.W,0,0,0,0,Units.getMaxByteUnitTextSize(label,"/s"));
+        Widgets.addModifyListener(new WidgetModifyListener(label,volumeBytesPerSecond)
+        {
+          @Override
+          public String getString(WidgetVariable variable)
+          {
+            return Units.getByteUnit(variable.getDouble())+"/s";
+          }
+        });
       }
 
       // skipped files/bytes
@@ -3129,6 +3157,7 @@ tableItem.setBackground(COLOR_ABORTED);
             bytesPerSecond.set       (valueMap.getDouble ("bytesPerSecond"       ));
             storageBytesPerSecond.set(valueMap.getDouble ("storageBytesPerSecond"));
             compressionRatio.set     (valueMap.getDouble ("compressionRatio"     ));
+            volumeBytesPerSecond.set (valueMap.getDouble ("volumeBytesPerSecond" ));
 
             fileName.set             (valueMap.getString("entryName"));
             fileProgress.set         (getProgress(valueMap.getLong("entryDoneSize"),valueMap.getLong("entryTotalSize")));
@@ -3242,6 +3271,7 @@ tableItem.setBackground(COLOR_ABORTED);
           bytesPerSecond.set       (0.0);
           storageBytesPerSecond.set(0.0);
           compressionRatio.set     (0.0);
+          volumeBytesPerSecond.set (0.0);
 
           fileName.set             ("");
           fileProgress.set         (getProgress(0L,0L));

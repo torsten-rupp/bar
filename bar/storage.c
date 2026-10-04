@@ -163,6 +163,7 @@ LOCAL bool updateStorageRunningInfo(const StorageInfo *storageInfo)
     result = storageInfo->updateProgressFunction(storageInfo->progress.storageDoneBytes,
                                                  storageInfo->progress.volumeNumber,
                                                  storageInfo->progress.volumeDone,
+                                                 storageInfo->progress.volumeBytesPerSecond,
                                                  storageInfo->progress.message.code,
                                                  storageInfo->progress.message.text,
                                                  storageInfo->updateProgressUserData
@@ -190,29 +191,32 @@ LOCAL void resetVolumeDone(StorageInfo *storageInfo)
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
-  storageInfo->opticalDisk.write.step = 0;
-  storageInfo->progress.volumeDone    = 0.0;
+  storageInfo->opticalDisk.write.step        = 0;
+  storageInfo->progress.volumeDone           = 0.0;
+  storageInfo->progress.volumeBytesPerSecond = 0.0;
 }
 
 /***********************************************************************\
 * Name   : updateStorageRunningInfo
 * Purpose: update volume progress
-* Input  : storageInfo   - storage info
-*          stepIncrement - step increment
-*          percentage    - percentage [0..100]
+* Input  : storageInfo    - storage info
+*          stepIncrement  - step increment
+*          percentage     - percentage [0..100]
+*          bytesPerSecond - current writing speed [bytes/s]
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void updateVolumeDone(StorageInfo *storageInfo, uint stepIncrement, double percentage)
+LOCAL void updateVolumeDone(StorageInfo *storageInfo, uint stepIncrement, double percentage, uint bytesPerSecond)
 {
   assert(storageInfo != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(storageInfo);
 
   storageInfo->opticalDisk.write.step += stepIncrement;
   assert(storageInfo->opticalDisk.write.step <= storageInfo->opticalDisk.write.steps);
-  storageInfo->progress.volumeDone = ((double)storageInfo->opticalDisk.write.step*100.0+percentage)/(double)(storageInfo->opticalDisk.write.steps);
+  storageInfo->progress.volumeDone           = ((double)storageInfo->opticalDisk.write.step*100.0+percentage)/(double)(storageInfo->opticalDisk.write.steps);
+  storageInfo->progress.volumeBytesPerSecond = bytesPerSecond;
 }
 
 #ifdef HAVE_CURL
@@ -1304,7 +1308,7 @@ LOCAL Errors transferFileToStorage(FileHandle                  *fileHandle,
                                    void                        *isAbortedUserData
                                   )
 {
-  #define TRANSFER_BUFFER_SIZE (1024*1024)
+  #define TRANSFER_BUFFER_SIZE (1*MB)
 
   Errors error;
 
@@ -2977,11 +2981,12 @@ uint Storage_getServerSettings(Server                 *server,
     return error;
   }
 
-  storageInfo->progress.storageDoneBytes = 0LL;
-  storageInfo->progress.volumeNumber     = 0;
-  storageInfo->progress.volumeDone       = 0.0;
-  storageInfo->progress.message.code     = MESSAGE_CODE_NONE;
-  storageInfo->progress.message.text     = String_new();
+  storageInfo->progress.storageDoneBytes     = 0LL;
+  storageInfo->progress.volumeNumber         = 0;
+  storageInfo->progress.volumeDone           = 0.0;
+  storageInfo->progress.volumeBytesPerSecond = 0.0;
+  storageInfo->progress.message.code         = MESSAGE_CODE_NONE;
+  storageInfo->progress.message.text         = String_new();
 
   // free resources
   AutoFree_done(&autoFreeList);

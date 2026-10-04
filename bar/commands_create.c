@@ -1065,20 +1065,22 @@ LOCAL void runningInfoUpdateUnlock(CreateInfo *createInfo, ConstString name)
 /***********************************************************************\
 * Name   : updateStorageProgress
 * Purpose: update storage progress data
-* Input  : doneSize     - done size [bytes]
-*          volumeNumber - volume number [1..n]
-*          volumeDone   - volume done [0..100%]
-*          messageCode  - message code; see MESSAGE_CODE_...
-*          messageText  - message text
-*          userData     - user data
+* Input  : storageDoneSize      - storage done size [bytes]
+*          volumeNumber         - volume number [1..n]
+*          volumeDone           - volume done [0..100%]
+*          volumeBytesPerSecond - volume writbg speed [bytes/s]
+*          messageCode          - message code; see MESSAGE_CODE_...
+*          messageText          - message text
+*          userData             - user data
 * Output : -
 * Return : TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool updateStorageProgress(uint64       doneSize,
+LOCAL bool updateStorageProgress(uint64       storageDoneSize,
                                  uint         volumeNumber,
                                  double       volumeDone,
+                                 double       volumeBytesPerSecond,
                                  MessageCodes messageCode,
                                  ConstString  messageText,
                                  void         *userData
@@ -1088,9 +1090,10 @@ LOCAL bool updateStorageProgress(uint64       doneSize,
   assert(createInfo != NULL);
   STATUS_INFO_UPDATE(createInfo,NULL,NULL)
   {
-    createInfo->runningInfo.progress.storage.doneSize = doneSize;
-    createInfo->runningInfo.progress.volume.number    = volumeNumber;
-    createInfo->runningInfo.progress.volume.done      = volumeDone;
+    createInfo->runningInfo.progress.storage.doneSize      = storageDoneSize;
+    createInfo->runningInfo.progress.volume.number         = volumeNumber;
+    createInfo->runningInfo.progress.volume.done           = volumeDone;
+    createInfo->runningInfo.progress.volume.bytesPerSecond = volumeBytesPerSecond;
     messageSet(&createInfo->runningInfo.message,messageCode,messageText);
   }
 
@@ -4382,6 +4385,7 @@ LOCAL void storageThreadCode(CreateInfo *createInfo)
                      && (createInfo->storageInfo.jobOptions->archiveFileMode == ARCHIVE_FILE_MODE_APPEND)
                      && Storage_exists(&createInfo->storageInfo,storageMsg.archiveName);
 
+// TODO: try file rename first
         // create/append storage file
         StorageHandle storageHandle;
         error = Storage_create(&storageHandle,

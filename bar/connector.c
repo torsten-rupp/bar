@@ -4259,6 +4259,7 @@ UNUSED_VARIABLE(storageVolumeRequestUserData);
                                        StringMap_getULong (resultMap,"entriesPerSecond",     &statusInfo.entriesPerSecond,0L);
                                        StringMap_getULong (resultMap,"bytesPerSecond",       &statusInfo.bytesPerSecond,0L);
                                        StringMap_getULong (resultMap,"storageBytesPerSecond",&statusInfo.storageBytesPerSecond,0L);
+                                       StringMap_getULong (resultMap,"volumeBytesPerSecond", &statusInfo.volumeBytesPerSecond,0L);
                                        StringMap_getULong (resultMap,"estimatedRestTime",    &statusInfo.estimatedRestTime,0L);
                                        */
 

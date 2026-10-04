@@ -265,15 +265,23 @@ typedef struct
   double value;
 } PerformanceValue;
 
+// performance value types
+typedef enum
+{
+  PERFORMANCE_VALUE_TYPE_ABSOLUTE,
+  PERFORMANCE_VALUE_TYPE_DELTA,
+} PerformanceValueTypes;
+
 // performance filter (average of time range)
 typedef struct
 {
-  uint             maxSeconds;
-  uint             seconds;
-  uint             index;
-  PerformanceValue *performanceValues;
-  double           average;
-  ulong            n;
+  uint                  maxSeconds;
+  PerformanceValueTypes type;
+  uint                  seconds;
+  uint                  index;
+  PerformanceValue      *performanceValues;
+  double                average;
+  ulong                 n;
 } PerformanceFilter;
 
 /***************************** Variables *******************************/
@@ -1628,14 +1636,16 @@ INLINE uint Misc_getConsoleColumns(void)
 * Name   : Misc_performanceFilterInit
 * Purpose: initialize performance filter
 * Input  : performanceFilter - performance filter variable
-*          seconds           - filter time window size in seconds
+*          maxSeconds        - filter time window size in seconds
+*          type              - filter type; see PerformanceValueTypes
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-void Misc_performanceFilterInit(PerformanceFilter *performanceFilter,
-                                uint              maxSeconds
+void Misc_performanceFilterInit(PerformanceFilter     *performanceFilter,
+                                uint                  maxSeconds,
+                                PerformanceValueTypes type
                                );
 
 /***********************************************************************\

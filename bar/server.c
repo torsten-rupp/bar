@@ -6184,17 +6184,18 @@ LOCAL void updateRunningInfo(Errors      error,
     setRunningInfo(&jobNode->runningInfo,runningInfo);
 
     // calculate statics values
-    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     jobNode->runningInfo.progress.done.count      );
-    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       jobNode->runningInfo.progress.done.size       );
-    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,jobNode->runningInfo.progress.storage.doneSize);
+    Misc_performanceFilterAdd(&jobNode->runningInfo.entriesPerSecondFilter,     jobNode->runningInfo.progress.done.count           );
+    Misc_performanceFilterAdd(&jobNode->runningInfo.bytesPerSecondFilter,       jobNode->runningInfo.progress.done.size            );
+    Misc_performanceFilterAdd(&jobNode->runningInfo.storageBytesPerSecondFilter,jobNode->runningInfo.progress.storage.doneSize     );
+    Misc_performanceFilterAdd(&jobNode->runningInfo.volumeBytesPerSecondFilter, jobNode->runningInfo.progress.volume.bytesPerSecond);
     double entriesPerSecondAverage      = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.entriesPerSecondFilter     );
     double bytesPerSecondAverage        = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.bytesPerSecondFilter       );
     double storageBytesPerSecondAverage = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.storageBytesPerSecondFilter);
 
     // calculate rest values
-    ulong  restFiles         = (jobNode->runningInfo.progress.total.count       > jobNode->runningInfo.progress.done.count      ) ? jobNode->runningInfo.progress.total.count      -jobNode->runningInfo.progress.done.count       : 0L;
-    uint64 restBytes         = (jobNode->runningInfo.progress.total.size        > jobNode->runningInfo.progress.done.size       ) ? jobNode->runningInfo.progress.total.size       -jobNode->runningInfo.progress.done.size        : 0LL;
-    uint64 restStorageBytes  = (jobNode->runningInfo.progress.storage.totalSize > jobNode->runningInfo.progress.storage.doneSize) ? jobNode->runningInfo.progress.storage.totalSize-jobNode->runningInfo.progress.storage.doneSize : 0LL;
+    ulong  restFiles        = (jobNode->runningInfo.progress.total.count       > jobNode->runningInfo.progress.done.count      ) ? jobNode->runningInfo.progress.total.count      -jobNode->runningInfo.progress.done.count       : 0L;
+    uint64 restBytes        = (jobNode->runningInfo.progress.total.size        > jobNode->runningInfo.progress.done.size       ) ? jobNode->runningInfo.progress.total.size       -jobNode->runningInfo.progress.done.size        : 0LL;
+    uint64 restStorageBytes = (jobNode->runningInfo.progress.storage.totalSize > jobNode->runningInfo.progress.storage.doneSize) ? jobNode->runningInfo.progress.storage.totalSize-jobNode->runningInfo.progress.storage.doneSize : 0LL;
 
     // calculate estimated rest time
     ulong estimatedRestTime = 0L;
@@ -6203,9 +6204,11 @@ LOCAL void updateRunningInfo(Errors      error,
     if (storageBytesPerSecondAverage > 0.0) { estimatedRestTime = MAX(estimatedRestTime,(ulong)lround((double)restStorageBytes/storageBytesPerSecondAverage)); }
 
     // calulcate performance values
+// TODO: average value?
     jobNode->runningInfo.entriesPerSecond      = Misc_performanceFilterGetValue(&jobNode->runningInfo.entriesPerSecondFilter     ,10);
     jobNode->runningInfo.bytesPerSecond        = Misc_performanceFilterGetValue(&jobNode->runningInfo.bytesPerSecondFilter       ,10);
     jobNode->runningInfo.storageBytesPerSecond = Misc_performanceFilterGetValue(&jobNode->runningInfo.storageBytesPerSecondFilter,10);
+    jobNode->runningInfo.volumeBytesPerSecond  = Misc_performanceFilterGetAverageValue(&jobNode->runningInfo.volumeBytesPerSecondFilter);
     jobNode->runningInfo.estimatedRestTime     = estimatedRestTime;
   }
 }
@@ -6877,8 +6880,8 @@ LOCAL void jobThreadCode(void)
 
     // store final compress ratio: 100%-totalSum/totalCompressedSum
     jobNode->runningInfo.progress.compressionRatio = (!jobOptions.dryRun && (jobNode->runningInfo.progress.total.size > 0))
-                                             ? 100.0-(jobNode->runningInfo.progress.storage.totalSize*100.0)/jobNode->runningInfo.progress.total.size
-                                             : 0.0;
+                                                       ? 100.0-(jobNode->runningInfo.progress.storage.totalSize*100.0)/jobNode->runningInfo.progress.total.size
+                                                       : 0.0;
 
     // store last error code/message, last executed date/time
     jobNode->runningInfo.lastErrorCode        = Error_getCode(jobNode->runningInfo.error);
@@ -12652,6 +12655,7 @@ LOCAL void serverCommand_jobFlush(ClientInfo *clientInfo, IndexHandle *indexHand
 *            entriesPerSecond=<n [1/s]>
 *            bytesPerSecond=<n [bytes/s]>
 *            storageBytesPerSecond=<n [bytes/s]>
+*            volumeBytesPerSecond=<n [bytes/s]>
 *            estimatedRestTime=<n [s]>
 \***********************************************************************/
 
@@ -12686,7 +12690,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
     // Note: remote jobs status is updated in jobThreadRun->Connector_create()
 // TODO: rename totalEntry* -> total*
     ServerIO_sendResult(&clientInfo->io,id,TRUE,ERROR_NONE,
-                        "state=%s errorCode=%u errorNumber=%d errorData=%'S doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%d volumeDone=%lf entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf estimatedRestTime=%lu volumeRequest=%s volumeRequestNumber=%d messageCode=%s messageText=%'S",
+                        "state=%s errorCode=%u errorNumber=%d errorData=%'S doneCount=%lu doneSize=%"PRIu64" totalEntryCount=%lu totalEntrySize=%"PRIu64" collectTotalSumDone=%y skippedEntryCount=%lu skippedEntrySize=%"PRIu64" errorEntryCount=%lu errorEntrySize=%"PRIu64" archiveSize=%"PRIu64" compressionRatio=%lf entryName=%'S entryDoneSize=%"PRIu64" entryTotalSize=%"PRIu64" storageName=%'S storageDoneSize=%"PRIu64" storageTotalSize=%"PRIu64" volumeNumber=%u volumeDone=%lf entriesPerSecond=%lf bytesPerSecond=%lf storageBytesPerSecond=%lf volumeBytesPerSecond=%lf estimatedRestTime=%lu volumeRequest=%s volumeRequestNumber=%d messageCode=%s messageText=%'S",
                         Job_getStateText(jobNode->jobState,jobNode->noStorage,jobNode->dryRun),
                         jobNode->runningInfo.lastErrorCode,
                         jobNode->runningInfo.lastErrorNumber,
@@ -12713,6 +12717,7 @@ LOCAL void serverCommand_jobStatus(ClientInfo *clientInfo, IndexHandle *indexHan
                         jobNode->runningInfo.entriesPerSecond,
                         jobNode->runningInfo.bytesPerSecond,
                         jobNode->runningInfo.storageBytesPerSecond,
+                        jobNode->runningInfo.volumeBytesPerSecond,
                         jobNode->runningInfo.estimatedRestTime,
                         volumeRequestToString(jobNode->volumeRequest),
                         jobNode->volumeRequestNumber,

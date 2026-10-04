@@ -6771,6 +6771,7 @@ if (false) {
                                          System.out.println(String.format("  Storage done       : %s",Units.formatByteSize(valueMap.getLong("storageTotalSize"))));
                                          System.out.println(String.format("          total      : %s",Units.formatByteSize(valueMap.getLong("storageTotalSize"))));
                                          System.out.println(String.format("          bytes/s    : %.1f",valueMap.getDouble("storageBytesPerSecond")));
+                                         System.out.println(String.format("  Volume bytes/s     : %.1f",valueMap.getDouble("volumeBytesPerSecond")));
                                          System.out.println(String.format("  Estimated rest time: %ds",valueMap.getLong("estimatedRestTime")));
                                          System.out.println(String.format("  Last error         : %s",(errorCode != 0) ? BARException.getText(errorCode,0,errorData) : "none"));
                                        }

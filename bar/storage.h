@@ -81,20 +81,22 @@
 /***********************************************************************\
 * Name   : StorageUpdateProgressFunction
 * Purpose: update storage progress call-back
-* Input  : doneSize     - done size [bytes]
-*          volumeNumber - volume number [1..n]
-*          volumeDone   - volume done [0..100%]
-*          messageCode  - message code; see MESSAGE_CODE_...
-*          messageText  - message text
-*          userData     - user data
+* Input  : doneSize             - done size [bytes]
+*          volumeNumber         - volume number [1..n]
+*          volumeDone           - volume done [0..100%]
+*          volumeBytesPerSecond - volume writubg speed [bytes/s]
+*          messageCode          - message code; see MESSAGE_CODE_...
+*          messageText          - message text
+*          userData             - user data
 * Output : -
 * Return : TRUE to continue, FALSE to abort
 * Notes  : -
 \***********************************************************************/
 
-typedef bool(*StorageUpdateProgressFunction)(uint64       doneSize,
+typedef bool(*StorageUpdateProgressFunction)(uint64       storageDoneSize,
                                              uint         volumeNumber,
                                              double       volumeDone,
+                                             double       volumeBytesPerSecond,
                                              MessageCodes messageCode,
                                              ConstString  messageText,
                                              void         *userData
@@ -404,6 +406,7 @@ typedef struct
     uint64  storageDoneBytes;                                 // storage done [bytes]
     uint    volumeNumber;                                     // current volume number
     double  volumeDone;                                       // current volume progress [0..100%]
+    double  volumeBytesPerSecond;                             // current volume writubg speed [bytes/s]
     Message message;
   }                             progress;
 } StorageInfo;

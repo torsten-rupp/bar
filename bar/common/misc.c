@@ -2942,8 +2942,9 @@ void Misc_getConsoleSize(uint *rows, uint *columns)
 
 /*---------------------------------------------------------------------*/
 
-void Misc_performanceFilterInit(PerformanceFilter *performanceFilter,
-                                uint              maxSeconds
+void Misc_performanceFilterInit(PerformanceFilter     *performanceFilter,
+                                uint                  maxSeconds,
+                                PerformanceValueTypes type
                                )
 {
   assert(performanceFilter != NULL);
@@ -2962,6 +2963,7 @@ void Misc_performanceFilterInit(PerformanceFilter *performanceFilter,
     performanceFilter->performanceValues[i].value     = 0.0;
   }
   performanceFilter->maxSeconds = maxSeconds;
+  performanceFilter->type       = type;
   performanceFilter->seconds    = 0;
   performanceFilter->index      = 0;
   performanceFilter->average    = 0;
@@ -3005,31 +3007,68 @@ void Misc_performanceFilterAdd(PerformanceFilter *performanceFilter,
   uint64 timeStamp = Misc_getTimestamp()/US_PER_MS;
   if (timeStamp > (performanceFilter->performanceValues[performanceFilter->index].timeStamp+MS_PER_SECOND))
   {
-    // calculate new average value
-    if (performanceFilter->seconds > 0)
-    {
-      double valueDelta     = value-performanceFilter->performanceValues[performanceFilter->index].value;
-      uint64 timeStampDelta = timeStamp-performanceFilter->performanceValues[performanceFilter->index].timeStamp;
-      double average = (valueDelta*MS_PER_SECOND)/(double)timeStampDelta;
-      if (performanceFilter->n > 0)
-      {
-        performanceFilter->average = average/(double)performanceFilter->n+((double)(performanceFilter->n-1)*performanceFilter->average)/(double)performanceFilter->n;
-      }
-      else
-      {
-        performanceFilter->average = average;
-      }
-      performanceFilter->n++;
-    }
-
     // move to next index in ring buffer
-    performanceFilter->index = (performanceFilter->index+1)%performanceFilter->maxSeconds;
+    performanceFilter->index = (performanceFilter->index+1) % performanceFilter->maxSeconds;
     assert(performanceFilter->index < performanceFilter->maxSeconds);
 
     // store value
     performanceFilter->performanceValues[performanceFilter->index].timeStamp = timeStamp;
     performanceFilter->performanceValues[performanceFilter->index].value     = value;
     if (performanceFilter->seconds < performanceFilter->maxSeconds) performanceFilter->seconds++;
+
+    // calculate average
+    uint i0 = (performanceFilter->index+performanceFilter->maxSeconds-performanceFilter->seconds+1) % performanceFilter->maxSeconds;
+    assert(i0 < performanceFilter->maxSeconds);
+    uint i1 = performanceFilter->index;
+    assert(i1 < performanceFilter->maxSeconds);
+    switch (performanceFilter->type)
+    {
+      case PERFORMANCE_VALUE_TYPE_ABSOLUTE:
+        {
+          uint n = 0;
+          while (i0 != i1)
+          {
+            double filterValue = performanceFilter->performanceValues[i0].value;
+            if (n > 0)
+            {
+              performanceFilter->average =  filterValue/(double)n
+                                           +((double)(n-1)*performanceFilter->average)/(double)n;
+            }
+            else
+            {
+              performanceFilter->average = filterValue;
+            }
+            n++;
+            i0 = (i0+1) % performanceFilter->maxSeconds;
+          }
+        }
+        break;
+      case PERFORMANCE_VALUE_TYPE_DELTA:
+        {
+          uint n = 0;
+          while (i0 != i1)
+          {
+            double valueDelta     = value-performanceFilter->performanceValues[performanceFilter->index].value;
+            uint64 timeStampDelta = timeStamp-performanceFilter->performanceValues[performanceFilter->index].timeStamp;
+            if (timeStampDelta > 0)
+            {
+              double filterValue = (valueDelta*MS_PER_SECOND)/(double)timeStampDelta;
+              if (n > 0)
+              {
+                performanceFilter->average =  filterValue/(double)n
+                                             +((double)(n-1)*performanceFilter->average)/(double)n;
+              }
+              else
+              {
+                performanceFilter->average = filterValue;
+              }
+              n++;
+            }
+            i0 = (i0+1) % performanceFilter->maxSeconds;
+          }
+        }
+        break;
+    }
   }
 }
 
@@ -3042,14 +3081,14 @@ double Misc_performanceFilterGetValue(const PerformanceFilter *performanceFilter
   assert(seconds <= performanceFilter->maxSeconds);
 
   seconds = MIN(seconds,performanceFilter->seconds);
-  uint i0 = (performanceFilter->index+(performanceFilter->maxSeconds-seconds))%performanceFilter->maxSeconds;
+  uint i0 = (performanceFilter->index+(performanceFilter->maxSeconds-seconds)) % performanceFilter->maxSeconds;
   assert(i0 < performanceFilter->maxSeconds);
   uint i1 = performanceFilter->index;
   assert(i1 < performanceFilter->maxSeconds);
 
   double valueDelta     = performanceFilter->performanceValues[i1].value-performanceFilter->performanceValues[i0].value;
   uint64 timeStampDelta = performanceFilter->performanceValues[i1].timeStamp-performanceFilter->performanceValues[i0].timeStamp;
-  return (timeStampDelta > 0) ? (valueDelta*MS_PER_SECOND)/(double)timeStampDelta : 0.0;
+  return (timeStampDelta > 0) ? (valueDelta*MS_PER_SECOND) / (double)timeStampDelta : 0.0;
 }
 
 double Misc_performanceFilterGetAverageValue(PerformanceFilter *performanceFilter)

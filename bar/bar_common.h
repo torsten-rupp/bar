@@ -928,6 +928,7 @@ typedef struct
     {
       uint      number;                               // current volume number
       double    done;                                 // current volume progress done [0..100%]
+      double    bytesPerSecond;                       // current volume writing speed [bytes/s]
     } volume;
   }                 progress;
 
@@ -943,10 +944,12 @@ typedef struct
   PerformanceFilter entriesPerSecondFilter;
   PerformanceFilter bytesPerSecondFilter;
   PerformanceFilter storageBytesPerSecondFilter;
+  PerformanceFilter volumeBytesPerSecondFilter;
 
   double            entriesPerSecond;                 // average processed entries last 10s [1/s]
-  double            bytesPerSecond;                   // average processed bytes last 10s [1/s]
-  double            storageBytesPerSecond;            // average processed storage bytes last 10s [1/s]
+  double            bytesPerSecond;                   // average processed bytes last 10s [bytes/s]
+  double            storageBytesPerSecond;            // average processed storage bytes last 10s [bytes/s]
+  double            volumeBytesPerSecond;             // volume writing speed [bytes/s]
   ulong             estimatedRestTime;                // estimated rest running time [s]
 } RunningInfo;
 

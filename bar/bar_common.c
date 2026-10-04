@@ -210,87 +210,93 @@ void initRunningInfo(RunningInfo *runningInfo)
 {
   assert(runningInfo != NULL);
 
-  runningInfo->error                        = ERROR_NONE;
+  runningInfo->error                          = ERROR_NONE;
 
-  runningInfo->progress.done.count          = 0L;
-  runningInfo->progress.done.size           = 0LL;
-  runningInfo->progress.total.count         = 0L;
-  runningInfo->progress.total.size          = 0LL;
-  runningInfo->progress.collectTotalSumDone = FALSE;
-  runningInfo->progress.skipped.count       = 0L;
-  runningInfo->progress.skipped.size        = 0LL;
-  runningInfo->progress.error.count         = 0L;
-  runningInfo->progress.error.size          = 0LL;
-  runningInfo->progress.archiveSize         = 0LL;
-  runningInfo->progress.compressionRatio    = 0.0;
-  runningInfo->progress.entry.name          = String_new();
-  runningInfo->progress.entry.doneSize      = 0LL;
-  runningInfo->progress.entry.totalSize     = 0LL;
-  runningInfo->progress.storage.name        = String_new();
-  runningInfo->progress.storage.doneSize    = 0LL;
-  runningInfo->progress.storage.totalSize   = 0LL;
-  runningInfo->progress.volume.number       = 0;
-  runningInfo->progress.volume.done         = 0.0;
-  runningInfo->message.code                 = MESSAGE_CODE_NONE;
-  runningInfo->message.text                 = String_new();
+  runningInfo->progress.done.count            = 0L;
+  runningInfo->progress.done.size             = 0LL;
+  runningInfo->progress.total.count           = 0L;
+  runningInfo->progress.total.size            = 0LL;
+  runningInfo->progress.collectTotalSumDone   = FALSE;
+  runningInfo->progress.skipped.count         = 0L;
+  runningInfo->progress.skipped.size          = 0LL;
+  runningInfo->progress.error.count           = 0L;
+  runningInfo->progress.error.size            = 0LL;
+  runningInfo->progress.archiveSize           = 0LL;
+  runningInfo->progress.compressionRatio      = 0.0;
+  runningInfo->progress.entry.name            = String_new();
+  runningInfo->progress.entry.doneSize        = 0LL;
+  runningInfo->progress.entry.totalSize       = 0LL;
+  runningInfo->progress.storage.name          = String_new();
+  runningInfo->progress.storage.doneSize      = 0LL;
+  runningInfo->progress.storage.totalSize     = 0LL;
+  runningInfo->progress.volume.number         = 0;
+  runningInfo->progress.volume.done           = 0.0;
+  runningInfo->progress.volume.bytesPerSecond = 0.0;
+  runningInfo->message.code                   = MESSAGE_CODE_NONE;
+  runningInfo->message.text                   = String_new();
 
-  runningInfo->lastErrorCode                = ERROR_CODE_NONE;
-  runningInfo->lastErrorNumber              = 0;
-  runningInfo->lastErrorData                = String_new();
+  runningInfo->lastErrorCode                  = ERROR_CODE_NONE;
+  runningInfo->lastErrorNumber                = 0;
+  runningInfo->lastErrorData                  = String_new();
 
-  runningInfo->lastExecutedDateTime         = 0LL;
+  runningInfo->lastExecutedDateTime           = 0LL;
 
-  Misc_performanceFilterInit(&runningInfo->entriesPerSecondFilter,     10*60);
-  Misc_performanceFilterInit(&runningInfo->bytesPerSecondFilter,       10*60);
-  Misc_performanceFilterInit(&runningInfo->storageBytesPerSecondFilter,10*60);
+  Misc_performanceFilterInit(&runningInfo->entriesPerSecondFilter,     10*60,PERFORMANCE_VALUE_TYPE_DELTA   );
+  Misc_performanceFilterInit(&runningInfo->bytesPerSecondFilter,       10*60,PERFORMANCE_VALUE_TYPE_DELTA   );
+  Misc_performanceFilterInit(&runningInfo->storageBytesPerSecondFilter,10*60,PERFORMANCE_VALUE_TYPE_DELTA   );
+  Misc_performanceFilterInit(&runningInfo->volumeBytesPerSecondFilter, 10*60,PERFORMANCE_VALUE_TYPE_ABSOLUTE);
 
-  runningInfo->entriesPerSecond             = 0.0;
-  runningInfo->bytesPerSecond               = 0.0;
-  runningInfo->storageBytesPerSecond        = 0.0;
-  runningInfo->estimatedRestTime            = 0L;
+  runningInfo->entriesPerSecond               = 0.0;
+  runningInfo->bytesPerSecond                 = 0.0;
+  runningInfo->storageBytesPerSecond          = 0.0;
+  runningInfo->volumeBytesPerSecond           = 0.0;
+  runningInfo->estimatedRestTime              = 0L;
 }
 
 void resetRunningInfo(RunningInfo *runningInfo)
 {
   assert(runningInfo != NULL);
 
-  runningInfo->error                        = ERROR_NONE;
+  runningInfo->error                          = ERROR_NONE;
 
-  runningInfo->progress.done.count          = 0L;
-  runningInfo->progress.done.size           = 0LL;
-  runningInfo->progress.total.count         = 0L;
-  runningInfo->progress.total.size          = 0LL;
-  runningInfo->progress.collectTotalSumDone = FALSE;
-  runningInfo->progress.skipped.count       = 0L;
-  runningInfo->progress.skipped.size        = 0LL;
-  runningInfo->progress.error.count         = 0L;
-  runningInfo->progress.error.size          = 0LL;
-  runningInfo->progress.archiveSize         = 0LL;
-  runningInfo->progress.compressionRatio    = 0.0;
+  runningInfo->progress.done.count            = 0L;
+  runningInfo->progress.done.size             = 0LL;
+  runningInfo->progress.total.count           = 0L;
+  runningInfo->progress.total.size            = 0LL;
+  runningInfo->progress.collectTotalSumDone   = FALSE;
+  runningInfo->progress.skipped.count         = 0L;
+  runningInfo->progress.skipped.size          = 0LL;
+  runningInfo->progress.error.count           = 0L;
+  runningInfo->progress.error.size            = 0LL;
+  runningInfo->progress.archiveSize           = 0LL;
+  runningInfo->progress.compressionRatio      = 0.0;
   String_clear(runningInfo->progress.entry.name);
-  runningInfo->progress.entry.doneSize      = 0LL;
-  runningInfo->progress.entry.totalSize     = 0LL;
+  runningInfo->progress.entry.doneSize        = 0LL;
+  runningInfo->progress.entry.totalSize       = 0LL;
   String_clear(runningInfo->progress.storage.name);
-  runningInfo->progress.storage.doneSize    = 0LL;
-  runningInfo->progress.storage.totalSize   = 0LL;
-  runningInfo->progress.volume.number       = 0;
-  runningInfo->progress.volume.done         = 0.0;
-  runningInfo->message.code                 = MESSAGE_CODE_NONE;
+  runningInfo->progress.storage.doneSize      = 0LL;
+  runningInfo->progress.storage.totalSize     = 0LL;
+  runningInfo->progress.volume.number         = 0;
+  runningInfo->progress.volume.done           = 0.0;
+  runningInfo->progress.volume.bytesPerSecond = 0.0;
+  runningInfo->message.code                   = MESSAGE_CODE_NONE;
   String_clear(runningInfo->message.text);
 
-  runningInfo->lastErrorCode                = ERROR_CODE_NONE;
-  runningInfo->lastErrorNumber              = 0;
+  runningInfo->lastErrorCode                  = ERROR_CODE_NONE;
+  runningInfo->lastErrorNumber                = 0;
   String_clear(runningInfo->lastErrorData);
 
-  runningInfo->lastExecutedDateTime         = 0LL;
+  runningInfo->lastExecutedDateTime           = 0LL;
 
   Misc_performanceFilterClear(&runningInfo->entriesPerSecondFilter     );
   Misc_performanceFilterClear(&runningInfo->bytesPerSecondFilter       );
   Misc_performanceFilterClear(&runningInfo->storageBytesPerSecondFilter);
+  Misc_performanceFilterClear(&runningInfo->volumeBytesPerSecondFilter );
 
   runningInfo->entriesPerSecond             = 0.0;
   runningInfo->bytesPerSecond               = 0.0;
   runningInfo->storageBytesPerSecond        = 0.0;
+  runningInfo->volumeBytesPerSecond         = 0.0;
   runningInfo->estimatedRestTime            = 0L;
 }
 
@@ -298,9 +304,10 @@ void doneRunningInfo(RunningInfo *runningInfo)
 {
   assert(runningInfo != NULL);
 
-  Misc_performanceFilterDone(&runningInfo->entriesPerSecondFilter);
-  Misc_performanceFilterDone(&runningInfo->bytesPerSecondFilter);
+  Misc_performanceFilterDone(&runningInfo->volumeBytesPerSecondFilter);
   Misc_performanceFilterDone(&runningInfo->storageBytesPerSecondFilter);
+  Misc_performanceFilterDone(&runningInfo->bytesPerSecondFilter);
+  Misc_performanceFilterDone(&runningInfo->entriesPerSecondFilter);
 
   String_delete(runningInfo->lastErrorData);
   String_delete(runningInfo->message.text);
@@ -321,40 +328,42 @@ void setRunningInfo(RunningInfo *runningInfo, const RunningInfo *fromRunningInfo
   assert(fromRunningInfo->message.text != NULL);
   assert(fromRunningInfo->lastErrorData != NULL);
 
-  runningInfo->error                        = fromRunningInfo->error;
+  runningInfo->error                          = fromRunningInfo->error;
 
-  runningInfo->progress.done.count          = fromRunningInfo->progress.done.count;
-  runningInfo->progress.done.size           = fromRunningInfo->progress.done.size;
-  runningInfo->progress.total.count         = fromRunningInfo->progress.total.count;
-  runningInfo->progress.total.size          = fromRunningInfo->progress.total.size;
-  runningInfo->progress.collectTotalSumDone = fromRunningInfo->progress.collectTotalSumDone;
-  runningInfo->progress.skipped.count       = fromRunningInfo->progress.skipped.count;
-  runningInfo->progress.skipped.size        = fromRunningInfo->progress.skipped.size;
-  runningInfo->progress.error.count         = fromRunningInfo->progress.error.count;
-  runningInfo->progress.error.size          = fromRunningInfo->progress.error.size;
-  runningInfo->progress.archiveSize         = fromRunningInfo->progress.archiveSize;
-  runningInfo->progress.compressionRatio    = fromRunningInfo->progress.compressionRatio;
+  runningInfo->progress.done.count            = fromRunningInfo->progress.done.count;
+  runningInfo->progress.done.size             = fromRunningInfo->progress.done.size;
+  runningInfo->progress.total.count           = fromRunningInfo->progress.total.count;
+  runningInfo->progress.total.size            = fromRunningInfo->progress.total.size;
+  runningInfo->progress.collectTotalSumDone   = fromRunningInfo->progress.collectTotalSumDone;
+  runningInfo->progress.skipped.count         = fromRunningInfo->progress.skipped.count;
+  runningInfo->progress.skipped.size          = fromRunningInfo->progress.skipped.size;
+  runningInfo->progress.error.count           = fromRunningInfo->progress.error.count;
+  runningInfo->progress.error.size            = fromRunningInfo->progress.error.size;
+  runningInfo->progress.archiveSize           = fromRunningInfo->progress.archiveSize;
+  runningInfo->progress.compressionRatio      = fromRunningInfo->progress.compressionRatio;
   String_set(runningInfo->progress.entry.name,fromRunningInfo->progress.entry.name);
-  runningInfo->progress.entry.doneSize      = fromRunningInfo->progress.entry.doneSize;
-  runningInfo->progress.entry.totalSize     = fromRunningInfo->progress.entry.totalSize;
+  runningInfo->progress.entry.doneSize        = fromRunningInfo->progress.entry.doneSize;
+  runningInfo->progress.entry.totalSize       = fromRunningInfo->progress.entry.totalSize;
   String_set(runningInfo->progress.storage.name,fromRunningInfo->progress.storage.name);
-  runningInfo->progress.storage.doneSize    = fromRunningInfo->progress.storage.doneSize;
-  runningInfo->progress.storage.totalSize   = fromRunningInfo->progress.storage.totalSize;
-  runningInfo->progress.volume.number       = fromRunningInfo->progress.volume.number;
-  runningInfo->progress.volume.done         = fromRunningInfo->progress.volume.done;
-  runningInfo->message.code                 = fromRunningInfo->message.code;
+  runningInfo->progress.storage.doneSize      = fromRunningInfo->progress.storage.doneSize;
+  runningInfo->progress.storage.totalSize     = fromRunningInfo->progress.storage.totalSize;
+  runningInfo->progress.volume.number         = fromRunningInfo->progress.volume.number;
+  runningInfo->progress.volume.done           = fromRunningInfo->progress.volume.done;
+  runningInfo->progress.volume.bytesPerSecond = fromRunningInfo->progress.volume.bytesPerSecond;
+  runningInfo->message.code                   = fromRunningInfo->message.code;
   String_set(runningInfo->message.text,fromRunningInfo->message.text);
 
-  runningInfo->lastErrorCode                = fromRunningInfo->lastErrorCode;
-  runningInfo->lastErrorNumber              = fromRunningInfo->lastErrorNumber;
+  runningInfo->lastErrorCode                  = fromRunningInfo->lastErrorCode;
+  runningInfo->lastErrorNumber                = fromRunningInfo->lastErrorNumber;
   String_set(runningInfo->lastErrorData,fromRunningInfo->lastErrorData);
 
-  runningInfo->lastExecutedDateTime         = fromRunningInfo->lastExecutedDateTime;
+  runningInfo->lastExecutedDateTime           = fromRunningInfo->lastExecutedDateTime;
 
-  runningInfo->entriesPerSecond             = fromRunningInfo->entriesPerSecond;
-  runningInfo->bytesPerSecond               = fromRunningInfo->bytesPerSecond;
-  runningInfo->storageBytesPerSecond        = fromRunningInfo->storageBytesPerSecond;
-  runningInfo->estimatedRestTime            = fromRunningInfo->estimatedRestTime;
+  runningInfo->entriesPerSecond               = fromRunningInfo->entriesPerSecond;
+  runningInfo->bytesPerSecond                 = fromRunningInfo->bytesPerSecond;
+  runningInfo->storageBytesPerSecond          = fromRunningInfo->storageBytesPerSecond;
+  runningInfo->volumeBytesPerSecond           = fromRunningInfo->volumeBytesPerSecond;
+  runningInfo->estimatedRestTime              = fromRunningInfo->estimatedRestTime;
 }
 
 const char *volumeRequestToString(VolumeRequests volumeRequest)
