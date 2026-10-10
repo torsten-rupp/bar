@@ -247,7 +247,7 @@ UNUSED_VARIABLE(privateKeyLength);
   {
     curlBLOB.data  = (void*)publicKeyData;
     curlBLOB.len   = publicKeyLength;
-    curlBLOB.flags = 0;
+    curlBLOB.flags = CURL_BLOB_COPY;
     curlCode = curl_easy_setopt(curlHandle,CURLOPT_CAINFO_BLOB,&curlBLOB);
   }
 // TODO: option
@@ -408,6 +408,10 @@ LOCAL Errors checkWebDAVLogin(StorageTypes type,
       }
       if (curlCode == CURLE_OK)
       {
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+      }
+      if (curlCode == CURLE_OK)
+      {
         curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
       }
       if (curlCode == CURLE_OK)
@@ -422,6 +426,7 @@ LOCAL Errors checkWebDAVLogin(StorageTypes type,
       {
         curlCode = curl_easy_perform(curlHandle);
       }
+      curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,NULL);
       if (curlCode != CURLE_OK)
       {
         switch (curlCode)
@@ -452,158 +457,6 @@ LOCAL Errors checkWebDAVLogin(StorageTypes type,
   (void)curl_easy_cleanup(curlHandle);
 
   return error;
-}
-
-/***********************************************************************\
-* Name   : fileExists
-* Purpose: check if file exists
-* Input  : curlHandle - CURL handle
-*          url        - URL
-* Output : -
-* Return : TRUE iff file exists
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool fileExists(CURL *curlHandle, ConstString url)
-{
-  assert(curlHandle != NULL);
-  assert(url != NULL);
-
-  CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"HEAD");
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_perform(curlHandle);
-  }
-  long responseCode;
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
-  }
-//fprintf(stderr,"%s:%d: file exists %s: %ld %s\n",__FILE__,__LINE__,String_cString(url),responseCode,(responseCode == HTTP_CODE_OK) ? "yes" : "no");
-
-  return (curlCode == CURLE_OK) && (responseCode == HTTP_CODE_OK);
-}
-
-/***********************************************************************\
-* Name   : directoryExists
-* Purpose: check if directory exists
-* Input  : curlHandle - CURL handle
-*          url        - URL
-* Output : -
-* Return : TRUE iff directory exists
-* Notes  : -
-\***********************************************************************/
-
-LOCAL bool directoryExists(CURL *curlHandle, ConstString url)
-{
-  assert(curlHandle != NULL);
-  assert(url != NULL);
-
-  String   directoryURL = String_appendChar(String_duplicate(url),'/');
-  CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(directoryURL));
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"HEAD");
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_perform(curlHandle);
-  }
-  long responseCode;
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
-  }
-//fprintf(stderr,"%s:%d: directory exists %s: %ld\n",__FILE__,__LINE__,String_cString(directoryURL),responseCode,(responseCode == HTTP_CODE_OK) ? "yes" : "no");
-
-  // free resources
-  String_delete(directoryURL);
-
-  return (curlCode == CURLE_OK) && (responseCode == HTTP_CODE_OK);
-}
-
-/***********************************************************************\
-* Name   : makeDirectory
-* Purpose: make directory
-* Input  : curlHandle - CURL handle
-*          url        - URL
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors makeDirectory(CURL *curlHandle, ConstString url)
-{
-  assert(curlHandle != NULL);
-  assert(url != NULL);
-
-  CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"MKCOL");
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_perform(curlHandle);
-  }
-
-  return (curlCode == CURLE_OK)
-    ? ERROR_NONE
-    : getCurlHTTPResponseError(curlHandle,url);
-}
-
-/***********************************************************************\
-* Name   : fileDirectoryDelete
-* Purpose: delete file/directory
-* Input  : curlHandle - CURL handle
-*          url        - URL
-* Output : -
-* Return : ERROR_NONE or error code
-* Notes  : -
-\***********************************************************************/
-
-LOCAL Errors deleteFileDirectory(CURL *curlHandle, ConstString url)
-{
-  assert(curlHandle != NULL);
-  assert(url != NULL);
-
-  CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_perform(curlHandle);
-  }
-
-  return (curlCode == CURLE_OK)
-    ? ERROR_NONE
-    : getCurlHTTPResponseError(curlHandle,url);
 }
 
 /***********************************************************************\
@@ -727,6 +580,806 @@ debugDumpMemory(storageHandle->webdav.receiveBuffer.data,storageHandle->webdav.r
 }
 
 /***********************************************************************\
+* Name   : curlWebDAVReadDirectoryDataCallback
+* Purpose: curl WebDAV parse directory list callback
+* Input  : buffer   - buffer with data: receive data from remote
+*          size     - size of an element
+*          n        - number of elements
+*          userData - user data
+* Output : -
+* Return : number of processed bytes or 0
+* Notes  : -
+\***********************************************************************/
+
+LOCAL size_t curlWebDAVReadDirectoryDataCallback(const void *buffer,
+                                                 size_t     size,
+                                                 size_t     n,
+                                                 void       *userData
+                                                )
+{
+  assert(buffer != NULL);
+  assert(size > 0);
+
+  String directoryData = (String)userData;
+  assert(directoryData != NULL);
+  String_appendBuffer(directoryData,buffer,size*n);
+
+  return size*n;
+}
+
+/***********************************************************************\
+* Name   : newXMLTree
+* Purpose: parse XML data and create XML tree
+* Input  : data - data to parse
+* Output : -
+* Return : XML tree or NULL
+* Notes  : -
+\***********************************************************************/
+
+LOCAL mxml_node_t *newXMLTree(const char *data)
+{
+ assert(data != NULL);
+
+  mxml_node_t *xmlTree;
+  #if MXML_MAJOR_VERSION >= 4
+    mxml_options_t *options = mxmlOptionsNew();
+    assert(options != NULL);
+    mxmlOptionsSetTypeValue(options,MXML_TYPE_OPAQUE);
+    xmlTree = mxmlLoadString(NULL,
+                             options,
+                             data
+                            );
+    mxmlOptionsDelete(options);
+  #else
+    xmlTree = mxmlLoadString(NULL,
+                             data,
+//                             MXML_TEXT_CALLBACK
+                             MXML_TEXT_OPAQUE
+                            );
+  #endif
+
+  return xmlTree;
+}
+
+/***********************************************************************\
+* Name   : deleteXMLTree
+* Purpose: free XML tree
+* Input  : xmlTree - XML tree to free
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void deleteXMLTree(mxml_node_t *xmlTree)
+{
+  assert(xmlTree != NULL);
+
+  mxmlDelete(xmlTree);
+}
+
+static void print_indent(int depth)
+{
+    for (int i = 0; i < depth; i++)
+        printf("  ");
+}
+
+static void walk_tree(mxml_node_t *node, int depth)
+{
+    for (mxml_node_t *cur = node;
+         cur != NULL;
+         cur = mxmlGetNextSibling(cur))
+    {
+        mxml_type_t type = mxmlGetType(cur);
+
+        print_indent(depth);
+
+        switch (type)
+        {
+        case MXML_TYPE_ELEMENT:
+        {
+            const char *name = mxmlGetElement(cur);
+
+            printf("%p ELEMENT: <%s>\n", cur, name ? name : "");
+
+            /*
+             * Recursively process ALL children.
+             */
+            walk_tree(mxmlGetFirstChild(cur), depth + 1);
+
+            print_indent(depth);
+            printf("END: </%s>\n", name ? name : "");
+
+            break;
+        }
+
+        case MXML_TYPE_TEXT:
+        {
+            bool whitespace = false;
+            const char *text = mxmlGetText(cur, &whitespace);
+
+            printf("%p TEXT%s: \"%s\"\n",cur,
+                   whitespace ? " (whitespace)" : "",
+                   text ? text : "");
+
+            break;
+        }
+
+        case MXML_TYPE_OPAQUE:
+        {
+            const char *value = mxmlGetOpaque(cur);
+
+            printf("%p OPAQUE: \"%s\"\n",cur,
+                   value ? value : "");
+
+            break;
+        }
+
+        case MXML_TYPE_CDATA:
+        {
+            const char *value = mxmlGetCDATA(cur);
+
+            printf("CDATA: \"%s\"\n",
+                   value ? value : "");
+
+            break;
+        }
+
+        case MXML_TYPE_COMMENT:
+        {
+            const char *value = mxmlGetComment(cur);
+
+            printf("COMMENT: \"%s\"\n",
+                   value ? value : "");
+
+            break;
+        }
+
+        case MXML_TYPE_DIRECTIVE:
+        {
+            const char *value = mxmlGetDirective(cur);
+
+            printf("%p DIRECTIVE: \"%s\"\n",cur,
+                   value ? value : "");
+
+            break;
+        }
+
+        case MXML_TYPE_INTEGER:
+            printf("INTEGER: %lld\n",
+                   (long long)mxmlGetInteger(cur));
+            break;
+
+        case MXML_TYPE_REAL:
+            printf("REAL: %g\n",
+                   mxmlGetReal(cur));
+            break;
+
+        case MXML_TYPE_CUSTOM:
+            printf("CUSTOM\n");
+            break;
+
+        case MXML_TYPE_DECLARATION:
+        {
+            const char *value = mxmlGetDeclaration(cur);
+
+            printf("DECLARATION: \"%s\"\n",
+                   value ? value : "");
+
+            break;
+        }
+
+        default:
+            printf("UNKNOWN TYPE: %d\n", (int)type);
+            break;
+        }
+    }
+}
+
+/***********************************************************************\
+* Name   : firstXMLNode
+* Purpose: find first XML node recursively
+* Input  : xmlTree  - XML tree
+*          node     - start node or NULL
+*          nodeName - node name
+* Output : -
+* Return : XML node or NULL
+* Notes  : -
+\***********************************************************************/
+
+mxml_node_t *firstXMLNode(const mxml_node_t *xmlTree, const mxml_node_t *node, const char *nodeName)
+{
+  assert(xmlTree != NULL);
+  assert(nodeName != NULL);
+
+  const mxml_node_t *foundNode = NULL;
+//walk_tree(xmlTree,0);
+//walk_tree((node == NULL) ? mxmlGetFirstChild(xmlTree) : node,0);
+
+//fprintf(stderr,"%s:%d: --- find node %s\n",__FILE__,__LINE__,nodeName);
+  if (node == NULL) node = mxmlGetFirstChild(xmlTree);
+//  if (node == NULL) node = xmlTree;
+  while (   (node != NULL)
+         && (foundNode == NULL)
+        )
+  {
+//fprintf(stderr,"%s:%d: %p %d %s\n",__FILE__,__LINE__,node,mxmlGetType(node),mxmlGetElement(node));
+    switch (mxmlGetType(node))
+    {
+      case MXML_TYPE_ELEMENT:
+        const char *name = mxmlGetElement(node);
+//fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,name);
+        if (stringEquals(name,nodeName))
+        {
+          foundNode = node;
+        }
+        else
+        {
+          ssize_t i = stringFindReverseChar(name,':');
+          if (   (i >= 0)
+              && (stringEquals(&name[i+1],nodeName))
+             )
+          {
+            foundNode = node;
+          }
+        }
+        if (foundNode == NULL)
+        {
+          foundNode = firstXMLNode(xmlTree,mxmlGetFirstChild(node),nodeName);
+        }
+//else { fprintf(stderr,"%s:%d: found!\n",__FILE__,__LINE__); }
+        break;
+      default:
+        break;
+    }
+    node = mxmlGetNextSibling(node);
+  }
+//{ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3"); }
+
+  return foundNode;
+}
+
+/***********************************************************************\
+* Name   : nextXMLNode
+* Purpose: find next XML node
+* Input  : xmlTree  - XML tree
+*          node     - start node or NULL
+*          nodeName - node name
+* Output : -
+* Return : XML node or NULL
+* Notes  : -
+\***********************************************************************/
+
+mxml_node_t *nextXMLNode(const mxml_node_t *xmlTree, const mxml_node_t *node, const char *nodeName)
+{
+  assert(xmlTree != NULL);
+  assert(nodeName != NULL);
+
+  const mxml_node_t *foundNode = NULL;
+//walk_tree(xmlTree,0);
+//walk_tree((node == NULL) ? mxmlGetFirstChild(xmlTree) : node,0);
+
+//fprintf(stderr,"%s:%d: --- next node %s\n",__FILE__,__LINE__,nodeName);
+  if (node != NULL)
+  {
+    do
+    {
+      node = mxmlGetNextSibling(node);
+
+      switch (mxmlGetType(node))
+      {
+        case MXML_TYPE_ELEMENT:
+          const char *name = mxmlGetElement(node);
+  //fprintf(stderr,"%s:%d: %s\n",__FILE__,__LINE__,name);
+          if (stringEquals(name,nodeName))
+          {
+            foundNode = node;
+          }
+          else
+          {
+            ssize_t i = stringFindReverseChar(name,':');
+            if (   (i >= 0)
+                && (stringEquals(&name[i+1],nodeName))
+               )
+            {
+              foundNode = node;
+            }
+          }
+          if (foundNode == NULL)
+          {
+            foundNode = firstXMLNode(xmlTree,mxmlGetFirstChild(node),nodeName);
+          }
+  //else { fprintf(stderr,"%s:%d: found!\n",__FILE__,__LINE__); }
+          break;
+        default:
+          break;
+      }
+    }
+    while ((node != NULL) && (foundNode == NULL));
+  }
+//{ fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3"); }
+
+  return foundNode;
+}
+
+/***********************************************************************\
+* Name   : getXMLNodeText
+* Purpose: get text of XML element node
+* Input  : xmlTree  - XML tree
+*          node     - start node or NULL
+*          nodeName - node name
+* Output : text - text string
+* Return : text
+* Notes  : -
+\***********************************************************************/
+
+String getXMLNodeText(String text, const mxml_node_t *xmlTree, const mxml_node_t *node, const char *nodeName)
+{
+  assert(text != NULL);
+  assert(xmlTree != NULL);
+  assert(node != NULL);
+  assert(nodeName != NULL);
+
+//fprintf(stderr,"%s:%d: --- get text %s\n",__FILE__,__LINE__,nodeName);
+  String_clear(text);
+
+  node = firstXMLNode(xmlTree,node,nodeName);
+  if (   (node != NULL)
+      && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
+      && (mxmlGetFirstChild(node) != NULL)
+     )
+  {
+    if      (   (mxmlGetType(mxmlGetFirstChild(node)) == MXML_TYPE_TEXT)
+             && (mxmlGetText(mxmlGetFirstChild(node),NULL) != NULL)
+            )
+    {
+      String_setCString(text,mxmlGetText(mxmlGetFirstChild(node),NULL));
+    }
+    else if (   (mxmlGetType(mxmlGetFirstChild(node)) == MXML_TYPE_OPAQUE)
+             && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
+            )
+    {
+      String_setCString(text,mxmlGetOpaque(mxmlGetFirstChild(node)));
+    }
+
+    return text;
+  }
+  else
+  {
+    return NULL;
+  }
+}
+
+/***********************************************************************\
+* Name   : getXMLPropertyText
+* Purpose: get text from properties section (named "prop")
+* Input  : xmlTree      - XML tree
+*          node         - start node or NULL
+*          propertyName - property name
+* Output : text - text
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+String getXMLPropertyText(String text, const mxml_node_t *xmlTree, const mxml_node_t *node, const char *propertyName)
+{
+  assert(text != NULL);
+  assert(xmlTree != NULL);
+  assert(node != NULL);
+  assert(propertyName != NULL);
+
+//fprintf(stderr,"%s:%d: --- find prop %s\n",__FILE__,__LINE__,propertyName);
+  node = firstXMLNode(xmlTree,node,"prop");
+  if (   (node != NULL)
+      && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
+     )
+  {
+    mxml_node_t *foundNode = NULL;
+    node = mxmlGetFirstChild(node);
+    while (   (node != NULL)
+           && (foundNode == NULL)
+          )
+    {
+//fprintf(stderr,"%s:%d: %p %d %s\n",__FILE__,__LINE__,node,mxmlGetType(node),mxmlGetElement(node));
+      switch (mxmlGetType(node))
+      {
+        case MXML_TYPE_ELEMENT:
+          {
+            const char *name = mxmlGetElement(node);
+//fprintf(stderr,"%s:%d: name=%s\n",__FILE__,__LINE__,name);
+            if (stringEquals(name,propertyName))
+            {
+              foundNode = node;
+            }
+            else
+            {
+              ssize_t i = stringFindReverseChar(name,':');
+              if (   (i >= 0)
+                  && (stringEquals(&name[i+1],propertyName))
+                 )
+              {
+                foundNode = node;
+              }
+            }
+
+            if (foundNode != NULL)
+            {
+              if      (mxmlGetType(mxmlGetFirstChild(foundNode)) == MXML_TYPE_ELEMENT)
+              {
+                const char *name = mxmlGetElement(mxmlGetFirstChild(foundNode));
+                ssize_t i = stringFindReverseChar(name,':');
+                if (i >= 0)
+                {
+                  String_setCString(text,&name[i+1]);
+                }
+                else
+                {
+                  String_setCString(text,name);
+                }
+              }
+              else if (   (mxmlGetType(mxmlGetFirstChild(foundNode)) == MXML_TYPE_TEXT)
+                       && (mxmlGetText(mxmlGetFirstChild(foundNode),NULL) != NULL)
+                      )
+              {
+                String_setCString(text,mxmlGetText(mxmlGetFirstChild(foundNode),NULL));
+              }
+              else if (   (mxmlGetType(mxmlGetFirstChild(foundNode)) == MXML_TYPE_OPAQUE)
+                       && (mxmlGetOpaque(mxmlGetFirstChild(foundNode)) != NULL)
+                      )
+              {
+                String_setCString(text,mxmlGetOpaque(mxmlGetFirstChild(foundNode)));
+              }
+            }
+          }
+          break;
+        default:
+          break;
+      }
+      node = mxmlGetNextSibling(node);
+    }
+  }
+
+  return text;
+}
+
+/***********************************************************************\
+* Name   : getXMLPropertyInt64
+* Purpose: get integer from properties section
+* Input  :
+* Output : text - text
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+int64 getXMLPropertyInt64(const mxml_node_t *xmlTree, const mxml_node_t *node, const char *propertyName)
+{
+  assert(xmlTree != NULL);
+  assert(node != NULL);
+  assert(propertyName != NULL);
+
+  int64 value = -1;
+
+//fprintf(stderr,"%s:%d: --- find prop %s\n",__FILE__,__LINE__,propertyName);
+  node = firstXMLNode(xmlTree,node,"prop");
+  if (   (node != NULL)
+      && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
+     )
+  {
+    mxml_node_t *foundNode = NULL;
+    node = mxmlGetFirstChild(node);
+    while (   (node != NULL)
+           && (foundNode == NULL)
+          )
+    {
+//fprintf(stderr,"%s:%d: %p %d %s\n",__FILE__,__LINE__,node,mxmlGetType(node),mxmlGetElement(node));
+      switch (mxmlGetType(node))
+      {
+        case MXML_TYPE_ELEMENT:
+          {
+            const char *name = mxmlGetElement(node);
+//fprintf(stderr,"%s:%d: name=%s\n",__FILE__,__LINE__,name);
+            if (stringEquals(name,propertyName))
+            {
+              foundNode = node;
+            }
+            else
+            {
+              ssize_t i = stringFindReverseChar(name,':');
+              if (   (i >= 0)
+                  && (stringEquals(&name[i+1],propertyName))
+                 )
+              {
+                foundNode = node;
+              }
+            }
+
+            if (foundNode != NULL)
+            {
+              switch (mxmlGetType(mxmlGetFirstChild(foundNode)))
+              {
+                case MXML_TYPE_INTEGER:
+                  value = (int64)mxmlGetInteger(mxmlGetFirstChild(foundNode));
+                  break;
+                case MXML_TYPE_REAL:
+                  value = (int64)mxmlGetReal(mxmlGetFirstChild(foundNode));
+                  break;
+                case MXML_TYPE_TEXT:
+                  stringToInt64(mxmlGetText(mxmlGetFirstChild(foundNode),NULL),&value,NULL);
+                  break;
+                case MXML_TYPE_OPAQUE:
+                  stringToInt64(mxmlGetOpaque(mxmlGetFirstChild(foundNode)),&value,NULL);
+                  break;
+              }
+            }
+          }
+          break;
+        default:
+          break;
+      }
+      node = mxmlGetNextSibling(node);
+    }
+  }
+
+  return value;
+}
+
+/***********************************************************************\
+* Name   : parseXMLFileInfo
+* Purpose: parse file meta data
+* Input  : xmlTree      - XML tree
+*          responseNode - response node
+*          fileName     - file name
+* Output : fileInfo - file meta data
+* Return : TRUE iff file info parsed
+* Notes  : -
+\***********************************************************************/
+
+LOCAL bool parseXMLFileInfo(FileInfo *fileInfo, const mxml_node_t *xmlTree, const mxml_node_t *responseNode, ConstString fileName)
+{
+  assert(fileInfo != NULL);
+  assert(xmlTree != NULL);
+  assert(responseNode != NULL);
+  assert(fileName != NULL);
+
+  bool result = FALSE;
+
+  String string = String_new();
+  if (getXMLNodeText(string,xmlTree,responseNode,"href") != NULL)
+  {
+    if (String_startsWithChar(string,'/')) String_remove(string,STRING_BEGIN,1);
+    if (String_length(string) > 1) String_trimEnd(string,"/");
+//fprintf(stderr,"%s:%d: fileInfo fileName=%s == name=%s\n",__FILE__,__LINE__,String_cString(fileName),String_cString(string));
+//if (String_startsWithChar(fileName,'/')) { fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__); asm("int3"); }
+
+    if (String_equals(fileName,string))
+    {
+      // get file type
+      if (getXMLPropertyText(string,xmlTree,responseNode,"resourcetype") != NULL)
+      {
+        if (String_equalsCString(string,"collection"))
+        {
+          fileInfo->type = FILE_TYPE_DIRECTORY;
+        }
+        else
+        {
+          fileInfo->type = FILE_TYPE_FILE;
+        }
+//fprintf(stderr,"%s:%d: fileInfo fileInfo->type=%d\n",__FILE__,__LINE__,fileInfo->type);
+      }
+
+      // get file size
+      if (fileInfo->type == FILE_TYPE_FILE)
+      {
+        fileInfo->size = (uint64)getXMLPropertyInt64(xmlTree,responseNode,"getcontentlength");
+      }
+
+      // get time modified
+      if (getXMLPropertyText(string,xmlTree,responseNode,"getlastmodified") != NULL)
+      {
+        fileInfo->timeModified = Misc_parseDateTime(String_cString(string));
+      }
+
+      // get time last change
+// TODO:?
+      result = TRUE;
+    }
+  }
+  String_delete(string);
+
+  return result;
+}
+
+/***********************************************************************\
+* Name   : getFileInfo
+* Purpose: get file meta data
+* Input  : curlHandle - CURL handle
+*          url        - URL
+*          fileName   - file name
+* Output : fileInfo - file info
+* Return : TRUE iff file exists
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors getFileInfo(FileInfo *fileInfo, CURL *curlHandle, ConstString url, ConstString fileName)
+{
+  assert(fileInfo != NULL);
+  assert(curlHandle != NULL);
+  assert(url != NULL);
+  assert(fileName != NULL);
+
+  // init variables
+  fileInfo->type            = FILE_TYPE_NONE;
+  fileInfo->size            = 0;
+  fileInfo->timeLastAccess  = 0;
+  fileInfo->timeModified    = 0;
+  fileInfo->timeLastChanged = 0;
+  fileInfo->userId          = 0;
+  fileInfo->groupId         = 0;
+  fileInfo->permissions     = FILE_PERMISSION_NONE;
+  fileInfo->specialType     = FILE_SPECIAL_TYPE_NONE;
+  fileInfo->major           = 0;
+  fileInfo->minor           = 0;
+  fileInfo->attributes      = FILE_ATTRIBUTE_NONE;
+  fileInfo->id              = 0;
+  fileInfo->linkCount       = 0;
+  fileInfo->cast.mtime      = 0;
+  fileInfo->cast.ctime      = 0;
+
+  Errors error = ERROR_FILE_NOT_FOUND_;
+
+  CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
+  }
+  struct curl_slist *curlSList = curl_slist_append(NULL,"Depth: 1");
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,curlSList);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlWebDAVReadDirectoryDataCallback);
+  }
+  String directoryData = String_new();
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,directoryData);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_perform(curlHandle);
+  }
+  curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,NULL);
+
+  long responseCode;
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    if (responseCode == HTTP_CODE_MULTI_STATUS)
+    {
+      mxml_node_t *xmlTree = newXMLTree(String_cString(directoryData));
+      if (xmlTree != NULL)
+      {
+        String string = String_new();
+        mxml_node_t *responseNode = firstXMLNode(xmlTree,NULL,"response");
+        while (responseNode != NULL)
+        {
+          if (parseXMLFileInfo(fileInfo,xmlTree,responseNode,fileName))
+          {
+            error = ERROR_NONE;
+            break;
+          }
+          responseNode = nextXMLNode(xmlTree, responseNode, "response");
+        }
+        String_delete(string);
+        deleteXMLTree(xmlTree);
+      }
+    }
+    else
+    {
+      error = ERRORX_(WEBDAV,responseCode,"http error %u",responseCode);
+    }
+  }
+  else
+  {
+    error = ERRORX_(WEBDAV,curlCode,"%s",curl_easy_strerror(curlCode));
+  }
+
+  // free resources
+  String_delete(directoryData);
+  curl_slist_free_all(curlSList);
+
+  return error;
+}
+
+/***********************************************************************\
+* Name   : makeDirectory
+* Purpose: make directory
+* Input  : curlHandle - CURL handle
+*          url        - URL
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors makeDirectory(CURL *curlHandle, ConstString url)
+{
+  assert(curlHandle != NULL);
+  assert(url != NULL);
+
+  CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"MKCOL");
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_perform(curlHandle);
+  }
+
+  return (curlCode == CURLE_OK)
+    ? ERROR_NONE
+    : getCurlHTTPResponseError(curlHandle,url);
+}
+
+/***********************************************************************\
+* Name   : fileDirectoryDelete
+* Purpose: delete file/directory
+* Input  : curlHandle - CURL handle
+*          url        - URL
+* Output : -
+* Return : ERROR_NONE or error code
+* Notes  : -
+\***********************************************************************/
+
+LOCAL Errors deleteFileDirectory(CURL *curlHandle, ConstString url)
+{
+  assert(curlHandle != NULL);
+  assert(url != NULL);
+
+  CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_perform(curlHandle);
+  }
+
+  return (curlCode == CURLE_OK)
+    ? ERROR_NONE
+    : getCurlHTTPResponseError(curlHandle,url);
+}
+
+/***********************************************************************\
 * Name   : initDownload
 * Purpose: init WebDAV download
 * Input  : storageHandle - storage handle
@@ -751,6 +1404,10 @@ LOCAL Errors initDownload(StorageHandle *storageHandle,
   if (curlCode == CURLE_OK)
   {
     curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
+  }
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FOLLOWLOCATION,1L);
   }
   if (curlCode == CURLE_OK)
   {
@@ -785,7 +1442,7 @@ LOCAL Errors initDownload(StorageHandle *storageHandle,
   }
 
   // start WebDAV download
-  int runningHandles;
+  int runningHandles = 0;
   do
   {
     curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
@@ -828,6 +1485,10 @@ LOCAL Errors initUpload(StorageHandle *storageHandle,
   assert(url != NULL);
 
   CURLcode curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
+  if (curlCode == CURLE_OK)
+  {
+    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+  }
   if (curlCode == CURLE_OK)
   {
     curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FAILONERROR,1L);
@@ -873,7 +1534,7 @@ LOCAL Errors initUpload(StorageHandle *storageHandle,
   }
 
   // start WebDAV upload
-  int runningHandles;
+  int runningHandles = 0;
   do
   {
     curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
@@ -908,35 +1569,7 @@ LOCAL void doneDownloadUpload(StorageHandle *storageHandle)
   assert(storageHandle->webdav.curlHandle != NULL);
   assert(storageHandle->webdav.curlMultiHandle != NULL);
 
-  UNUSED_VARIABLE(storageHandle);
-}
-
-/***********************************************************************\
-* Name   : curlWebDAVReadDirectoryDataCallback
-* Purpose: curl WebDAV parse directory list callback
-* Input  : buffer   - buffer with data: receive data from remote
-*          size     - size of an element
-*          n        - number of elements
-*          userData - user data
-* Output : -
-* Return : number of processed bytes or 0
-* Notes  : -
-\***********************************************************************/
-
-LOCAL size_t curlWebDAVReadDirectoryDataCallback(const void *buffer,
-                                                 size_t     size,
-                                                 size_t     n,
-                                                 void       *userData
-                                                )
-{
-  assert(buffer != NULL);
-  assert(size > 0);
-
-  String directoryData = (String)userData;
-  assert(directoryData != NULL);
-  String_appendBuffer(directoryData,buffer,size*n);
-
-  return size*n;
+  (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
 }
 #endif /* HAVE_CURL */
 
@@ -1626,8 +2259,9 @@ LOCAL bool StorageWebDAV_exists(const StorageInfo *storageInfo, ConstString arch
     }
 
     // check if file/directory exists
-    existsFlag =    fileExists(curlHandle,url)
-                 || directoryExists(curlHandle,url);
+    FileInfo fileInfo;
+    existsFlag =    (getFileInfo(&fileInfo,curlHandle,url,archiveName) == ERROR_NONE)
+                 && (fileInfo.type != FILE_TYPE_NONE);
 
     // free resources
     String_delete(url);
@@ -1685,7 +2319,9 @@ LOCAL bool StorageWebDAV_isFile(const StorageInfo *storageInfo, ConstString arch
     }
 
     // check if file exists
-    isFileFlag = fileExists(curlHandle,url);
+    FileInfo fileInfo;
+    isFileFlag =    (getFileInfo(&fileInfo,curlHandle,url,archiveName) == ERROR_NONE)
+                 && (fileInfo.type == FILE_TYPE_FILE);
 
     // free resources
     String_delete(url);
@@ -1743,7 +2379,9 @@ LOCAL bool StorageWebDAV_isDirectory(const StorageInfo *storageInfo, ConstString
     }
 
     // check if directory exists
-    isDirectoryFlag = directoryExists(curlHandle,url);
+    FileInfo fileInfo;
+    isDirectoryFlag =    (getFileInfo(&fileInfo,curlHandle,url,archiveName) == ERROR_NONE)
+                      && (fileInfo.type == FILE_TYPE_DIRECTORY);
 
     // free resources
     String_delete(url);
@@ -1779,7 +2417,6 @@ LOCAL bool StorageWebDAV_isWritable(const StorageInfo *storageInfo, ConstString 
 
 //TODO: still not implemented
 return FALSE;
-  return File_exists(archiveName);
 }
 
 LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *storageInfo)
@@ -1791,8 +2428,8 @@ LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *sto
   UNUSED_VARIABLE(archiveName);
   UNUSED_VARIABLE(storageInfo);
 
-//TODO
-  return ERROR_STILL_NOT_IMPLEMENTED;
+//TODO: still not implemented
+return FALSE;
 }
 
 LOCAL Errors StorageWebDAV_create(StorageHandle *storageHandle,
@@ -1815,7 +2452,6 @@ UNUSED_VARIABLE(forceFlag);
     // initialize variables
     storageHandle->webdav.curlMultiHandle      = NULL;
     storageHandle->webdav.curlHandle           = NULL;
-    storageHandle->webdav.additionalHeader     = NULL;
     storageHandle->webdav.index                = 0LL;
     storageHandle->webdav.size                 = fileSize;
     storageHandle->webdav.receiveBuffer.data   = NULL;
@@ -1896,7 +2532,10 @@ UNUSED_VARIABLE(forceFlag);
         String_append(baseURL,token);
 
         // check if sub-directory exists
-        if (!directoryExists(storageHandle->webdav.curlHandle,baseURL))
+        FileInfo fileInfo;
+        if (   (getFileInfo(&fileInfo,storageHandle->webdav.curlHandle,baseURL,directoryName) != ERROR_NONE)
+            || (fileInfo.type != FILE_TYPE_DIRECTORY)
+           )
         {
           // create sub-directory
           error = makeDirectory(storageHandle->webdav.curlHandle,baseURL);
@@ -1934,7 +2573,8 @@ UNUSED_VARIABLE(forceFlag);
     {
       case ARCHIVE_FILE_MODE_STOP:
         // check if file exists
-        if (fileExists(storageHandle->webdav.curlHandle,baseURL))
+        FileInfo fileInfo;
+        if (getFileInfo(&fileInfo,storageHandle->webdav.curlHandle,baseURL,fileName) == ERROR_NONE)
         {
           String_delete(baseName);
           String_delete(directoryName);
@@ -1970,7 +2610,6 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
       String_delete(baseName);
       String_delete(directoryName);
       String_delete(baseURL);
-      (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
       return error;
@@ -1991,6 +2630,9 @@ HALT_INTERNAL_ERROR_STILL_NOT_IMPLEMENTED();
   #endif /* HAVE_CURL */
 }
 
+// TODO: remove
+LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle);
+
 LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
                                 ConstString   archiveName
                                )
@@ -2006,7 +2648,6 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     // initialize variables
     storageHandle->webdav.curlMultiHandle      = NULL;
     storageHandle->webdav.curlHandle           = NULL;
-//    storageHandle->webdav.url                  = String_new();
     storageHandle->webdav.index                = 0LL;
     storageHandle->webdav.size                 = 0LL;
     storageHandle->webdav.receiveBuffer.data   = NULL;
@@ -2066,10 +2707,11 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
                               archiveName
                              );
 
-    // check if file exists
-    if (!fileExists(storageHandle->webdav.curlHandle,url))
+    // get file info
+    FileInfo fileInfo;
+    error = getFileInfo(&fileInfo,storageHandle->webdav.curlHandle,url,archiveName);
+    if (error != ERROR_NONE)
     {
-      error = ERRORX_(FILE_NOT_FOUND_,0,"%s",String_cString(url));
       String_delete(url);
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
@@ -2078,40 +2720,13 @@ LOCAL Errors StorageWebDAV_open(StorageHandle *storageHandle,
     }
 
     // get file size
-    struct
-    {
-      double     d;
-      curl_off_t i;
-    } contentLength;
-    #ifdef HAVE_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T
-      CURLcode curlCode = curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,&contentLength.i);
-      if ((curlCode == CURLE_OK) && (contentLength.i > 0LL))
-      {
-        storageHandle->webdav.size = (int64)contentLength.i;
-      }
-      else
-      {
-        storageHandle->webdav.size = -1LL;
-      }
-    #else  // not HAVE_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T
-      CURLcode curlCode = curl_easy_getinfo(storageHandle->webdav.curlHandle,CURLINFO_CONTENT_LENGTH_DOWNLOAD,&contentLength.d);
-      if ((curlCode == CURLE_OK) && (contentLength.d > 0LL))
-      {
-        storageHandle->webdav.size = (int64)contentLength.d;
-      }
-      else
-      {
-        storageHandle->webdav.size = -1LL;
-      }
-    #endif // HAVE_CURLINFO_CONTENT_LENGTH_DOWNLOAD_T
-//fprintf(stderr,"%s:%d: storageHandle->webdav.size=%lld\n",__FILE__,__LINE__,storageHandle->webdav.size);
+    storageHandle->webdav.size = (int64)fileInfo.size;
 
     // init WebDAV download
     error = initDownload(storageHandle,url);
     if (error != ERROR_NONE)
     {
       String_delete(url);
-      (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
       (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
       (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
       free(storageHandle->webdav.receiveBuffer.data);
@@ -2141,12 +2756,9 @@ LOCAL void StorageWebDAV_close(StorageHandle *storageHandle)
   #ifdef HAVE_CURL
     doneDownloadUpload(storageHandle);
 
-    (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
     (void)curl_easy_cleanup(storageHandle->webdav.curlHandle);
     (void)curl_multi_cleanup(storageHandle->webdav.curlMultiHandle);
-    curl_slist_free_all(storageHandle->webdav.additionalHeader);
     if (storageHandle->webdav.receiveBuffer.data != NULL) free(storageHandle->webdav.receiveBuffer.data);
-//    String_delete(storageHandle->webdav.url);
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
   #endif /* HAVE_CURL */
@@ -2162,7 +2774,7 @@ LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle)
         );
 
   #ifdef HAVE_CURL
-    int runningHandles;
+    int runningHandles = 0;
     return    (   (storageHandle->webdav.index < storageHandle->webdav.receiveBuffer.offset)
                || (storageHandle->webdav.index >= (storageHandle->webdav.receiveBuffer.offset+storageHandle->webdav.receiveBuffer.length))
               )
@@ -2366,6 +2978,7 @@ LOCAL Errors StorageWebDAV_write(StorageHandle *storageHandle,
   assert(buffer != NULL);
 
   Errors error = ERROR_UNKNOWN;
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   #ifdef HAVE_CURL
     assert(storageHandle->webdav.curlMultiHandle != NULL);
 
@@ -2725,6 +3338,7 @@ LOCAL Errors StorageWebDAV_makeDirectory(const StorageInfo *storageInfo,
   assert(!String_isEmpty(directoryName));
 
   Errors error = ERROR_UNKNOWN;
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   #ifdef HAVE_CURL
     // initialize variables
     CURL *curlHandle = curl_easy_init();
@@ -2787,6 +3401,7 @@ LOCAL Errors StorageWebDAV_delete(const StorageInfo *storageInfo,
   assert(!String_isEmpty(archiveName));
 
   Errors error = ERROR_UNKNOWN;
+fprintf(stderr,"%s:%d: _\n",__FILE__,__LINE__);
   #ifdef HAVE_CURL
     // initialize variables
     CURL *curlHandle = curl_easy_init();
@@ -3168,8 +3783,6 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     String_appendChar(url,'/');
 
     // read directory data
-    String            directoryData = String_new();
-    struct curl_slist *curlSList    = NULL;
     CURLcode          curlCode      = CURLE_OK;
     if (curlCode == CURLE_OK)
     {
@@ -3179,15 +3792,16 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
     }
+    struct curl_slist *curlSList = curl_slist_append(NULL,"Depth: 1");
     if (curlCode == CURLE_OK)
     {
-      curlSList = curl_slist_append(NULL,"Depth: 1");
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,curlSList);
     }
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlWebDAVReadDirectoryDataCallback);
     }
+    String directoryData = String_new();
     if (curlCode == CURLE_OK)
     {
       curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,directoryData);
@@ -3209,20 +3823,7 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     }
 
     // parse directory entries
-    #if MXML_MAJOR_VERSION >= 4
-      mxml_options_t *options = mxmlOptionsNew();
-      assert(options != NULL);
-      storageDirectoryListHandle->webdav.rootNode = mxmlLoadString(NULL,
-                                                                   options,
-                                                                   String_cString(directoryData)
-                                                                  );
-      mxmlOptionsDelete(options);
-    #else
-      storageDirectoryListHandle->webdav.rootNode = mxmlLoadString(NULL,
-                                                                   String_cString(directoryData),
-                                                                   MXML_TEXT_CALLBACK
-                                                                  );
-    #endif
+    storageDirectoryListHandle->webdav.rootNode = newXMLTree(String_cString(directoryData));
     if (storageDirectoryListHandle->webdav.rootNode == NULL)
     {
       error = ERROR_READ_DIRECTORY;
@@ -3236,13 +3837,10 @@ LOCAL Errors StorageWebDAV_openDirectoryList(StorageDirectoryListHandle *storage
     AUTOFREE_ADD(&autoFreeList,storageDirectoryListHandle->webdav.rootNode,{ mxmlDelete(storageDirectoryListHandle->webdav.rootNode); });
 
     // discard first entry: directory
-    storageDirectoryListHandle->webdav.lastNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
-                                                                  storageDirectoryListHandle->webdav.rootNode,
-                                                                  "D:response",
-                                                                  NULL,
-                                                                  NULL,
-                                                                  MXML_DESCEND_ALL
-                                                                 );
+    storageDirectoryListHandle->webdav.lastNode = firstXMLNode(storageDirectoryListHandle->webdav.rootNode,
+                                                               NULL,
+                                                               "response"
+                                                              );
 
     // free resources
     String_delete(directoryData);
@@ -3284,7 +3882,7 @@ LOCAL void StorageWebDAV_closeDirectoryList(StorageDirectoryListHandle *storageD
         );
 
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
-    mxmlDelete(storageDirectoryListHandle->webdav.rootNode);
+    deleteXMLTree(storageDirectoryListHandle->webdav.rootNode);
   #else /* not defined(HAVE_CURL) && defined(HAVE_MXML) */
     UNUSED_VARIABLE(storageDirectoryListHandle);
   #endif /* defined(HAVE_CURL) && defined(HAVE_MXML) */
@@ -3302,13 +3900,10 @@ LOCAL bool StorageWebDAV_endOfDirectoryList(StorageDirectoryListHandle *storageD
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
     if (storageDirectoryListHandle->webdav.currentNode == NULL)
     {
-      storageDirectoryListHandle->webdav.currentNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
-                                                                       storageDirectoryListHandle->webdav.rootNode,
-                                                                       "D:response",
-                                                                       NULL,
-                                                                       NULL,
-                                                                       MXML_DESCEND_ALL
-                                                                      );
+      storageDirectoryListHandle->webdav.currentNode = nextXMLNode(storageDirectoryListHandle->webdav.rootNode,
+                                                                   storageDirectoryListHandle->webdav.lastNode,
+                                                                   "response"
+                                                                  );
     }
     endOfDirectoryFlag = (storageDirectoryListHandle->webdav.currentNode == NULL);
   #else /* not defined(HAVE_CURL) && defined(HAVE_MXML) */
@@ -3332,132 +3927,49 @@ LOCAL Errors StorageWebDAV_readDirectoryList(StorageDirectoryListHandle *storage
   #if defined(HAVE_CURL) && defined(HAVE_MXML)
     if (storageDirectoryListHandle->webdav.currentNode == NULL)
     {
-      storageDirectoryListHandle->webdav.currentNode = mxmlFindElement(storageDirectoryListHandle->webdav.lastNode,
-                                                                       storageDirectoryListHandle->webdav.rootNode,
-                                                                       "D:response",
-                                                                       NULL,
-                                                                       NULL,
-                                                                       MXML_DESCEND_ALL
-                                                                      );
+      storageDirectoryListHandle->webdav.currentNode = nextXMLNode(storageDirectoryListHandle->webdav.rootNode,
+                                                                   storageDirectoryListHandle->webdav.lastNode,
+                                                                   "response"
+                                                                  );
     }
+
     if (   (storageDirectoryListHandle->webdav.currentNode != NULL)
         && (mxmlGetType(storageDirectoryListHandle->webdav.currentNode) == MXML_TYPE_ELEMENT)
         && (mxmlGetFirstChild(storageDirectoryListHandle->webdav.currentNode) != NULL)
-        && (mxmlGetType(mxmlGetFirstChild(storageDirectoryListHandle->webdav.currentNode)) == MXML_TYPE_OPAQUE)
-        && (mxmlGetOpaque(mxmlGetFirstChild(storageDirectoryListHandle->webdav.currentNode)) != NULL)
        )
     {
+      error = ERROR_NONE;
+
       // get file name
-      mxml_node_t *node = mxmlFindElement(storageDirectoryListHandle->webdav.currentNode,
-                                          storageDirectoryListHandle->webdav.currentNode,
-                                          "D:href",
-                                          NULL,
-                                          NULL,
-                                          MXML_DESCEND_ALL
-                                         );
-      if (   (node != NULL)
-          && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
-          && (mxmlGetFirstChild(node) != NULL)
-          && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_TYPE_OPAQUE)
-          && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
+      if (!getXMLNodeText(fileName,
+                         storageDirectoryListHandle->webdav.rootNode,
+                         storageDirectoryListHandle->webdav.currentNode,
+                         "href"
+                        )
          )
       {
-        String_setCString(fileName,mxmlGetOpaque(mxmlGetFirstChild(node)));
-        if (String_startsWithChar(fileName,'/')) String_remove(fileName,STRING_BEGIN,1);
-        if (String_length(fileName) > 1) String_trimEnd(fileName,"/");
+        error = ERROR_READ_DIRECTORY;
       }
+      if (String_startsWithChar(fileName,'/')) String_remove(fileName,STRING_BEGIN,1);
+      if (String_length(fileName) > 1) String_trimEnd(fileName,"/");
 
       // get file info
       if (fileInfo != NULL)
       {
-        fileInfo->type            = FILE_TYPE_FILE;
-        fileInfo->size            = 0LL;
-        fileInfo->timeLastAccess  = 0LL;
-        fileInfo->timeModified    = 0LL;
-        fileInfo->timeLastChanged = 0LL;
-        fileInfo->userId          = FILE_DEFAULT_USER_ID;
-        fileInfo->groupId         = FILE_DEFAULT_GROUP_ID;
-        fileInfo->permissions     = FILE_DEFAULT_PERMISSIONS;
-        fileInfo->major           = 0;
-        fileInfo->minor           = 0;
-
-        mxml_node_t *propNode = mxmlFindElement(storageDirectoryListHandle->webdav.currentNode,
-                                               storageDirectoryListHandle->webdav.currentNode,
-                                               "D:prop",
-                                               NULL,
-                                               NULL,
-                                               MXML_DESCEND_ALL
-                                               );
-        if (   (propNode != NULL)
-            && (mxmlGetType(propNode) == MXML_TYPE_ELEMENT)
-            && (mxmlGetFirstChild(propNode) != NULL)
-            && (mxmlGetType(mxmlGetFirstChild(propNode)) == MXML_TYPE_OPAQUE)
-            && (mxmlGetOpaque(mxmlGetFirstChild(propNode)) != NULL)
+        if (!parseXMLFileInfo(fileInfo,
+                              storageDirectoryListHandle->webdav.rootNode,
+                              storageDirectoryListHandle->webdav.currentNode,
+                              fileName
+                             )
            )
         {
-          mxml_node_t *node;
-
-          node = mxmlFindElement(propNode,
-                                 propNode,
-                                 "D:getcontenttype",
-                                 NULL,
-                                 NULL,
-                                 MXML_DESCEND_ALL
-                                );
-          if (   (node != NULL)
-              && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
-              && (mxmlGetFirstChild(node) != NULL)
-              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_TYPE_OPAQUE)
-              && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
-             )
-          {
-            if (stringEndsWith(mxmlGetOpaque(mxmlGetFirstChild(node)),"unix-directory"))
-            {
-              fileInfo->type = FILE_TYPE_DIRECTORY;
-            }
-          }
-
-          node = mxmlFindElement(propNode,
-                                 propNode,
-                                 "lp1:getcontentlength",
-                                 NULL,
-                                 NULL,
-                                 MXML_DESCEND_ALL
-                                );
-          if (   (node != NULL)
-              && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
-              && (mxmlGetFirstChild(node) != NULL)
-              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_TYPE_OPAQUE)
-              && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
-             )
-          {
-            stringToUInt64(mxmlGetOpaque(mxmlGetFirstChild(node)),&fileInfo->size,NULL);
-          }
-
-          node = mxmlFindElement(propNode,
-                                 propNode,
-                                 "lp1:getlastmodified",
-                                 NULL,
-                                 NULL,
-                                 MXML_DESCEND_ALL
-                                );
-          if (   (node != NULL)
-              && (mxmlGetType(node) == MXML_TYPE_ELEMENT)
-              && (mxmlGetFirstChild(node) != NULL)
-              && (mxmlGetType(mxmlGetFirstChild(node)) == MXML_TYPE_OPAQUE)
-              && (mxmlGetOpaque(mxmlGetFirstChild(node)) != NULL)
-             )
-          {
-            fileInfo->timeModified = Misc_parseDateTime(mxmlGetOpaque(mxmlGetFirstChild(node)));
-          }
+          error = ERROR_READ_DIRECTORY;
         }
       }
 
       // next file
       storageDirectoryListHandle->webdav.lastNode    = storageDirectoryListHandle->webdav.currentNode;
       storageDirectoryListHandle->webdav.currentNode = NULL;
-
-      error = ERROR_NONE;
     }
     else
     {

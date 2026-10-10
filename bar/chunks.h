@@ -148,7 +148,7 @@ typedef struct
 
   /***********************************************************************\
   * Name   : getSize
-  * Purpose: get size of transfer
+  * Purpose: get total size
   * Input  : userData - userdata
   * Output : -
   * Return : size or -1 if unknown

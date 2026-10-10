@@ -2498,7 +2498,6 @@ bool remoteBarFlag=FALSE;
               break; /* not reached */
             case ARCHIVE_ENTRY_TYPE_FILE:
               {
-
                 if (showEntriesFlag)
                 {
                   // read archive file
@@ -3669,7 +3668,7 @@ NULL, // masterSocketHandle
           error = Storage_readDirectoryList(&storageDirectoryListHandle,fileName,&fileInfo);
           if (error != ERROR_NONE)
           {
-            continue;
+            break;
           }
 
           // match pattern
@@ -3703,7 +3702,6 @@ NULL, // masterSocketHandle
         Storage_closeDirectoryList(&storageDirectoryListHandle);
       }
     }
-
     if (error != ERROR_NONE)
     {
       printError(_("cannot read storage '%s' (error: %s)!"),

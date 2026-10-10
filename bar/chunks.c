@@ -2612,7 +2612,7 @@ Errors Chunk_close(ChunkInfo *chunkInfo)
       break;
     case CHUNK_MODE_READ:
       {
-        // check chunk size value
+        // check chunk size value: must be in 0..total storage size-1
         uint64 offset;
         error = chunkInfo->io->tell(chunkInfo->ioUserData,&offset);
         if (error != ERROR_NONE)

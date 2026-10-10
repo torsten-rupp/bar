@@ -1307,7 +1307,8 @@ uint64 Misc_parseDateTime(const char *string)
   #if defined(HAVE_STRPTIME)
     const char *DATE_TIME_FORMATS[] =
     {
-      "%Y-%m-%dT%H:%i:%s%Q",       // 2011-03-11T14:46:23-06:00
+      "%Y-%m-%dT%H:%M:%s%Q",       // 2011-03-11T14:46:23-06:00
+      "%Y-%m-%dT%H:%M:%SZ",        // 2011-03-11T14:46:23Z
 
       "%A, %d %b %y %H:%M:%S %z",  // Fri, 11 Mar 11 14:46:23 -0500
       "%a, %d %b %y %H:%M:%S %z",  // Friday, 11 Mar 11 14:46:23 -0500
