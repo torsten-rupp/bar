@@ -80,22 +80,24 @@
 #define MAX_FILENAME_LENGTH   ( 8*1024)
 
 // HTTP codes
-#define HTTP_CODE_CONTINUE               100
-#define HTTP_CODE_OK                     200
-#define HTTP_CODE_CREATED                201
-#define HTTP_CODE_ACCEPTED               202
-#define HTTP_CODE_MULTI_STATUS           207
-#define HTTP_CODE_SERVER_READY           220
-#define HTTP_CODE_BAD_REQUEST            400
-#define HTTP_CODE_UNAUTHORIZED           401
-#define HTTP_CODE_FORBITTEN              403
-#define HTTP_CODE_NOT_FOUND              404
-#define HTTP_CODE_BAD_METHOD             405
-#define HTTP_CODE_NOT_ACCEPTABLE         406
-#define HTTP_CODE_RESOURCE_TIMEOUT       408
-#define HTTP_CODE_RESOURCE_NOT_AVAILABLE 410
-#define HTTP_CODE_ENTITY_TOO_LARGE       413
-#define HTTP_CODE_EXPECTATIONFAILED      417
+#define HTTP_CODE_CONTINUE                        100
+#define HTTP_CODE_OK                              200
+#define HTTP_CODE_CREATED                         201
+#define HTTP_CODE_ACCEPTED                        202
+#define HTTP_CODE_PARTIAL_CONTENT                 206
+#define HTTP_CODE_MULTI_STATUS                    207
+#define HTTP_CODE_SERVER_READY                    220
+#define HTTP_CODE_BAD_REQUEST                     400
+#define HTTP_CODE_UNAUTHORIZED                    401
+#define HTTP_CODE_FORBITTEN                       403
+#define HTTP_CODE_NOT_FOUND                       404
+#define HTTP_CODE_BAD_METHOD                      405
+#define HTTP_CODE_NOT_ACCEPTABLE                  406
+#define HTTP_CODE_RESOURCE_TIMEOUT                408
+#define HTTP_CODE_RESOURCE_NOT_AVAILABLE          410
+#define HTTP_CODE_ENTITY_TOO_LARGE                413
+#define HTTP_CODE_REQUESTED_RANGE_NOT_SATISFIABLE 416
+#define HTTP_CODE_EXPECTATION_FAILED              417
 
 /***************************** Datatypes *******************************/
 
@@ -356,6 +358,7 @@ LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle, ConstString archiveName)
       case HTTP_CODE_OK:
       case HTTP_CODE_CREATED:
       case HTTP_CODE_ACCEPTED:
+      case HTTP_CODE_PARTIAL_CONTENT:
       case HTTP_CODE_MULTI_STATUS:
       case HTTP_CODE_SERVER_READY:
         error = ERROR_NONE;
@@ -370,6 +373,9 @@ LOCAL Errors getCurlHTTPResponseError(CURL *curlHandle, ConstString archiveName)
         break;
       case HTTP_CODE_NOT_FOUND:
         error = ERROR_FILE_NOT_FOUND_;
+        break;
+      case HTTP_CODE_REQUESTED_RANGE_NOT_SATISFIABLE:
+        error = ERRORX_(BAD_REQUEST,responseCode,"requested range not satisfiable");
         break;
       default:
         error = ERRORX_(INVALID_RESPONSE,responseCode,"unhandled HTTP response");

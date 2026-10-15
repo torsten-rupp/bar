@@ -6383,7 +6383,7 @@ UNUSED_VARIABLE(storageInfo);
   if (error != ERROR_NONE)
   {
     AutoFree_cleanup(&autoFreeList);
-    return error;
+    return ERRORX_(NOT_AN_ARCHIVE_FILE,0,"%s",String_cString(archiveName));
   }
   DEBUG_TESTCODE() { AutoFree_cleanup(&autoFreeList); return DEBUG_TESTCODE_ERROR(); }
   if (chunkHeader.id != CHUNK_ID_BAR)
