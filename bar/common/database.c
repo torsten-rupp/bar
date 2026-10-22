@@ -18574,7 +18574,7 @@ Errors Database_vacuum(DatabaseHandle     *databaseHandle,
   return error;
 }
 
-Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseCheck)
+Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseCheck, const char *tableName)
 {
   assert(databaseHandle != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(databaseHandle);
@@ -18596,28 +18596,76 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
         switch (databaseCheck)
         {
           case DATABASE_CHECK_QUICK:
-            return executeQuery(databaseHandle,
-                                NULL,  // changedRowCount
-                                databaseHandle->timeout,
-                                DATABASE_FLAG_NONE,
-                                "PRAGMA quick_check"
-                               );
+            if (tableName != NULL)
+            {
+              char sqlString[256];
+              return executeQuery(databaseHandle,
+                                  NULL,  // changedRowCount
+                                  databaseHandle->timeout,
+                                  DATABASE_FLAG_NONE,
+                                  stringFormat(sqlString,sizeof(sqlString),
+                                               "PRAGMA quick_check(%s)",
+                                               tableName
+                                              )
+                                 );
+            }
+            else
+            {
+              return executeQuery(databaseHandle,
+                                  NULL,  // changedRowCount
+                                  databaseHandle->timeout,
+                                  DATABASE_FLAG_NONE,
+                                  "PRAGMA quick_check"
+                                 );
+            }
             break;
           case DATABASE_CHECK_KEYS:
-            return executeQuery(databaseHandle,
-                                NULL,  // changedRowCount
-                                databaseHandle->timeout,
-                                DATABASE_FLAG_NONE,
-                                "PRAGMA foreign_key_check"
-                               );
+            if (tableName != NULL)
+            {
+              char sqlString[256];
+              return executeQuery(databaseHandle,
+                                  NULL,  // changedRowCount
+                                  databaseHandle->timeout,
+                                  DATABASE_FLAG_NONE,
+                                  stringFormat(sqlString,sizeof(sqlString),
+                                               "PRAGMA foreign_key_check(%s)",
+                                               tableName
+                                              )
+                                 );
+            }
+            else
+            {
+              return executeQuery(databaseHandle,
+                                  NULL,  // changedRowCount
+                                  databaseHandle->timeout,
+                                  DATABASE_FLAG_NONE,
+                                  "PRAGMA foreign_key_check"
+                                 );
+            }
             break;
           case DATABASE_CHECK_FULL:
-            return executeQuery(databaseHandle,
-                                NULL,  // changedRowCount
-                                databaseHandle->timeout,
-                                DATABASE_FLAG_NONE,
-                                "PRAGMA integrity_check"
-                               );
+            if (tableName != NULL)
+            {
+              char sqlString[256];
+              return executeQuery(databaseHandle,
+                                  NULL,  // changedRowCount
+                                  databaseHandle->timeout,
+                                  DATABASE_FLAG_NONE,
+                                  stringFormat(sqlString,sizeof(sqlString),
+                                               "PRAGMA integrity_check(%s)",
+                                               tableName
+                                              )
+                                 );
+            }
+            else
+            {
+              return executeQuery(databaseHandle,
+                                  NULL,  // changedRowCount
+                                  databaseHandle->timeout,
+                                  DATABASE_FLAG_NONE,
+                                  "PRAGMA integrity_check"
+                                 );
+            }
             break;
         }
         break;
@@ -18632,6 +18680,20 @@ Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseChe
               return ERROR_NONE;
               break;
             case DATABASE_CHECK_FULL:
+              if (tableName != NULL)
+              {
+                char sqlString[256];
+                error = executeQuery(databaseHandle,
+                                     NULL,  // changedRowCount
+                                     databaseHandle->timeout,
+                                     DATABASE_FLAG_NONE,
+                                     stringFormat(sqlString,sizeof(sqlString),
+                                                  "CHECK TABLE %s",
+                                                  tableName
+                                                 )
+                                    );
+              }
+              else
               {
                 // get table names
                 StringList tableNameList;

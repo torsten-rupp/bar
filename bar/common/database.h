@@ -3009,12 +3009,13 @@ Errors Database_vacuum(DatabaseHandle     *databaseHandle,
 * Purpose: check database integrity
 * Input  : databaseHandle - database handle
 *          databaseCheck  - database check to execute
+*          tableName      - table name (can be NULL)
 * Output : -
 * Return : ERROR_NONE or error code
 * Notes  : -
 \***********************************************************************/
 
-Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseCheck);
+Errors Database_check(DatabaseHandle *databaseHandle, DatabaseChecks databaseCheck, const char *tableName);
 
 /***********************************************************************\
 * Name   : Database_reindex

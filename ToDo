@@ -162,7 +162,7 @@ rest time
 - incremental/differential backup: save/show base backup UUIDs
 - sqlite3 recover -DSQLITE_ENABLE_DBPAGE_VTAB
 - BARControl: show writing speed for CD/DVD/BD
-
+- compress liblzf1
 
 
 Log post process 'sh -c 'cat %file|mail -s "BAR Backup log" torsten.rupp@macio.de''...Execute command 'sh -c 'cat /media/backup/tmp/bar-bnk7kI/log.txt|mail -s "BAR Backup log" torsten.rupp@macio.de''...ok

@@ -1676,8 +1676,29 @@ LOCAL bool checkIntegrity(DatabaseHandle *databaseHandle)
 
   printInfo("Check integrity:\n");
 
+  StringList tableNameList;
+  StringList_init(&tableNameList);
+  Database_getTableList(&tableNameList,databaseHandle,NULL);
+
+  error = ERROR_NONE;
+
+  ConstString tableName;
+  size_t n;
+
   printInfo("  quick...");
-  error = Database_check(databaseHandle, DATABASE_CHECK_QUICK);
+  initProgress(StringList_count(&tableNameList));
+  n = 0;
+  STRINGLIST_ITERATEX(&tableNameList,tableName,error == ERROR_NONE)
+  {
+    // Note: for some reason quick check for FTS tables seems to run forever
+    if (!String_startsWithCString(tableName,"FTS_"))
+    {
+      error = Database_check(databaseHandle, DATABASE_CHECK_QUICK, String_cString(tableName));
+    }
+    n++;
+    printProgress(n);
+  }
+  doneProgress();
   if (error == ERROR_NONE)
   {
     printInfo("OK\n");
@@ -1686,11 +1707,20 @@ LOCAL bool checkIntegrity(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL!\n");
     printError(_("quick integrity check fail (error: %s)!"),Error_getText(error));
+    StringList_done(&tableNameList);
     return FALSE;
   }
 
   printInfo("  foreign key...");
-  error = Database_check(databaseHandle, DATABASE_CHECK_KEYS);
+  initProgress(StringList_count(&tableNameList));
+  n = 0;
+  STRINGLIST_ITERATEX(&tableNameList,tableName,error == ERROR_NONE)
+  {
+    error = Database_check(databaseHandle, DATABASE_CHECK_KEYS, String_cString(tableName));
+    n++;
+    printProgress(n);
+  }
+  doneProgress();
   if (error == ERROR_NONE)
   {
     printInfo("OK\n");
@@ -1699,11 +1729,20 @@ LOCAL bool checkIntegrity(DatabaseHandle *databaseHandle)
   {
     printInfo("FAIL!\n");
     printError(_("foreign key check fail (error: %s)!"),Error_getText(error));
+    StringList_done(&tableNameList);
     return FALSE;
   }
 
   printInfo("  full...");
-  error = Database_check(databaseHandle, DATABASE_CHECK_FULL);
+  initProgress(StringList_count(&tableNameList));
+  n = 0;
+  STRINGLIST_ITERATEX(&tableNameList,tableName,error == ERROR_NONE)
+  {
+    error = Database_check(databaseHandle, DATABASE_CHECK_FULL, String_cString(tableName));
+    n++;
+    printProgress(n);
+  }
+  doneProgress();
   if (error == ERROR_NONE)
   {
     printInfo("OK\n");
@@ -1711,9 +1750,13 @@ LOCAL bool checkIntegrity(DatabaseHandle *databaseHandle)
   else
   {
     printInfo("FAIL!\n");
-    printError(_("integrity check fail (error: %s)!"),Error_getText(error));
+    printError(_("full check fail (error: %s)!"),Error_getText(error));
+    StringList_done(&tableNameList);
     return FALSE;
   }
+
+  // free resources
+  StringList_done(&tableNameList);
 
   return TRUE;
 }
