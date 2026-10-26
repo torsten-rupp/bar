@@ -28,32 +28,32 @@ XZ="xz"
 
 ZLIB_VERSION=1.3.2
 BZIP2_VERSION=1.0.8
-XZ_VERSION=5.8.3
+XZ_VERSION=5.8.4
 LZO_VERSION=2.10
 LZ4_VERSION=v1.10.0
 ZSTD_VERSION=1.5.7
 XDELTA3_VERSION=3.1.0
-MXML_VERSION=4.0.4
-GPG_ERROR_VERSION=1.56
-GCRYPT_VERSION=1.11.2
+MXML_VERSION=4.0.6
+GPG_ERROR_VERSION=1.61
+GCRYPT_VERSION=1.12.4
 NETTLE_VERSION=3.10.2
 GMP_VERSION=6.3.0
 IDN2_VERSION=2.3.8
 GNU_TLS_SUB_DIRECTORY=v3.8
 GNU_TLS_VERSION=3.8.13
-ICONV_VERSION=1.18
-OPENSSL_VERSION=4.0.1
+ICONV_VERSION=1.19
+OPENSSL_VERSION=4.1.0-beta2
 SSH2_VERSION=1.11.1
 # Note: 1.33.0 does not compile on legacy systems; fix is in
 #       main, but not in 1.33. Thus use previous version for
 #       now.
-C_ARES_VERSION=1.34.5
-CURL_VERSION=8.21.0
+C_ARES_VERSION=1.34.9
+CURL_VERSION=8.23.0
 PCRE_VERSION=8.45
 SQLITE_YEAR=2026
-SQLITE_VERSION=3530300
-MARIADB_CLIENT_VERSION=3.4.7
-POSTGRESQL_VERSION=18.4
+SQLITE_VERSION=3540100
+MARIADB_CLIENT_VERSION=3.4.9
+POSTGRESQL_VERSION=18.6
 # Note ICU: * 61.1 seems to be the latest version without C++11
 #           * 58.2 seems to be the latest version which can be
 #              compiled on older 32bit systems, e. g. CentOS 6
@@ -64,14 +64,14 @@ CDIO_VERSION=2.1.0
 KRB5_VERSION=1.22
 KRB5_VERSION_MINOR=2
 # Note: at least 2.6.2 is required
-SMB2_VERSION=2.6.2
-PAR2_VERSION=1.2.0
+SMB2_VERSION=2.6.3
+PAR2_VERSION=1.4.0
 UTIL_LINUX_VERSION="v2.41.1"
 ISOFS_VERSION="release-1.5.8.pl02"
-URCU_VERSION=0.15.3
-XFSPROGS_VERSION=6.16.0
+URCU_VERSION=0.15.7
+XFSPROGS_VERSION=7.2.1
 BURN_VERSION="release-1.5.8"
-BINUTILS_VERSION=2.45
+BINUTILS_VERSION=2.47
 PTHREAD_W32_VERSION=2-9-1
 LAUNCH4J_MAJOR_VERSION=3
 LAUNCH4J_VERSION=3.14
@@ -679,7 +679,7 @@ if test $cleanFlag -eq 0; then
          $LN -s $localDirectory/xz-$XZ_VERSION.tar.gz $fileName
          result=1
        else
-         url="https://tukaani.org/xz/$fileName"
+         url="https://github.com/tukaani-project/xz/releases/download/v$XZ_VERSION/$fileName"
          $CURL $curlOptions --output $fileName $url
          if test $? -ne 0; then
            fatalError "download $url -> $fileName"
@@ -2265,10 +2265,11 @@ if test $cleanFlag -eq 0; then
        #   diff -u xfsprogs 6.16.0.org xfsprogs 6.16.0 > ../misc/xfsprogs 6.16.0-install-dev-issue.patch
        #   diff -u xfsprogs 6.16.0.org xfsprogs 6.16.0 > ../misc/xfsprogs 6.16.0-version.patch
        # Note: ignore exit code 1: patch may already be applied
-       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-clean-issue.patch) 1>/dev/null
-       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-install-dev-issue.patch) 1>/dev/null
-       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-cache-alloc-issue.patch; autoconf) 1>/dev/null
-       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-version.patch; autoconf) 1>/dev/null
+#       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-clean-issue.patch) 1>/dev/null
+#       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-install-dev-issue.patch) 1>/dev/null
+#       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-cache-alloc-issue.patch; autoconf) 1>/dev/null
+#       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-6.16.0-version.patch; autoconf) 1>/dev/null
+       (cd $workingDirectory/xfsprogs; $PATCH --batch -N -p1 < $patchDirectory/xfsprogs-7.2.1.patch; autoconf) 1>/dev/null
        if test $? -gt 1; then
          fatalError "patch"
        fi

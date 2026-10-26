@@ -1,0 +1,74 @@
+diff --git a/include/asprintf.h b/include/asprintf.h
+index 073fc53..01b1d85 100644
+--- a/include/asprintf.h
++++ b/include/asprintf.h
+@@ -28,6 +28,8 @@ static inline int _vscprintf_so(const char * format, va_list pargs) {
+ #endif /* _vscprintf */
+ #endif
+ 
++// already defined, tr 2023-10-01
++#if 0
+ #ifndef vasprintf
+ static inline int vasprintf(char **strp, const char *fmt, va_list ap) {
+ #ifdef _XBOX
+@@ -61,5 +63,6 @@ static inline int asprintf(char *strp[], const char *fmt, ...) {
+   return r;
+ }
+ #endif /* asprintf */
++#endif
+ 
+ #endif /* ! _ASPRINTF_H_ */
+diff --git a/include/smb2/libsmb2-dcerpc.h b/include/smb2/libsmb2-dcerpc.h
+index 2c3e60d..d77ace6 100644
+--- a/include/smb2/libsmb2-dcerpc.h
++++ b/include/smb2/libsmb2-dcerpc.h
+@@ -100,7 +100,8 @@ struct dcerpc_procedure {
+ 
+ struct dcerpc_service {
+         const char *name;
+-        p_syntax_id_t *interface;
++// inteface -> inteface_, tr 2026-07-19
++        p_syntax_id_t *interface_;
+         struct dcerpc_procedure *procs;
+ };
+         
+diff --git a/lib/compat.h b/lib/compat.h
+index 7428e53..4f71b0b 100644
+--- a/lib/compat.h
++++ b/lib/compat.h
+@@ -120,8 +120,11 @@ typedef unsigned int uintptr_t;
+ 
+ #if defined(_XBOX)
+ #define snprintf _snprintf
++// already defined, tr 2026-07-12
++#if 0
+ int gethostname(char* name, size_t len);
+ #endif
++#endif
+ 
+ #ifndef EAI_AGAIN
+ #define EAI_AGAIN EAGAIN
+diff --git a/lib/socket.c b/lib/socket.c
+index 56913fb..1e7c1b3 100644
+--- a/lib/socket.c
++++ b/lib/socket.c
+@@ -1175,6 +1175,9 @@ connect_async_ai(struct smb2_context *smb2, const struct addrinfo *ai, int *fd_o
+ #ifdef HAVE_SOCK_SIN_LEN
+                 ((struct sockaddr_in6 *)&ss)->sin6_len = socksize;
+ #endif
++// required for Windows, tr 2023-10-02
++#elif WIN32
++#include <winsock2.h>
+ #endif
+                 break;
+ #endif
+@@ -1367,6 +1370,9 @@ smb2_connect_async(struct smb2_context *smb2, const char *server,
+ #if EAI_NODATA != EAI_NONAME /* Equal in MSVC */
+                     case EAI_NODATA:
+ #endif
++// required for Windows, tr 2023-10-02
++#elif WIN32
++#include <winsock2.h>
+ #endif
+                     case EAI_SERVICE:
+                     case EAI_FAIL:

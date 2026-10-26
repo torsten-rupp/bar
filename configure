@@ -21607,6 +21607,7 @@ printf "%s\n" "fail (patch)" >&6; }
           (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
             -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
             -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+            -DCMAKE_COMPILE_WARNING_AS_ERROR=NO \
             -DWITH_EXTERNAL_ZLIB=ON \
             -DZLIB_INCLUDE_DIR=$cwd/extern/include \
             -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
@@ -21623,6 +21624,7 @@ printf "%s\n" "fail (patch)" >&6; }
             -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
             -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
             -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+            -DCMAKE_COMPILE_WARNING_AS_ERROR=NO \
             -DWITH_EXTERNAL_ZLIB=ON \
             -DZLIB_INCLUDE_DIR=$cwd/extern/include \
             -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
@@ -25048,8 +25050,8 @@ if test $ENABLE_XFS = "yes"; then
 
   printf %s "compile libuuid+libblkid... " >&6
 
-    result1=1
-    if test $result1 -eq 1; then
+    result=1
+    if test $result -eq 1; then
       (cd util-linux; ./autogen.sh) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (autogen)" >&5
@@ -25059,10 +25061,10 @@ printf "%s\n" "fail (autogen)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       case $host_os in
         linux-* | sunos | solaris* | darwin*)
           (cd util-linux; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
@@ -25083,10 +25085,10 @@ printf "%s\n" "fail (configure)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       (cd util-linux; \
        make -j$CPU_CORES; \
       ) 1>$tmpFile 2>&1
@@ -25098,10 +25100,10 @@ printf "%s\n" "fail (make)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       (cd util-linux; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: fail (install)" >&5
@@ -25111,15 +25113,15 @@ printf "%s\n" "fail (install)" >&6; }
   cat $tmpFile | while read s; do printf "%s\n" "  $s"; done
   printf "%s\n" "---------------------------------------------------------------------------------------"
 
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: done" >&5
 printf "%s\n" "done" >&6; }
     fi
 
-    if test $result1 -eq 1 -a $result2 -eq 1; then
+    if test $result -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
         LIBRARIES="$LIBRARIES uuid blkid"
       else
@@ -25662,7 +25664,7 @@ printf "%s\n" "fail (install)" >&6; }
 printf "%s\n" "done" >&6; }
     fi
 
-    if test $result1 -eq 1 -a $result2 -eq 1; then
+    if test $result -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
         LIBRARIES="$LIBRARIES urcu"
       else
@@ -25954,8 +25956,6 @@ printf "%s\n" "fail (configure)" >&6; }
     if test $result -eq 1; then
       (   cd xfsprogs \
        && make headers \
-       && make -j$CPU_CORES -C include install-headers \
-       && make -j$CPU_CORES -C libxfs install-headers \
        && make -j$CPU_CORES -C include \
        && make -j$CPU_CORES -C libfrog \
        && make -j$CPU_CORES -C libxfs \
@@ -25973,6 +25973,9 @@ printf "%s\n" "fail (make)" >&6; }
     fi
     if test $result -eq 1; then
       (   cd xfsprogs \
+       && make -j$CPU_CORES -C include install-headers \
+       && make -j$CPU_CORES -C include install-dev \
+       && make -j$CPU_CORES -C libxfs install-headers \
        && make -j$CPU_CORES -C libfrog install-dev \
        && make -j$CPU_CORES -C libxfs install-dev \
       ) 1>$tmpFile 2>&1
@@ -26001,6 +26004,7 @@ printf "%s\n" "#define HAVE_XFS 1" >>confdefs.h
 
     fi
 
+    CC_INCLUDES="$CC_INCLUDES $cwd/extern/include/xfs"
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
 
 

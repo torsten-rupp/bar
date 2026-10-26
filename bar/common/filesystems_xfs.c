@@ -293,7 +293,7 @@ LOCAL bool scanFreeList(XFSHandle   *xfsHandle,
   }
 
   // read allocation group free space block
-  struct xfs_buf *xfsBuffer = xfsReadBuffer(xfsMount->m_dev,
+  struct xfs_buf *xfsBuffer = xfsReadBuffer(xfsMount->m_ddev_targp,
                                             XFS_AG_DADDR(xfsMount,be32_to_cpu(agf->agf_seqno),XFS_AGFL_DADDR(xfsMount)),
                                             XFS_FSS_TO_BB(xfsMount,1),
                                             0  // flags
@@ -357,7 +357,7 @@ LOCAL bool scanBTree(XFSHandle         *xfsHandle,
   assert(level > 0);
   assert(scanBTreeFunction != NULL);
 
-  struct xfs_buf *xfsBuffer = xfsReadBuffer(xfsMount->m_dev,
+  struct xfs_buf *xfsBuffer = xfsReadBuffer(xfsMount->m_ddev_targp,
                                             XFS_AGB_TO_DADDR(xfsMount,be32_to_cpu(agf->agf_seqno),root),
                                             XFS_FSB_TO_BB(xfsMount,1),
                                             0  // flags
@@ -464,7 +464,7 @@ LOCAL bool scanAllocationGroup(XFSHandle      *xfsHandle,
                                xfs_agnumber_t allocationGroupNumber
                               )
 {
-  struct xfs_buf *xfsBuffer = xfsReadBuffer(xfsMount->m_dev,
+  struct xfs_buf *xfsBuffer = xfsReadBuffer(xfsMount->m_ddev_targp,
                                             XFS_AG_DADDR(xfsMount,allocationGroupNumber,XFS_AGF_DADDR(xfsMount)),
                                             XFS_FSS_TO_BB(xfsMount,1),
                                             0  // flags

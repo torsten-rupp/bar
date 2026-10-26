@@ -1,0 +1,119 @@
+diff -u -r -x configure xfsprogs-7.2.1.org/include/Makefile xfsprogs-7.2.1/include/Makefile
+--- xfsprogs-7.2.1.org/include/Makefile	2026-09-16 13:11:04.000000000 +0200
++++ xfsprogs-7.2.1/include/Makefile	2026-10-25 15:38:23.826387566 +0100
+@@ -53,4 +53,4 @@
+ 	$(INSTALL) -m 755 -d $(PKG_INC_DIR)
+ 
+ install-dev: install
+-	$(INSTALL) -m 644 $(HFILES) $(PKG_INC_DIR)
++	$(INSTALL) -m 644 $(LIBHFILES) $(HFILES) $(PKG_INC_DIR)
+diff -u -r -x configure xfsprogs-7.2.1.org/libfrog/Makefile xfsprogs-7.2.1/libfrog/Makefile
+--- xfsprogs-7.2.1.org/libfrog/Makefile	2026-09-16 13:11:04.000000000 +0200
++++ xfsprogs-7.2.1/libfrog/Makefile	2026-10-26 04:00:43.011575401 +0100
+@@ -46,6 +46,7 @@
+ avl64.h \
+ bulkstat.h \
+ bitmap.h \
++bitmask.h \
+ convert.h \
+ crc32c.h \
+ crc32cselftest.h \
+@@ -74,6 +75,7 @@
+ scrub.h \
+ statx.h \
+ systemd.h \
++util.h \
+ workqueue.h \
+ zones.h
+ 
+@@ -129,6 +131,13 @@
+ 
+ include $(BUILDRULES)
+ 
+-install install-dev: default
++install: default
++
++install-dev: install
++	$(INSTALL) -m 755 -d $(PKG_INC_DIR)
++	$(INSTALL) -m 644 $(PKGHFILES) $(PKG_INC_DIR)
++	$(INSTALL) -m 755 -d $(PKG_INC_DIR)/libfrog
++	$(INSTALL) -m 644 $(HFILES) $(PKG_INC_DIR)/libfrog
++	$(Q)$(INSTALL_LTLIB_DEV)
+ 
+ -include .ltdep
+diff -u -r -x configure xfsprogs-7.2.1.org/libxfs/Makefile xfsprogs-7.2.1/libxfs/Makefile
+--- xfsprogs-7.2.1.org/libxfs/Makefile	2026-10-14 14:54:57.000000000 +0200
++++ xfsprogs-7.2.1/libxfs/Makefile	2026-10-26 04:37:24.011832201 +0100
+@@ -29,9 +29,11 @@
+ 	topology.h \
+ 	xfblob.h \
+ 	xfile.h \
++	xfs_ag.h \
+ 	xfs_ag_resv.h \
+ 	xfs_alloc.h \
+ 	xfs_alloc_btree.h \
++	xfs_attr.h \
+ 	xfs_attr_leaf.h \
+ 	xfs_attr_item.h \
+ 	xfs_attr_sf.h \
+@@ -46,6 +48,7 @@
+ 	xfs_attr_remote.h \
+ 	xfs_cksum.h \
+ 	xfs_da_btree.h \
++	xfs_defer.h \
+ 	xfs_dir2.h \
+ 	xfs_dir2_priv.h \
+ 	xfs_errortag.h \
+@@ -78,19 +81,22 @@
+ 	xfs_rtrmap_btree.h \
+ 	xfs_sb.h \
+ 	xfs_shared.h \
++	xfs_symlink_remote.h \
+ 	xfs_trans_resv.h \
+ 	xfs_trans_space.h \
+ 	xfs_trans.h \
+ 	xfs_zones.h \
+-	stubs/xfs_buf_mem.h \
+-	stubs/xfs_error.h \
+-	stubs/xfs_extent_busy.h \
+-	stubs/xfs_inode.h \
+-	stubs/xfs_log.h \
+-	stubs/xfs_mount.h \
+-	stubs/xfs_quota.h \
+-	stubs/xfs_trace.h \
+-	stubs/xfs_trans_priv.h
++
++STUBS_HFILES = \
++	xfs_buf_mem.h \
++	xfs_error.h \
++	xfs_extent_busy.h \
++	xfs_inode.h \
++	xfs_log.h \
++	xfs_mount.h \
++	xfs_quota.h \
++	xfs_trace.h \
++	xfs_trans_priv.h
+ 
+ CFILES = buf_mem.c \
+ 	cache.c \
+@@ -206,7 +212,7 @@
+ 
+ .PHONY: .extradep
+ 
+-.extradep: $(EXTRA_CFILES) $(EXTRA_CXXFILES) $(HFILES)
++.extradep: $(EXTRA_CFILES) $(EXTRA_CXXFILES) $(HFILES) $(addprefix stubs/, $(STUBS_HFILES))
+ 	$(Q)$(MAKEDEP) $(EXTRA_CFILES) > .extradep
+ 	$(Q)$(MAKECXXDEP) $(EXTRA_CXXFILES) >> .extradep
+ 
+@@ -222,7 +228,11 @@
+ 	$(Q)$(LN_S) -f $(CURDIR)/$* $(TOPDIR)/include/xfs/$*
+ 
+ install-dev: install
++	$(INSTALL) -m 755 -d $(PKG_INC_DIR)
+ 	$(INSTALL) -m 644 $(PKGHFILES) $(PKG_INC_DIR)
++	$(INSTALL) -m 644 $(HFILES) $(PKG_INC_DIR)
++	(cd stubs; ../$(INSTALL) -m 644 $(STUBS_HFILES) $(PKG_INC_DIR))
++	$(Q)$(INSTALL_LTLIB_DEV)
+ 
+ # We need to install the headers before building the dependencies.  If we
+ # include the .ltdep file, the makefile decides that it needs to build the

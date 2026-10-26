@@ -3952,6 +3952,7 @@ if test $ENABLE_MARIADB = "yes"; then
           (cd mariadb-connector-c; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="$LIBS" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" $CMAKE . \
             -DCMAKE_SYSTEM_NAME=$SYSTEM_NAME \
             -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+            -DCMAKE_COMPILE_WARNING_AS_ERROR=NO \
             -DWITH_EXTERNAL_ZLIB=ON \
             -DZLIB_INCLUDE_DIR=$cwd/extern/include \
             -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
@@ -3968,6 +3969,7 @@ if test $ENABLE_MARIADB = "yes"; then
             -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc \
             -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres \
             -DCMAKE_INSTALL_PREFIX=$cwd/extern \
+            -DCMAKE_COMPILE_WARNING_AS_ERROR=NO \
             -DWITH_EXTERNAL_ZLIB=ON \
             -DZLIB_INCLUDE_DIR=$cwd/extern/include \
             -DZLIB_LIBRARY=$cwd/extern/lib/libz.a \
@@ -4961,16 +4963,16 @@ if test $ENABLE_XFS = "yes"; then
 
     dnl compile libuuid, libblkid from util-linux
     AC_MSG_COMPILE([libuuid+libblkid])
-    result1=1
-    if test $result1 -eq 1; then
+    result=1
+    if test $result -eq 1; then
       (cd util-linux; ./autogen.sh) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (autogen)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       case $host_os in
         linux-* | sunos | solaris* | darwin*)
           (cd util-linux; CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
@@ -4986,32 +4988,32 @@ if test $ENABLE_XFS = "yes"; then
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (configure)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       (cd util-linux; \
        make -j$CPU_CORES; \
       ) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (make)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       (cd util-linux; make install PREFIX=$cwd/extern) 1>$tmpFile 2>&1
       if test $? -ne 0; then
         AC_MSG_RESULT([fail (install)])
         AC_MSG_OUTPUT_LOG($tmpFile)
-        result1=0
+        result=0
       fi
     fi
-    if test $result1 -eq 1; then
+    if test $result -eq 1; then
       AC_MSG_RESULT([done])
     fi
 
-    if test $result1 -eq 1 -a $result2 -eq 1; then
+    if test $result -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
         LIBRARIES="$LIBRARIES uuid blkid"
       else
@@ -5108,7 +5110,7 @@ if test $ENABLE_XFS = "yes"; then
       AC_MSG_RESULT([done])
     fi
 
-    if test $result1 -eq 1 -a $result2 -eq 1; then
+    if test $result -eq 1; then
       if test $ENABLE_LINK_DYNAMIC = "yes"; then
         LIBRARIES="$LIBRARIES urcu"
       else
@@ -5190,6 +5192,7 @@ if test $ENABLE_XFS = "yes"; then
     fi
     if test $result -eq 1; then
       (   cd xfsprogs \
+       && make -j$CPU_CORES -C include install-dev \
        && make -j$CPU_CORES -C libfrog install-dev \
        && make -j$CPU_CORES -C libxfs install-dev \
       ) 1>$tmpFile 2>&1
@@ -5210,6 +5213,7 @@ if test $ENABLE_XFS = "yes"; then
       AC_DEFINE(HAVE_XFS,1,[xfs installed (local)])
     fi
 
+    CC_INCLUDES="$CC_INCLUDES $cwd/extern/include/xfs"
     if test $ENABLE_LINK_DYNAMIC = "yes"; then
       AC_SEARCH_LIBRARIES(crc32c_le,frog,[HAVE_FROG=1;LIBRARIES="$LIBRARIES frog";AC_DEFINE(HAVE_FROG,1,[libfrog installed])])
       if test -z "$HAVE_FROG"; then
