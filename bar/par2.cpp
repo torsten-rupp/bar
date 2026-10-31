@@ -31,6 +31,7 @@
 #include "common/files.h"
 
 #include "configuration.h"
+#include "bar_common.h"
 #include "errors.h"
 
 #include "par2.h"

@@ -24,6 +24,19 @@
 
 /***************************** Datatypes *******************************/
 
+/***********************************************************************\
+* Name   : FragmentNodeFreeDataFunction
+* Purpose: callback function to free fragment node data content
+* Input  : data     - data to free
+*          size     - size of data
+*          userData - user data
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+typedef void(*FragmentNodeFreeDataFunction)(void *data, size_t size, void *userData);
+
 // fragment list range node
 typedef struct FragmentRangeNode
 {
@@ -40,18 +53,21 @@ typedef struct
 } FragmentRangeList;
 
 // fragment list node
+// TODO: split into Fragment + FragmentNode?
 typedef struct FragmentNode
 {
   LIST_NODE_HEADER(struct FragmentNode);
 
-  String            name;               // fragment name
-  uint64            size;               // size of fragment
-  void              *userData;
-  uint              userDataSize;
-  uint              lockCount;
+  size_t                       lockCount;          // done if lock count <= 1
+  String                       name;               // fragment name
+  uint64                       size;               // size of fragment
+  void                         *data;              // additional data or NULL
+  size_t                       dataSize;           // size of additional data
+  FragmentNodeFreeDataFunction freeDataFunction;   // callback to free data content or NULL
+  void                         *freeDataUserData;  // data for for free function
 
-  FragmentRangeList rangeList;
-  uint64            rangeListSum;
+  FragmentRangeList            rangeList;
+  uint64                       rangeListSum;
 } FragmentNode;
 
 // sorted fragment list
@@ -151,34 +167,40 @@ void FragmentList_done(FragmentList *fragmentList);
 /***********************************************************************\
 * Name   : FragmentList_initNode
 * Purpose: init fragment node
-* Input  : name         - name of fragment
-*          size         - size of fragment
-*          userData     - user data to store with fragment (will be
-*                         copied!)
-*          userDataSize - size of user data
-*          lockCount    - lock count
+* Input  : name             - name of fragment
+*          size             - size of fragment
+*          data             - additional data to store with
+*                             fragment (will be copied!)
+*          dataSize         - size of additional data
+*          lockCount        - lock count
+*          freeDataFunction - free additional data function or NULL
+*          freeDataUserData - free additional data user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
 #ifdef NDEBUG
-void FragmentList_initNode(FragmentNode *fragmentNode,
-                           ConstString  name,
-                           uint64       size,
-                           const void   *userData,
-                           uint         userDataSize,
-                           uint         lockCount
+void FragmentList_initNode(FragmentNode                 *fragmentNode,
+                           ConstString                  name,
+                           uint64                       size,
+                           const void                   *data,
+                           size_t                       dataSize,
+                           size_t                       lockCount,
+                           FragmentNodeFreeDataFunction freeDataFunction,
+                           void                         *freeDataUserData
                           );
 #else /* not NDEBUG */
-void __FragmentList_initNode(const char   *__fileName__,
-                             size_t       __lineNb__,
-                             FragmentNode *fragmentNode,
-                             ConstString  name,
-                             uint64       size,
-                             const void   *userData,
-                             uint         userDataSize,
-                             uint         lockCount
+void __FragmentList_initNode(const char                   *__fileName__,
+                             size_t                       __lineNb__,
+                             FragmentNode                 *fragmentNode,
+                             ConstString                  name,
+                             uint64                       size,
+                             const void                   *data,
+                             size_t                       dataSize,
+                             size_t                       lockCount,
+                             FragmentNodeFreeDataFunction freeDataFunction,
+                             void                         *freeDataUserData
                             );
 #endif /* NDEBUG */
 
@@ -195,7 +217,7 @@ void FragmentList_doneNode(FragmentNode *fragmentNode);
 
 /***********************************************************************\
 * Name   : FragmentList_lockNode
-* Purpose: lock fragment node
+* Purpose: set delete lock for fragment node
 * Input  : fragmentNode - fragment node
 * Output : -
 * Return : -
@@ -206,7 +228,7 @@ void FragmentList_lockNode(FragmentNode *fragmentNode);
 
 /***********************************************************************\
 * Name   : FragmentList_unlockNode
-* Purpose: unlock fragment node
+* Purpose: clear delete lock for fragment node
 * Input  : fragmentNode - fragment node
 * Output : -
 * Return : -
@@ -217,13 +239,13 @@ void FragmentList_unlockNode(FragmentNode *fragmentNode);
 
 /***********************************************************************\
 * Name   : FragmentList_add
-* Purpose: add new fragment to fragment list
+* Purpose: add new fragment node to fragment list
 * Input  : fragmentList - fragment list
 *          name         - name of fragment
 *          size         - size of fragment
-*          userData     - user data to store with fragment (will be
+*          data         - additional data to store with fragment (will be
 *                         copied!)
-*          userDataSize - size of user data
+*          dataSize     - size of additional data
 *          lockCount    - lock count
 * Output : -
 * Return : fragment node or NULL on error
@@ -231,22 +253,26 @@ void FragmentList_unlockNode(FragmentNode *fragmentNode);
 \***********************************************************************/
 
 #ifdef NDEBUG
-FragmentNode *FragmentList_add(FragmentList *fragmentList,
-                               ConstString  name,
-                               uint64       size,
-                               const void   *userData,
-                               uint         userDataSize,
-                               uint         lockCount
+FragmentNode *FragmentList_add(FragmentList                 *fragmentList,
+                               ConstString                  name,
+                               uint64                       size,
+                               const void                   *data,
+                               size_t                       dataSize,
+                               size_t                       lockCount,
+                               FragmentNodeFreeDataFunction freeDataFunction,
+                               void                         *freeDataUserData
                               );
 #else /* not NDEBUG */
-FragmentNode *__FragmentList_add(const char   *__fileName__,
-                                 size_t       __lineNb__,
-                                 FragmentList *fragmentList,
-                                 ConstString  name,
-                                 uint64       size,
-                                 const void   *userData,
-                                 uint         userDataSize,
-                                 uint         lockCount
+FragmentNode *__FragmentList_add(const char                   *__fileName__,
+                                 size_t                       __lineNb__,
+                                 FragmentList                 *fragmentList,
+                                 ConstString                  name,
+                                 uint64                       size,
+                                 const void                   *data,
+                                 size_t                       dataSize,
+                                 size_t                       lockCount,
+                                 FragmentNodeFreeDataFunction freeDataFunction,
+                                 void                         *freeDataUserData
                                 );
 #endif /* NDEBUG */
 
@@ -269,22 +295,11 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
 *          name         - name
 * Output : -
 * Return : -
-* Notes  : -
+* Notes  : cannnot be inlined, because of C typeof() in LIST_FIND()
+*          which does not compile for C++
 \***********************************************************************/
 
-INLINE FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name);
-#if defined(NDEBUG) || defined(__FRAGMENTLISTS_IMPLEMENTATION__)
-INLINE FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name)
-{
-  FragmentNode *fragmentNode;
-
-  assert(fragmentList != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
-  assert(name != NULL);
-
-  return LIST_FIND(fragmentList,fragmentNode,String_equals(fragmentNode->name,name));
-}
-#endif /* NDEBUG || __FRAGMENTLISTS_IMPLEMENTATION__ */
+FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name);
 
 /***********************************************************************\
 * Name   : FragmentList_clearRanges
@@ -390,7 +405,7 @@ INLINE uint64 FragmentList_getTotalSize(const FragmentNode *fragmentNode)
 \***********************************************************************/
 
 void FragmentList_print(FILE               *outputHandle,
-                        uint               indent,
+                        size_t             indent,
                         const FragmentNode *fragmentNode,
                         bool               printMissingFlag
                        );

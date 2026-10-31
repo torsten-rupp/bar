@@ -21,10 +21,8 @@
                              */
 
 #include "common/global.h"
-#include "common/lists.h"
 #include "common/strings.h"
 #include "common/files.h"
-//#include "common/patternlists.h"
 #include "deltasourcelists.h"
 
 #include "errors.h"
@@ -33,8 +31,6 @@
 
 /***************************** Constants *******************************/
 
-#define SOURCE_SIZE_UNKNOWN -1LL
-
 /***************************** Datatypes *******************************/
 
 // source handle
@@ -42,7 +38,6 @@ typedef struct
 {
 // NYI: is there a list of names required?
   ConstString name;             // source name
-  String      tmpFileName;      // temporary file name
   FileHandle  tmpFileHandle;    // temporary file handle
   uint64      baseOffset;       // block read base offset in source
 } DeltaSourceHandle;

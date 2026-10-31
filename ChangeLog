@@ -14,6 +14,7 @@
   * fix build dynamic linked executable
   * fix usage of regex+pcre
   * fix write CD/DVD/BD: special files
+  * fix create delta compressed image/hardlink entries
   * add libisofs+libburn debug output on verbose >= 4
   * support build with libssh2 1.11.0
   * build dynamic linked binary packages

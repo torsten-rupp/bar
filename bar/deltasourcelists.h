@@ -29,12 +29,15 @@
 #include "common/strings.h"
 #include "common/patterns.h"
 #include "common/semaphores.h"
+#include "common/fragmentlists.h"
 
 #include "errors.h"
 
 /****************** Conditional compilation switches *******************/
 
 /***************************** Constants *******************************/
+
+#define SOURCE_SIZE_UNKNOWN -1LL
 
 /***************************** Datatypes *******************************/
 
@@ -45,13 +48,13 @@ typedef struct DeltaSourceNode
   uint         id;                  // unique node id
   String       storageName;         // storage name
   PatternTypes patternType;         // pattern type
-  bool         locked;              // TRUE iff locked
 } DeltaSourceNode;
 
 typedef struct
 {
   LIST_HEADER(DeltaSourceNode);
-  Semaphore lock;
+  Semaphore    lock;
+  FragmentList temporaryList;
 } DeltaSourceList;
 
 /***************************** Variables *******************************/

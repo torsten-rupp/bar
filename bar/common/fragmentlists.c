@@ -34,7 +34,7 @@
 #define I0(offset,length) (offset)
 #define I1(offset,length) (((length)>0)?(offset)+(length)-1:(offset))
 
-// begin/end index f0,f1 of fragment
+// begin/end index f0,f1/length of fragment
 #define F0(fragmentRangeNode) I0(fragmentRangeNode->offset,fragmentRangeNode->length)
 #define F1(fragmentRangeNode) I1(fragmentRangeNode->offset,fragmentRangeNode->length)
 #define L(fragmentRangeNode) (fragmentRangeNode->length)
@@ -66,7 +66,7 @@
 
 /***********************************************************************\
 * Name   : fragmentNodeValid
-* Purpose: check if fragment node is valid
+* Purpose: check if fragment node is valid: sum of fragments
 * Input  : fragmentNode - fragment node
 * Output : -
 * Return : -
@@ -76,7 +76,6 @@
 LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
-  DEBUG_CHECK_RESOURCE_TRACE(fragmentNode);
 
   uint64                  size = 0LL;
   const FragmentRangeNode *fragmentRangeNode;
@@ -84,7 +83,6 @@ LOCAL void fragmentNodeValid(const FragmentNode *fragmentNode)
   {
     size += fragmentRangeNode->length;
   }
-//if (size != fragmentNode->rangeListSum) fprintf(stderr,"%s, %d: %lu == %lu\n",__FILE__,__LINE__,size,fragmentNode->rangeListSum);
   assert(size == fragmentNode->rangeListSum);
 }
 #endif /* NDEBUG */
@@ -104,47 +102,43 @@ LOCAL void fragmentNodeDone(FragmentNode *fragmentNode, void *userData)
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(fragmentNode,FragmentNode);
-
   UNUSED_VARIABLE(userData);
 
   List_done(&fragmentNode->rangeList);
-  if (fragmentNode->userData != NULL)
+  if (fragmentNode->data != NULL)
   {
-    free(fragmentNode->userData);
+    if (fragmentNode->freeDataFunction != NULL)
+    {
+      fragmentNode->freeDataFunction(fragmentNode->data,
+                                     fragmentNode->dataSize,
+                                     fragmentNode->freeDataUserData
+                                    );
+    }
+    free(fragmentNode->data);
   }
   String_delete(fragmentNode->name);
 }
 
 /***********************************************************************\
-* Name   : printSpaces
-* Purpose: print spaces
-* Input  : outputHandle - output file handle
-*          n            - number of spaces to print
+* Name   : freeFragmentNode
+* Purpose: free fragment node
+* Input  : fargmentNode - fragment node to free
+*          userData     - user data
 * Output : -
 * Return : -
 * Notes  : -
 \***********************************************************************/
 
-LOCAL void printSpaces(FILE *outputHandle, uint n)
+LOCAL void freeFragmentNode(FragmentNode *fragmentNode, void *userData)
 {
-  const char *SPACES8 = "        ";
+  assert(fragmentNode != NULL);
+  FRAGMENTNODE_VALID(fragmentNode);
 
-  assert(outputHandle != NULL);
+  UNUSED_VARIABLE(userData);
 
-  size_t i = 0;
-  while ((i+8) < n)
-  {
-    size_t bytesWritten;
-    bytesWritten = fwrite(SPACES8,1,8,outputHandle);
-    UNUSED_VARIABLE(bytesWritten);
-    i += 8;
-  }
-  while (i < n)
-  {
-    (void)fputc(' ',outputHandle);
-    i++;
-  }
+  DEBUG_REMOVE_RESOURCE_TRACE(fragmentNode,FragmentNode);
+
+  fragmentNodeDone(fragmentNode,NULL);
 }
 
 /*---------------------------------------------------------------------*/
@@ -158,10 +152,12 @@ void __FragmentList_init(const char   *__fileName__,
                         )
 #endif /* NDEBUG */
 {
-
   assert(fragmentList != NULL);
 
-  List_init(fragmentList,CALLBACK_(NULL,NULL),CALLBACK_((ListNodeFreeFunction)fragmentNodeDone,NULL));
+  List_init(fragmentList,
+            CALLBACK_(NULL,NULL),
+            CALLBACK_((ListNodeFreeFunction)freeFragmentNode,NULL)
+           );
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(fragmentList,FragmentList);
@@ -181,53 +177,54 @@ void FragmentList_done(FragmentList *fragmentList)
 }
 
 #ifdef NDEBUG
-void FragmentList_initNode(FragmentNode *fragmentNode,
-                           ConstString  name,
-                           uint64       size,
-                           const void   *userData,
-                           uint         userDataSize,
-                           uint         lockCount
+void FragmentList_initNode(FragmentNode                 *fragmentNode,
+                           ConstString                  name,
+                           uint64                       size,
+                           const void                   *data,
+                           size_t                       dataSize,
+                           size_t                       lockCount,
+                           FragmentNodeFreeDataFunction freeDataFunction,
+                           void                         *freeDataUserData
                           )
 #else /* not NDEBUG */
-void __FragmentList_initNode(const char   *__fileName__,
-                             size_t       __lineNb__,
-                             FragmentNode *fragmentNode,
-                             ConstString  name,
-                             uint64       size,
-                             const void   *userData,
-                             uint         userDataSize,
-                             uint         lockCount
+void __FragmentList_initNode(const char                   *__fileName__,
+                             size_t                       __lineNb__,
+                             FragmentNode                 *fragmentNode,
+                             ConstString                  name,
+                             uint64                       size,
+                             const void                   *data,
+                             size_t                       dataSize,
+                             size_t                       lockCount,
+                             FragmentNodeFreeDataFunction freeDataFunction,
+                             void                         *freeDataUserData
                             )
 #endif /* NDEBUG */
 {
   assert(fragmentNode != NULL);
+  assert((data != NULL) || (freeDataFunction == NULL));
 
-  fragmentNode->name = String_duplicate(name);
-  fragmentNode->size = size;
-  if (userData != NULL)
+  fragmentNode->name             = String_duplicate(name);
+  fragmentNode->size             = size;
+  if (data != NULL)
   {
-    fragmentNode->userData = malloc(userDataSize);
-    if (fragmentNode->userData == NULL)
+    fragmentNode->data = malloc(dataSize);
+    if (fragmentNode->data == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
     }
-    memcpy(fragmentNode->userData,userData,userDataSize);
-    fragmentNode->userDataSize = userDataSize;
+    memcpy(fragmentNode->data,data,dataSize);
+    fragmentNode->dataSize = dataSize;
   }
   else
   {
-    fragmentNode->userData     = NULL;
-    fragmentNode->userDataSize = 0;
+    fragmentNode->data     = NULL;
+    fragmentNode->dataSize = 0;
   }
-  fragmentNode->lockCount    = lockCount;
+  fragmentNode->lockCount        = lockCount;
+  fragmentNode->freeDataFunction = freeDataFunction;
+  fragmentNode->freeDataUserData = freeDataUserData;
   List_init(&fragmentNode->rangeList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   fragmentNode->rangeListSum = 0LL;
-
-  #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(fragmentNode,FragmentNode);
-  #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,fragmentNode,FragmentNode);
-  #endif /* NDEBUG */
 }
 
 void FragmentList_doneNode(FragmentNode *fragmentNode)
@@ -235,14 +232,7 @@ void FragmentList_doneNode(FragmentNode *fragmentNode)
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
 
-  DEBUG_REMOVE_RESOURCE_TRACE(fragmentNode,FragmentNode);
-
-  List_done(&fragmentNode->rangeList);
-  if (fragmentNode->userData != NULL)
-  {
-    free(fragmentNode->userData);
-  }
-  String_delete(fragmentNode->name);
+  fragmentNodeDone(fragmentNode,NULL);
 }
 
 void FragmentList_lockNode(FragmentNode *fragmentNode)
@@ -263,42 +253,66 @@ void FragmentList_unlockNode(FragmentNode *fragmentNode)
 }
 
 #ifdef NDEBUG
-FragmentNode *FragmentList_add(FragmentList *fragmentList,
-                               ConstString  name,
-                               uint64       size,
-                               const void   *userData,
-                               uint         userDataSize,
-                               uint         lockCount
+FragmentNode *FragmentList_add(FragmentList                 *fragmentList,
+                               ConstString                  name,
+                               uint64                       size,
+                               const void                   *data,
+                               size_t                       dataSize,
+                               size_t                       lockCount,
+                               FragmentNodeFreeDataFunction freeDataFunction,
+                               void                        *freeDataUserData
                               )
 #else /* not NDEBUG */
-FragmentNode *__FragmentList_add(const char   *__fileName__,
-                                 size_t       __lineNb__,
-                                 FragmentList *fragmentList,
-                                 ConstString  name,
-                                 uint64       size,
-                                 const void   *userData,
-                                 uint         userDataSize,
-                                 uint         lockCount
+FragmentNode *__FragmentList_add(const char                   *__fileName__,
+                                 size_t                       __lineNb__,
+                                 FragmentList                 *fragmentList,
+                                 ConstString                  name,
+                                 uint64                       size,
+                                 const void                   *data,
+                                 size_t                       dataSize,
+                                 size_t                       lockCount,
+                                 FragmentNodeFreeDataFunction freeDataFunction,
+                                 void                         *freeDataUserData
                                 )
 #endif /* NDEBUG */
 {
-  FragmentNode *fragmentNode;
-
   assert(fragmentList != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
   assert(name != NULL);
+  assert((data != NULL) || (freeDataFunction == NULL));
 
-
-  fragmentNode = LIST_NEW_NODE(FragmentNode);
+  FragmentNode *fragmentNode = LIST_NEW_NODE(FragmentNode);
   if (fragmentNode != NULL)
   {
     #ifdef NDEBUG
-      FragmentList_initNode(fragmentNode,name,size,userData,userDataSize,lockCount);
+      FragmentList_initNode(fragmentNode,
+                            name,
+                            size,
+                            data,
+                            dataSize,
+                            lockCount,
+                            freeDataFunction,
+                            freeDataUserData
+                           );
     #else /* not NDEBUG */
-      __FragmentList_initNode(__fileName__,__lineNb__,fragmentNode,name,size,userData,userDataSize,lockCount);
+      __FragmentList_initNode(__fileName__,__lineNb__,fragmentNode,
+                              name,
+                              size,
+                              data,
+                              dataSize,
+                              lockCount,
+                              freeDataFunction,
+                              freeDataUserData
+                             );
     #endif /* NDEBUG */
     List_append(fragmentList,fragmentNode);
   }
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(fragmentNode,FragmentNode);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,fragmentNode,FragmentNode);
+  #endif /* NDEBUG */
 
   return fragmentNode;
 }
@@ -310,9 +324,21 @@ void FragmentList_discard(FragmentList *fragmentList, FragmentNode *fragmentNode
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
 
+  DEBUG_REMOVE_RESOURCE_TRACE(fragmentNode,FragmentNode);
+
   List_remove(fragmentList,fragmentNode);
-  FragmentList_doneNode(fragmentNode);
+  fragmentNodeDone(fragmentNode,NULL);
   LIST_DELETE_NODE(fragmentNode);
+}
+
+FragmentNode *FragmentList_find(const FragmentList *fragmentList, ConstString name)
+{
+  assert(fragmentList != NULL);
+  DEBUG_CHECK_RESOURCE_TRACE(fragmentList);
+  assert(name != NULL);
+
+  FragmentNode *fragmentNode;
+  return LIST_FIND(fragmentList,fragmentNode,String_equals(fragmentNode->name,name));
 }
 
 void FragmentList_clearRanges(FragmentNode *fragmentNode)
@@ -525,7 +551,7 @@ bool FragmentList_isComplete(const FragmentNode *fragmentNode)
 }
 
 void FragmentList_print(FILE               *outputHandle,
-                        uint               indent,
+                        size_t             indent,
                         const FragmentNode *fragmentNode,
                         bool               printMissingFlag
                        )
@@ -543,21 +569,21 @@ void FragmentList_print(FILE               *outputHandle,
     {
       if ((lastOffset+1) < offset0)
       {
-        printSpaces(outputHandle,indent); fprintf(outputHandle,"%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: missing\n",lastOffset,offset0-1,offset0-1-lastOffset+1);
+        fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: missing\n",indent,"",lastOffset,offset0-1,offset0-1-lastOffset+1);
       }
-      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: OK\n",offset0,offset1,offset1-offset0+1);
+      fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: OK\n",indent,"",offset0,offset1,offset1-offset0+1);
       lastOffset = offset1;
     }
     else
     {
-      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes\n",offset0,offset1,offset1-offset0+1);
+      fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes\n",indent,"",offset0,offset1,offset1-offset0+1);
     }
   }
   if ((lastOffset+1) < fragmentNode->size)
   {
     if (printMissingFlag)
     {
-      printSpaces(outputHandle,indent); fprintf(outputHandle,"%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: missing\n",lastOffset+1,fragmentNode->size-1,fragmentNode->size-1-lastOffset);
+      fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: missing\n",indent,"",lastOffset+1,fragmentNode->size-1,fragmentNode->size-1-lastOffset);
     }
   }
 }
@@ -593,7 +619,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d:  1 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,0,2);
   FragmentList_addRange(n,2,2);
   FragmentList_addRange(n,4,2);
@@ -608,7 +634,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d:  2 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,4,2);
   FragmentList_addRange(n,2,2);
   FragmentList_addRange(n,0,2);
@@ -624,7 +650,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d:  3 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,0,2);
   FragmentList_addRange(n,4,2);
   FragmentList_addRange(n,2,2);
@@ -639,7 +665,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d:  4 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,4,2);
   FragmentList_addRange(n,0,2);
   FragmentList_addRange(n,2,2);
@@ -654,7 +680,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d:  5 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,0,3);
   FragmentList_addRange(n,4,2);
   FragmentList_addRange(n,3,3);
@@ -668,7 +694,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d:  6 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,0,3);
   FragmentList_addRange(n,2,4);
   assert(FragmentList_isComplete(n));
@@ -681,7 +707,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d:  7 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,2,4);
   FragmentList_addRange(n,0,3);
   assert(FragmentList_isComplete(n));
@@ -695,7 +721,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d:  8 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,3,3);
   FragmentList_addRange(n,4,2);
   FragmentList_addRange(n,0,3);
@@ -709,7 +735,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d:  9 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,4,2);
   FragmentList_addRange(n,0,6);
   assert(FragmentList_isComplete(n));
@@ -722,7 +748,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d: 10 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,0,6);
   FragmentList_addRange(n,4,2);
   assert(FragmentList_isComplete(n));
@@ -735,7 +761,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d: 11 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,0,2);
   FragmentList_addRange(n,4,2);
   assert(!FragmentList_isComplete(n));
@@ -748,7 +774,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d: 12 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,4,2);
   FragmentList_addRange(n,0,2);
   assert(!FragmentList_isComplete(n));
@@ -762,7 +788,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d: 13 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,0,1);
   FragmentList_addRange(n,2,2);
   FragmentList_addRange(n,5,1);
@@ -777,7 +803,7 @@ void FragmentList_unitTests()
   */
   fprintf(stderr,"%s, %d: 14 -------------------------------------------\n",__FILE__,__LINE__);
   FragmentList_init(&f);
-  n = FragmentList_add(&f,s,6,NULL,0,0);
+  n = FragmentList_add(&f,s,6,NULL,0,0,CALLBACK_(NULL,NULL));
   FragmentList_addRange(n,5,1);
   FragmentList_addRange(n,2,2);
   FragmentList_addRange(n,0,1);

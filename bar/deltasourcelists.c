@@ -83,7 +83,6 @@ LOCAL DeltaSourceNode *duplicateDeltaSourceNode(const DeltaSourceNode *deltaSour
   #endif
   newDeltaSourceNode->storageName = String_duplicate(deltaSourceNode->storageName);
   newDeltaSourceNode->patternType = deltaSourceNode->patternType;
-  newDeltaSourceNode->locked      = FALSE;
 
   return newDeltaSourceNode;
 }
@@ -136,6 +135,7 @@ void DeltaSourceList_doneAll(void)
             CALLBACK_((ListNodeFreeFunction)freeDeltaSourceNode,NULL)
            );
   Semaphore_init(&deltaSourceList->lock,SEMAPHORE_TYPE_BINARY);
+  FragmentList_init(&deltaSourceList->temporaryList);
 
   #ifdef NDEBUG
     DEBUG_ADD_RESOURCE_TRACE(deltaSourceList,DeltaSourceList);
@@ -188,6 +188,7 @@ void DeltaSourceList_doneAll(void)
     DEBUG_REMOVE_RESOURCE_TRACEX(__fileName__,__lineNb__,deltaSourceList,DeltaSourceList);
   #endif /* NDEBUG */
 
+  FragmentList_done(&deltaSourceList->temporaryList);
   Semaphore_done(&deltaSourceList->lock);
   List_done(deltaSourceList);
 }
@@ -262,7 +263,6 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     #endif
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
-    deltaSourceNode->locked      = FALSE;
 
     // add to list
     SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
@@ -323,7 +323,6 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
           #endif
           deltaSourceNode->storageName = String_duplicate(fileName);
           deltaSourceNode->patternType = patternType;
-          deltaSourceNode->locked      = FALSE;
 
           SEMAPHORE_LOCKED_DO(&deltaSourceList->lock,SEMAPHORE_LOCK_TYPE_READ_WRITE,WAIT_FOREVER)
           {
@@ -363,7 +362,6 @@ Errors DeltaSourceList_append(DeltaSourceList *deltaSourceList,
     #endif
     deltaSourceNode->storageName = String_duplicate(storageName);
     deltaSourceNode->patternType = patternType;
-    deltaSourceNode->locked      = FALSE;
 
     List_append(deltaSourceList,deltaSourceNode);
   }

@@ -76,28 +76,27 @@ diff -ru xfsprogs-6.16.0.org/libxfs/Makefile xfsprogs-6.16.0/libxfs/Makefile
  # headers to install in include/xfs
 -PKGHFILES = xfs_fs.h \
 +PKGHFILES = \
-+        xfs_fs.h \
++ xfs_fs.h \
  	xfs_types.h \
  	xfs_da_format.h \
  	xfs_format.h \
 -	xfs_log_format.h
 +	xfs_log_format.h \
-+        xfs_log_recover.h \
-+        xfs_quota_defs.h \
++ xfs_log_recover.h \
++ xfs_quota_defs.h \
 +	xfs_sb.h \
 +	xfs_shared.h \
-+        xfs_defer.h \
-+        xfs_attr.h \
-+        xfs_ag.h \
-+        xfs_symlink_remote.h \ \
++ xfs_defer.h \
++ xfs_attr.h \
++ xfs_ag.h \
++ xfs_symlink_remote.h \ \
 +
 +# headers to install in include/xfs/libxfs
 +LIBHFILES = \
-+        xfile.h \
-+        buf_mem.h \
++ xfile.h \
  
  HFILES = \
- 	defer_item.h \
+    defer_item.h \
 @@ -196,15 +210,18 @@
  include $(BUILDRULES)
  

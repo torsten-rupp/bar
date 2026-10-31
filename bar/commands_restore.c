@@ -886,7 +886,8 @@ LOCAL Errors restoreFileEntry(RestoreInfo   *restoreInfo,
                                           fileName,
                                           fileInfo.size,
                                           &fileInfo,sizeof(FileInfo),
-                                          0
+                                          0,
+                                          CALLBACK_(NULL,NULL)
                                          );
         }
         assert(fragmentNode != NULL);
@@ -1412,7 +1413,8 @@ LOCAL Errors restoreImageEntry(RestoreInfo   *restoreInfo,
                                           deviceName,
                                           deviceInfo.size,
                                           NULL,0,
-                                          0
+                                          0,
+                                          CALLBACK_(NULL,NULL)
                                          );
         }
         assert(fragmentNode != NULL);
@@ -2577,7 +2579,8 @@ LOCAL Errors restoreHardLinkEntry(RestoreInfo   *restoreInfo,
                                             fileName,
                                             fileInfo.size,
                                             &fileInfo,sizeof(FileInfo),
-                                            0
+                                            0,
+                                            CALLBACK_(NULL,NULL)
                                            );
           }
           assert(fragmentNode != NULL);
@@ -4003,16 +4006,16 @@ Errors Command_restore(const StringList           *storageNameList,
           }
         }
 
-        if (fragmentNode->userData != NULL)
+        if (fragmentNode->data != NULL)
         {
           if (!jobOptions->dryRun)
           {
             // set file time, file permission of incomplete entries
             if (globalOptions.permissions != FILE_DEFAULT_PERMISSIONS)
             {
-              ((FileInfo*)fragmentNode->userData)->permissions = globalOptions.permissions;
+              ((FileInfo*)fragmentNode->data)->permissions = globalOptions.permissions;
             }
-            error = File_setInfo((FileInfo*)fragmentNode->userData,fragmentNode->name);
+            error = File_setInfo((FileInfo*)fragmentNode->data,fragmentNode->name);
             if (error != ERROR_NONE)
             {
               if (   !jobOptions->noStopOnErrorFlag
@@ -4036,8 +4039,8 @@ Errors Command_restore(const StringList           *storageNameList,
 
             // set file owner/group of incomplete entries
             error = File_setOwner(fragmentNode->name,
-                                  ((FileInfo*)fragmentNode->userData)->userId,
-                                  ((FileInfo*)fragmentNode->userData)->groupId
+                                  ((FileInfo*)fragmentNode->data)->userId,
+                                  ((FileInfo*)fragmentNode->data)->groupId
                                  );
             if (error != ERROR_NONE)
             {
@@ -4062,7 +4065,7 @@ Errors Command_restore(const StringList           *storageNameList,
             }
 
             // set attributes of incomplete entries
-            error = File_setAttributes(((FileInfo*)fragmentNode->userData)->attributes,fragmentNode->name);
+            error = File_setAttributes(((FileInfo*)fragmentNode->data)->attributes,fragmentNode->name);
             if (error != ERROR_NONE)
             {
               if (   !jobOptions->noStopOnAttributeErrorFlag

@@ -4252,6 +4252,10 @@ LOCAL Errors writeImageChunks(ArchiveEntryInfo *archiveEntryInfo)
   {
     assert(Compress_isDeltaCompressed(archiveEntryInfo->image.deltaCompressAlgorithm));
 
+    archiveEntryInfo->image.chunkImageDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->image.deltaCompressAlgorithm);
+    String_set(archiveEntryInfo->image.chunkImageDelta.name,DeltaSource_getName(&archiveEntryInfo->image.deltaSourceHandle));
+    archiveEntryInfo->image.chunkImageDelta.size           = DeltaSource_getSize(&archiveEntryInfo->image.deltaSourceHandle);
+
     error = Chunk_create(&archiveEntryInfo->image.chunkImageDelta.info);
     if (error != ERROR_NONE)
     {
@@ -4915,6 +4919,10 @@ LOCAL Errors writeHardLinkChunks(ArchiveEntryInfo *archiveEntryInfo)
   if (Compress_isCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm))
   {
     assert(Compress_isDeltaCompressed(archiveEntryInfo->hardLink.deltaCompressAlgorithm));
+
+    archiveEntryInfo->hardLink.chunkHardLinkDelta.deltaAlgorithm = COMPRESS_ALGORITHM_TO_CONSTANT(archiveEntryInfo->hardLink.deltaCompressAlgorithm);
+    String_set(archiveEntryInfo->hardLink.chunkHardLinkDelta.name,DeltaSource_getName(&archiveEntryInfo->hardLink.deltaSourceHandle));
+    archiveEntryInfo->hardLink.chunkHardLinkDelta.size           = DeltaSource_getSize(&archiveEntryInfo->hardLink.deltaSourceHandle);
 
     error = Chunk_create(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);
     if (error != ERROR_NONE)
@@ -10402,9 +10410,14 @@ NULL//                             password
               error = ERROR_INVALID_COMPRESS_ALGORITHM;
               break;
             }
-// TODO: encoding
-            if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->file.chunkFileDelta.name);
-            if (deltaSourceSize != NULL) (*deltaSourceSize) = archiveEntryInfo->file.chunkFileDelta.size;
+            if (deltaSourceName != NULL)
+            {
+              convertSystemToUTF8Encoding(deltaSourceName,archiveEntryInfo->file.chunkFileDelta.name);
+            }
+            if (deltaSourceSize != NULL)
+            {
+              (*deltaSourceSize) = archiveEntryInfo->file.chunkFileDelta.size;
+            }
 
             // close file delta chunk
             error = Chunk_close(&archiveEntryInfo->file.chunkFileDelta.info);
@@ -10959,8 +10972,15 @@ NULL//                             password
               error = ERROR_INVALID_COMPRESS_ALGORITHM;
               break;
             }
-            if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->image.chunkImageDelta.name);
-            if (deltaSourceSize != NULL) (*deltaSourceSize) = archiveEntryInfo->image.chunkImageDelta.size;
+            if (deltaSourceName != NULL)
+            {
+              convertSystemToUTF8Encoding(deltaSourceName,archiveEntryInfo->image.chunkImageDelta.name);
+            }
+            if (deltaSourceSize != NULL)
+            {
+              (*deltaSourceSize) = archiveEntryInfo->image.chunkImageDelta.size;
+            }
+
 
             // close image delta chunk
             error = Chunk_close(&archiveEntryInfo->image.chunkImageDelta.info);
@@ -12487,8 +12507,14 @@ NULL//                             password
               error = ERROR_INVALID_COMPRESS_ALGORITHM;
               break;
             }
-            if (deltaSourceName != NULL) String_set(deltaSourceName,archiveEntryInfo->hardLink.chunkHardLinkDelta.name);
-            if (deltaSourceSize != NULL) (*deltaSourceSize) = archiveEntryInfo->hardLink.chunkHardLinkDelta.size;
+            if (deltaSourceName != NULL)
+            {
+              convertSystemToUTF8Encoding(deltaSourceName,archiveEntryInfo->hardLink.chunkHardLinkDelta.name);
+            }
+            if (deltaSourceSize != NULL)
+            {
+              (*deltaSourceSize) = archiveEntryInfo->hardLink.chunkHardLinkDelta.size;
+            }
 
             // close link extended attribute chunk
             error = Chunk_close(&archiveEntryInfo->hardLink.chunkHardLinkDelta.info);

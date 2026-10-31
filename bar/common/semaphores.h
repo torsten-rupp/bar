@@ -203,6 +203,7 @@ typedef enum
 *          'return' is used!
 \***********************************************************************/
 
+// TODO: use BLOCK_DO?
 #define SEMAPHORE_LOCKED_DO(semaphore,semaphoreLockType,timeout) \
   for (SemaphoreLock __semaphoreLock ## __COUNTER__ = Semaphore_lock(semaphore,semaphoreLockType,timeout); \
        __semaphoreLock ## __COUNTER__; \

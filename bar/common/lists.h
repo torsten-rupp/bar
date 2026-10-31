@@ -24,7 +24,7 @@
 
 /***********************************************************************\
 * Name   : ListNodeDuplicateFunction
-* Purpose: callback function to duplicate a list node
+* Purpose: callback function to duplicate a list node content
 * Input  : fromNode - copy from node
 *          userData - user data
 * Output : -
@@ -36,7 +36,7 @@ typedef void*(*ListNodeDuplicateFunction)(const void *fromNode, void *userData);
 
 /***********************************************************************\
 * Name   : ListNodeFreeFunction
-* Purpose: callback function to delete a list node
+* Purpose: callback function to free a list node content
 * Input  : node     - node to delete
 *          userData - user data
 * Output : -

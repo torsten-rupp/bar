@@ -403,7 +403,14 @@ LOCAL Errors testFileEntry(TestInfo          *testInfo,
         FragmentNode *fragmentNode = FragmentList_find(fragmentList,fileName);
         if (fragmentNode == NULL)
         {
-          fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
+          fragmentNode = FragmentList_add(fragmentList,
+                                          fileName,
+                                          fileInfo.size,
+                                          NULL,
+                                          0,
+                                          0,
+                                          CALLBACK_(NULL,NULL)
+                                         );
         }
         assert(fragmentNode != NULL);
 
@@ -648,7 +655,14 @@ LOCAL Errors testImageEntry(TestInfo          *testInfo,
         FragmentNode *fragmentNode = FragmentList_find(fragmentList,deviceName);
         if (fragmentNode == NULL)
         {
-          fragmentNode = FragmentList_add(fragmentList,deviceName,deviceInfo.size,NULL,0,0);
+          fragmentNode = FragmentList_add(fragmentList,
+                                          deviceName,
+                                          deviceInfo.size,
+                                          NULL,
+                                          0,
+                                          0,
+                                          CALLBACK_(NULL,NULL)
+                                         );
         }
 //FragmentList_print(fragmentNode,String_cString(deviceName),FALSE);
         assert(fragmentNode != NULL);
@@ -1116,7 +1130,14 @@ LOCAL Errors testHardLinkEntry(TestInfo          *testInfo,
             FragmentNode * fragmentNode = FragmentList_find(fragmentList,fileName);
             if (fragmentNode == NULL)
             {
-              fragmentNode = FragmentList_add(fragmentList,fileName,fileInfo.size,NULL,0,0);
+              fragmentNode = FragmentList_add(fragmentList,
+                                              fileName,
+                                              fileInfo.size,
+                                              NULL,
+                                              0,
+                                              0,
+                                              CALLBACK_(NULL,NULL)
+                                             );
             }
             assert(fragmentNode != NULL);
 

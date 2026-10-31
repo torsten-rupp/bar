@@ -5019,7 +5019,14 @@ LOCAL void fragmentInit(CreateInfo *createInfo, ConstString name, uint64 size, u
     FragmentNode *fragmentNode = FragmentList_find(&createInfo->runningInfoFragmentList,name);
     if (fragmentNode == NULL)
     {
-      fragmentNode = FragmentList_add(&createInfo->runningInfoFragmentList,name,size,NULL,0,fragmentCount);
+      fragmentNode = FragmentList_add(&createInfo->runningInfoFragmentList,
+                                      name,
+                                      size,
+                                      NULL,
+                                      0,
+                                      fragmentCount,
+                                      CALLBACK_(NULL,NULL)
+                                     );
       if (fragmentNode == NULL)
       {
         HALT_INSUFFICIENT_MEMORY();
