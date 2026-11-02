@@ -3585,8 +3585,10 @@ Errors Command_list(StringList              *storageNameList,
   StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
 
+
   // list archive content
-  Errors      failError = ERROR_NONE;
+  Errors      failError        = ERROR_NONE;
+  bool        someStorageFound = FALSE;
   ConstString storageName;
   STRINGLIST_ITERATE(storageNameList,storageName)
   {
@@ -3646,6 +3648,8 @@ NULL, // masterSocketHandle
                                      CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                      logHandle
                                     );
+
+          someStorageFound = TRUE;
         }
       }
     }
@@ -3661,6 +3665,7 @@ NULL, // masterSocketHandle
       if (error == ERROR_NONE)
       {
         String fileName = String_new();
+        bool   foundAnyFile = FALSE;
         while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
         {
           // read next directory entry
@@ -3695,6 +3700,8 @@ NULL, // masterSocketHandle
                                        CALLBACK_(getNamePasswordFunction,getNamePasswordUserData),
                                        logHandle
                                       );
+
+            someStorageFound = TRUE;
           }
         }
         String_delete(fileName);
@@ -3712,6 +3719,11 @@ NULL, // masterSocketHandle
     }
 
     (void)Storage_done(&storageInfo);
+  }
+  if ((failError == ERROR_NONE) && !StringList_isEmpty(storageNameList) && !someStorageFound)
+  {
+    printError(_("no matching storage files found!"));
+    failError = ERROR_FILE_NOT_FOUND_;
   }
 
   // output grouped list

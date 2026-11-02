@@ -1951,6 +1951,7 @@ NULL,  //               requestedAbortFlag,
     updateRunningInfo(&testInfo,FALSE);
   }
 
+  Errors      failError        = ERROR_NONE;
   bool        someStorageFound = FALSE;
   ConstString storageName;
   STRINGLIST_ITERATE(storageNameList,storageName)
@@ -2038,9 +2039,9 @@ NULL,  //               requestedAbortFlag,
             {
               if (testInfo.failError == ERROR_NONE) testInfo.failError = error;
             }
-          }
 
-          someStorageFound = TRUE;
+            someStorageFound = TRUE;
+          }
         }
         String_delete(fileName);
 

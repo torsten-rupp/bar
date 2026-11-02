@@ -2332,17 +2332,15 @@ NULL,  //               requestedAbortFlag,
       {
         // compare archive content
         error = compareArchive(&compareInfo,
-                                      &storageSpecifier,
-                                      NULL
-                                     );
-        if (error == ERROR_NONE)
-        {
-          someStorageFound = TRUE;
-        }
-        else
+                               &storageSpecifier,
+                               NULL
+                              );
+        if (error != ERROR_NONE)
         {
           if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
         }
+
+        someStorageFound = TRUE;
       }
     }
 
@@ -2392,8 +2390,9 @@ NULL,  //               requestedAbortFlag,
             {
               if (compareInfo.failError == ERROR_NONE) compareInfo.failError = error;
             }
+
+            someStorageFound = TRUE;
           }
-          someStorageFound = TRUE;
         }
         String_delete(fileName);
 
