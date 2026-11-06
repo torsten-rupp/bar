@@ -4572,6 +4572,7 @@ LOCAL Errors bar(int argc, const char *argv[])
     printf("  gnuTLS     %s\n",!stringIsEmpty(VERSION_GNUTLS    ) ? VERSION_GNUTLS     : "(not included)");
     printf("  OpenSSL    %s\n",!stringIsEmpty(VERSION_OPENSSL   ) ? VERSION_OPENSSL    : "(not included)");
     printf("  ssh2       %s\n",!stringIsEmpty(VERSION_SSH2      ) ? VERSION_SSH2       : "(not included)");
+    printf("  MXML       %s\n",!stringIsEmpty(VERSION_MXML      ) ? VERSION_MXML       : "(not included)");
     printf("  curl       %s\n",!stringIsEmpty(VERSION_CURL      ) ? VERSION_CURL       : "(not included)");
     printf("  smb2       %s\n",!stringIsEmpty(VERSION_SMB2      ) ? VERSION_SMB2       : "(not included)");
     printf("  cdio       %s\n",!stringIsEmpty(VERSION_CDIO      ) ? VERSION_CDIO       : "(not included)");

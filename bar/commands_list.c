@@ -3665,7 +3665,6 @@ NULL, // masterSocketHandle
       if (error == ERROR_NONE)
       {
         String fileName = String_new();
-        bool   foundAnyFile = FALSE;
         while (!Storage_endOfDirectoryList(&storageDirectoryListHandle))
         {
           // read next directory entry

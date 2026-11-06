@@ -225,12 +225,20 @@ void __FragmentList_initNode(const char                   *__fileName__,
   fragmentNode->freeDataUserData = freeDataUserData;
   List_init(&fragmentNode->rangeList,CALLBACK_(NULL,NULL),CALLBACK_(NULL,NULL));
   fragmentNode->rangeListSum = 0LL;
+
+  #ifdef NDEBUG
+    DEBUG_ADD_RESOURCE_TRACE(fragmentNode,FragmentNode);
+  #else /* not NDEBUG */
+    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,fragmentNode,FragmentNode);
+  #endif /* NDEBUG */
 }
 
 void FragmentList_doneNode(FragmentNode *fragmentNode)
 {
   assert(fragmentNode != NULL);
   FRAGMENTNODE_VALID(fragmentNode);
+
+  DEBUG_REMOVE_RESOURCE_TRACE(fragmentNode,FragmentNode);
 
   fragmentNodeDone(fragmentNode,NULL);
 }
@@ -295,7 +303,8 @@ FragmentNode *__FragmentList_add(const char                   *__fileName__,
                             freeDataUserData
                            );
     #else /* not NDEBUG */
-      __FragmentList_initNode(__fileName__,__lineNb__,fragmentNode,
+      __FragmentList_initNode(__fileName__,__lineNb__,
+                              fragmentNode,
                               name,
                               size,
                               data,
@@ -307,12 +316,6 @@ FragmentNode *__FragmentList_add(const char                   *__fileName__,
     #endif /* NDEBUG */
     List_append(fragmentList,fragmentNode);
   }
-
-  #ifdef NDEBUG
-    DEBUG_ADD_RESOURCE_TRACE(fragmentNode,FragmentNode);
-  #else /* not NDEBUG */
-    DEBUG_ADD_RESOURCE_TRACEX(__fileName__,__lineNb__,fragmentNode,FragmentNode);
-  #endif /* NDEBUG */
 
   return fragmentNode;
 }
@@ -569,21 +572,21 @@ void FragmentList_print(FILE               *outputHandle,
     {
       if ((lastOffset+1) < offset0)
       {
-        fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: missing\n",indent,"",lastOffset,offset0-1,offset0-1-lastOffset+1);
+        fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: missing\n",(int)indent,"",lastOffset,offset0-1,offset0-1-lastOffset+1);
       }
-      fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: OK\n",indent,"",offset0,offset1,offset1-offset0+1);
+      fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: OK\n",(int)indent,"",offset0,offset1,offset1-offset0+1);
       lastOffset = offset1;
     }
     else
     {
-      fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes\n",indent,"",offset0,offset1,offset1-offset0+1);
+      fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes\n",(int)indent,"",offset0,offset1,offset1-offset0+1);
     }
   }
   if ((lastOffset+1) < fragmentNode->size)
   {
     if (printMissingFlag)
     {
-      fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: missing\n",indent,"",lastOffset+1,fragmentNode->size-1,fragmentNode->size-1-lastOffset);
+      fprintf(outputHandle,"%*s%15"PRIu64"..%15"PRIu64" %15"PRIu64" bytes: missing\n",(int)indent,"",lastOffset+1,fragmentNode->size-1,fragmentNode->size-1-lastOffset);
     }
   }
 }

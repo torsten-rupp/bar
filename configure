@@ -20723,7 +20723,7 @@ printf "%s\n" "$ac_cv_search_static_ares_library_init" >&6; }
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none" || LIBS="$ac_result $LIBS" HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";
-printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
+printf "%s\n" "#define HAVE_CARES 1" >>confdefs.h
 
 fi
 
@@ -20943,7 +20943,7 @@ printf "%s\n" "$ac_cv_search_static_ares_library_init" >&6; }
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none" || LIBS="$ac_result $LIBS" HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";
-printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
+printf "%s\n" "#define HAVE_CARES 1" >>confdefs.h
 
 fi
 
@@ -21018,7 +21018,7 @@ printf "%s\n" "$ac_cv_search_libraries_ares_library_init" >&6; }
   if test "$ac_result" != no
 then :
   test "$ac_result" = "none" || LIBS="$ac_result $LIBS" HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";
-printf "%s\n" "#define HAVE_CURL 1" >>confdefs.h
+printf "%s\n" "#define HAVE_CARES 1" >>confdefs.h
 
 fi
 
@@ -25956,6 +25956,8 @@ printf "%s\n" "fail (configure)" >&6; }
     if test $result -eq 1; then
       (   cd xfsprogs \
        && make headers \
+       && make -j$CPU_CORES -C include install-headers \
+       && make -j$CPU_CORES -C libxfs install-headers \
        && make -j$CPU_CORES -C include \
        && make -j$CPU_CORES -C libfrog \
        && make -j$CPU_CORES -C libxfs \
@@ -25973,9 +25975,7 @@ printf "%s\n" "fail (make)" >&6; }
     fi
     if test $result -eq 1; then
       (   cd xfsprogs \
-       && make -j$CPU_CORES -C include install-headers \
        && make -j$CPU_CORES -C include install-dev \
-       && make -j$CPU_CORES -C libxfs install-headers \
        && make -j$CPU_CORES -C libfrog install-dev \
        && make -j$CPU_CORES -C libxfs install-dev \
       ) 1>$tmpFile 2>&1
@@ -39251,6 +39251,101 @@ printf "%s\n" "#define VERSION_SSH2 \"\"" >>confdefs.h
 
 fi
 
+if test "$HAVE_MXML"; then
+
+
+    if test -n "curl version"; then
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking curl version" >&5
+printf %s "checking curl version... " >&6; }
+if test ${ac_cv_constant_value_VERSION_MXML+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "mxml.h"
+
+int
+main (void)
+{
+__CONFTEST__ MXML_MAJOR_VERSION.MXML_MINOR_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_MXML=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_MXML=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_MXML=`echo $ac_cv_constant_value_VERSION_MXML|tr -d " \"
+                   "`
+        fi
+        VERSION_MXML=$ac_cv_constant_value_VERSION_MXML
+
+        rm -f conftest.c conftest
+
+
+fi
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_constant_value_VERSION_MXML" >&5
+printf "%s\n" "$ac_cv_constant_value_VERSION_MXML" >&6; }  else
+    if test ${ac_cv_constant_value_VERSION_MXML+y}
+then :
+  printf %s "(cached) " >&6
+else $as_nop
+
+        cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "mxml.h"
+
+int
+main (void)
+{
+__CONFTEST__ MXML_MAJOR_VERSION.MXML_MINOR_VERSION
+  ;
+  return 0;
+}
+_ACEOF
+        if { ac_try='$CPP $CPPFLAGS `if test -n ""; then echo -I; fi` -P -E conftest.c -o conftest'
+  { { eval echo "\"\$as_me\":${as_lineno-$LINENO}: \"$ac_try\""; } >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  printf "%s\n" "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then
+          ac_cv_constant_value_VERSION_MXML=`grep __CONFTEST__ conftest|sed 's/__CONFTEST__\s*//g'`
+        else
+          ac_cv_constant_value_VERSION_MXML=
+        fi
+        if test -n " \"
+                   "; then
+          ac_cv_constant_value_VERSION_MXML=`echo $ac_cv_constant_value_VERSION_MXML|tr -d " \"
+                   "`
+        fi
+        VERSION_MXML=$ac_cv_constant_value_VERSION_MXML
+
+        rm -f conftest.c conftest
+
+
+fi
+  fi
+
+
+printf "%s\n" "#define VERSION_MXML \"$VERSION_MXML\"" >>confdefs.h
+
+else
+
+printf "%s\n" "#define VERSION_MXML \"\"" >>confdefs.h
+
+fi
+
 if test "$HAVE_CURL"; then
 
 
@@ -41160,8 +41255,8 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    HAVE_XDELTA3=$HAVE_XDELTA3
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
-                   HAVE_CURL=$HAVE_CURL
                    HAVE_MXML=$HAVE_MXML
+                   HAVE_CURL=$HAVE_CURL
                    HAVE_SSL=$HAVE_SSL
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
@@ -41206,6 +41301,7 @@ VERSION_MAJOR="$VERSION_MAJOR"
                    VERSION_ZSTD="$VERSION_ZSTD"
                    VERSION_XDELTA3="$VERSION_XDELTA3"
                    VERSION_GCRYPT="$VERSION_GCRYPT"
+                   VERSION_MXML="$VERSION_MXML"
                    VERSION_CURL="$VERSION_CURL"
                    VERSION_OPENSSL="$VERSION_OPENSSL"
                    VERSION_SSH2="$VERSION_SSH2"
@@ -41814,7 +41910,8 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                     echo "  xdelta3 compression  : `if test "$HAVE_XDELTA3"; then echo "yes ($VERSION_XDELTA3)"; else echo no; fi`";
                     echo "  crypto support       : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support          : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
-                    echo "  curl support         : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
+                    echo "  MXML support         : `if test "$HAVE_MXML"; then echo "yes ($VERSION_MXML)"; else echo no; fi`";
+                    echo "  curl support         : `if test "$HAVE_CURL"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
                     echo "  SCP/SFTP support     : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_SSH2)"; else echo no; fi`";
                     echo "  TLS/SSL              : `if test "$HAVE_GNU_TLS"; then echo "yes (OpenSSL $VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support     : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
@@ -41855,8 +41952,8 @@ printf "%s\n" "$as_me: executing $ac_file commands" >&6;}
                             -o ! "$HAVE_GCRYPT" \
                             -o ! "$HAVE_FTP" \
                             -o ! "$HAVE_CARES" \
-                            -o ! "$HAVE_CURL" \
                             -o ! "$HAVE_MXML" \
+                            -o ! "$HAVE_CURL" \
                             -o ! "$HAVE_SSL" \
                             -o ! "$HAVE_SSH2" \
                             -o ! "$HAVE_GNU_TLS" \

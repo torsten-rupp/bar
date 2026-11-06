@@ -106,7 +106,7 @@
 /* crypto installed */
 #undef HAVE_CRYPTO
 
-/* c-ares installed */
+/* curl installed */
 #undef HAVE_CURL
 
 /* CURLINFO_CONTENT_LENGTH_DOWNLOAD_T available */
@@ -950,6 +950,9 @@
 
 /* mount version */
 #undef VERSION_MOUNT
+
+/* MXML version */
+#undef VERSION_MXML
 
 /* openssl version */
 #undef VERSION_OPENSSL

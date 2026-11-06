@@ -58,7 +58,7 @@ typedef struct FragmentNode
 {
   LIST_NODE_HEADER(struct FragmentNode);
 
-  size_t                       lockCount;          // done if lock count <= 1
+  uint                         lockCount;          // done if lock count <= 1
   String                       name;               // fragment name
   uint64                       size;               // size of fragment
   void                         *data;              // additional data or NULL

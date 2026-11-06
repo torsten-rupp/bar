@@ -1951,7 +1951,6 @@ NULL,  //               requestedAbortFlag,
     updateRunningInfo(&testInfo,FALSE);
   }
 
-  Errors      failError        = ERROR_NONE;
   bool        someStorageFound = FALSE;
   ConstString storageName;
   STRINGLIST_ITERATE(storageNameList,storageName)

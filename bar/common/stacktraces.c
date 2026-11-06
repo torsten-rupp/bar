@@ -23,6 +23,12 @@
   #include <execinfo.h>
 #endif
 #ifdef HAVE_BFD_H
+  #ifndef PACKAGE
+  #define PACKAGE
+  #endif
+  #ifndef PACKAGE_VERSION
+  #define PACKAGE_VERSION
+  #endif
   #include <bfd.h>
 #endif
 #if   defined(HAVE_DEMANGLE_H)

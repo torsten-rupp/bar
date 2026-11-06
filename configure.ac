@@ -3801,7 +3801,7 @@ if test $ENABLE_CURL = "yes"; then
       AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CARES,1,[c-ares installed])])
       if test -z "$HAVE_CARES"; then
         # Note: fallback static
-        AC_SEARCH_STATIC_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[static c-ares installed])])
+        AC_SEARCH_STATIC_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";AC_DEFINE(HAVE_CARES,1,[static c-ares installed])])
       fi
     else
       AC_SEARCH_STATIC_LIBRARIES(curl_global_init,curl,[HAVE_FTP=1;HAVE_CURL=1;STATIC_LIBRARIES="$STATIC_LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[static curl installed])])
@@ -3809,10 +3809,10 @@ if test $ENABLE_CURL = "yes"; then
         # Note: fallback dynamic
         AC_SEARCH_LIBRARIES(curl_global_init,curl,[HAVE_FTP=1;HAVE_CURL=1;LIBRARIES="$LIBRARIES curl";AC_DEFINE(HAVE_CURL,1,[curl installed])])
       fi
-      AC_SEARCH_STATIC_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[static c-ares installed])])
+      AC_SEARCH_STATIC_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;STATIC_LIBRARIES="$STATIC_LIBRARIES cares";AC_DEFINE(HAVE_CARES,1,[static c-ares installed])])
       if test -z "$HAVE_CARES"; then
         # Note: fallback dynamic
-        AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CURL,1,[c-ares installed])])
+        AC_SEARCH_LIBRARIES(ares_library_init,cares,[HAVE_CARES=1;LIBRARIES="$LIBRARIES cares";AC_DEFINE(HAVE_CARES,1,[c-ares installed])])
       fi
     fi
   fi
@@ -6243,6 +6243,20 @@ else
   AC_DEFINE_UNQUOTED(VERSION_SSH2,"",[libssh version])
 fi
 
+if test "$HAVE_MXML"; then
+  AC_CONSTANT_VALUE([curl version],
+                    VERSION_MXML,
+                    [#include "mxml.h"
+                    ],
+                    [MXML_MAJOR_VERSION.MXML_MINOR_VERSION],
+                    [],
+                    [ "]
+                   )
+  AC_DEFINE_UNQUOTED(VERSION_MXML,"$VERSION_MXML",[MXML version])
+else
+  AC_DEFINE_UNQUOTED(VERSION_MXML,"",[MXML version])
+fi
+
 if test "$HAVE_CURL"; then
   AC_CONSTANT_VALUE([curl version],
                     VERSION_CURL,
@@ -6499,7 +6513,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                     echo "  xdelta3 compression  : `if test "$HAVE_XDELTA3"; then echo "yes ($VERSION_XDELTA3)"; else echo no; fi`";
                     echo "  crypto support       : `if test "$HAVE_GCRYPT"; then echo "yes ($VERSION_GCRYPT)"; else echo no; fi`";
                     echo "  FTP support          : `if test "$HAVE_FTP"; then echo yes; else echo no; fi`";
-                    echo "  curl support         : `if test "$HAVE_CURL" -a "$HAVE_MXML"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
+                    echo "  MXML support         : `if test "$HAVE_MXML"; then echo "yes ($VERSION_MXML)"; else echo no; fi`";
+                    echo "  curl support         : `if test "$HAVE_CURL"; then echo "yes ($VERSION_CURL)"; else echo no; fi`";
                     echo "  SCP/SFTP support     : `if test "$HAVE_GCRYPT" -a "$HAVE_SSH2"; then echo "yes ($VERSION_SSH2)"; else echo no; fi`";
                     echo "  TLS/SSL              : `if test "$HAVE_GNU_TLS"; then echo "yes (OpenSSL $VERSION_OPENSSL, GMP $VERSION_GMP, GnuTLS $VERSION_GNUTLS)"; else echo no; fi`";
                     echo "  ISO 9660 support     : `if test "$HAVE_ISO9660"; then echo "yes ($VERSION_CDIO)"; else echo no; fi`";
@@ -6540,8 +6555,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                             -o ! "$HAVE_GCRYPT" \
                             -o ! "$HAVE_FTP" \
                             -o ! "$HAVE_CARES" \
-                            -o ! "$HAVE_CURL" \
                             -o ! "$HAVE_MXML" \
+                            -o ! "$HAVE_CURL" \
                             -o ! "$HAVE_SSL" \
                             -o ! "$HAVE_SSH2" \
                             -o ! "$HAVE_GNU_TLS" \
@@ -6579,8 +6594,8 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    HAVE_XDELTA3=$HAVE_XDELTA3
                    HAVE_GCRYPT=$HAVE_GCRYPT
                    HAVE_FTP=$HAVE_FTP
-                   HAVE_CURL=$HAVE_CURL
                    HAVE_MXML=$HAVE_MXML
+                   HAVE_CURL=$HAVE_CURL
                    HAVE_SSL=$HAVE_SSL
                    HAVE_SSH2=$HAVE_SSH2
                    HAVE_GNU_TLS=$HAVE_GNU_TLS
@@ -6625,6 +6640,7 @@ AC_CONFIG_COMMANDS(BUILD_NOTE,
                    VERSION_ZSTD="$VERSION_ZSTD"
                    VERSION_XDELTA3="$VERSION_XDELTA3"
                    VERSION_GCRYPT="$VERSION_GCRYPT"
+                   VERSION_MXML="$VERSION_MXML"
                    VERSION_CURL="$VERSION_CURL"
                    VERSION_OPENSSL="$VERSION_OPENSSL"
                    VERSION_SSH2="$VERSION_SSH2"

@@ -202,88 +202,101 @@ LOCAL Errors setWebDAVLogin(CURL           *curlHandle,
 UNUSED_VARIABLE(privateKeyData);
 UNUSED_VARIABLE(privateKeyLength);
 
-  // reset
-  curl_easy_reset(curlHandle);
+  #if   defined(HAVE_CURL)
+    // reset
+    curl_easy_reset(curlHandle);
 
-  CURLcode curlCode = CURLE_OK;
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_TIMEOUT_MS,timeout);
-  }
-  if (globalOptions.verboseLevel >= 6)
-  {
-    // enable debug mode
-    (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
-  }
-
-  /* Note: curl trigger from time to time a SIGALRM. The curl option
-           CURLOPT_NOSIGNAL should stop this. But it seems there is
-           a bug in curl which cause random crashes when
-           CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
-           Instead install a signal handler to catch the not wanted
-           signal.
-  (void)curl_easy_setopt(storageInfo->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
-  (void)curl_easy_setopt(storageInfo->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
-  */
-
-  // set login
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(userName));
-  }
-  if (curlCode == CURLE_OK)
-  {
-    PASSWORD_DEPLOY_DO(plainPassword,password)
+    CURLcode curlCode = CURLE_OK;
+    if (curlCode == CURLE_OK)
     {
-      curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainPassword);
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
     }
-  }
-  struct curl_blob curlBLOB;
-  if (curlCode == CURLE_OK)
-  {
-    curlBLOB.data  = (void*)publicKeyData;
-    curlBLOB.len   = publicKeyLength;
-    curlBLOB.flags = CURL_BLOB_COPY;
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CAINFO_BLOB,&curlBLOB);
-  }
-// TODO: option
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_SSL_VERIFYPEER,0L);
-  }
-// TODO: option
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_SSL_VERIFYHOST,0L);
-  }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_TIMEOUT_MS,timeout);
+    }
+    if (globalOptions.verboseLevel >= 6)
+    {
+      // enable debug mode
+      (void)curl_easy_setopt(curlHandle,CURLOPT_VERBOSE,1L);
+    }
 
-  // set nop-handlers
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_HEADERFUNCTION,curlNopDataCallback);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_HEADERDATA,NULL);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlNopDataCallback);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,NULL);
-  }
+    /* Note: curl trigger from time to time a SIGALRM. The curl option
+             CURLOPT_NOSIGNAL should stop this. But it seems there is
+             a bug in curl which cause random crashes when
+             CURLOPT_NOSIGNAL is enabled. Thus: do not use it!
+             Instead install a signal handler to catch the not wanted
+             signal.
+    (void)curl_easy_setopt(storageInfo->webdav.curlMultiHandle,CURLOPT_NOSIGNAL,1L);
+    (void)curl_easy_setopt(storageInfo->webdav.curlHandle,CURLOPT_NOSIGNAL,1L);
+    */
 
-  (void)curl_easy_setopt(curlHandle, CURLOPT_USERAGENT, "BAR/" VERSION_STRING);
+    // set login
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_USERNAME,String_cString(userName));
+    }
+    if (curlCode == CURLE_OK)
+    {
+      PASSWORD_DEPLOY_DO(plainPassword,password)
+      {
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_PASSWORD,plainPassword);
+      }
+    }
+    struct curl_blob curlBLOB;
+    if (curlCode == CURLE_OK)
+    {
+      curlBLOB.data  = (void*)publicKeyData;
+      curlBLOB.len   = publicKeyLength;
+      curlBLOB.flags = CURL_BLOB_COPY;
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_CAINFO_BLOB,&curlBLOB);
+    }
+  // TODO: option
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_SSL_VERIFYPEER,0L);
+    }
+  // TODO: option
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_SSL_VERIFYHOST,0L);
+    }
 
-  return (curlCode == CURLE_OK)
-    ? ERROR_NONE
-    : ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
+    // set nop-handlers
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_HEADERFUNCTION,curlNopDataCallback);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_HEADERDATA,NULL);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlNopDataCallback);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,NULL);
+    }
+
+    (void)curl_easy_setopt(curlHandle, CURLOPT_USERAGENT, "BAR/" VERSION_STRING);
+
+    return (curlCode == CURLE_OK)
+      ? ERROR_NONE
+      : ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
+  #else
+    UNUSED_VARIABLE(curlHandle);
+    UNUSED_VARIABLE(userName);
+    UNUSED_VARIABLE(password);
+    UNUSED_VARIABLE(publicKeyData);
+    UNUSED_VARIABLE(publicKeyLength);
+    UNUSED_VARIABLE(privateKeyData);
+    UNUSED_VARIABLE(privateKeyLength);
+    UNUSED_VARIABLE(timeout);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif
 }
 
 /***********************************************************************\
@@ -368,93 +381,108 @@ LOCAL Errors checkWebDAVLogin(StorageTypes type,
         );
   assert(hostName != NULL);
 
-  // init handle
-  CURL *curlHandle = curl_easy_init();
-  if (curlHandle == NULL)
-  {
-    return ERROR_WEBDAV_SESSION_FAIL;
-  }
-
-  Errors            error;
-  StringTokenizer   stringTokenizer;
-  File_initSplitFileName(&stringTokenizer,fileName);
-  bool              doneFlag  = FALSE;
-  struct curl_slist *curlSList = curl_slist_append(NULL,"Depth: 1");
-  String            pathName  = String_new();
-  do
-  {
-    // get URL
-    String url = getWebDAVURL(type,hostName,hostPort,pathName);
-
-    // init WebDAV login
-    error = setWebDAVLogin(curlHandle,
-                           userName,
-                           password,
-                           publicKeyData,
-                           publicKeyLength,
-                           privateKeyData,
-                           privateKeyLength,
-                           WEBDAV_TIMEOUT
-                          );
-
-    // check access via URL
-    if (error == ERROR_NONE)
+  #if   defined(HAVE_CURL)
+    // init handle
+    CURL *curlHandle = curl_easy_init();
+    if (curlHandle == NULL)
     {
-      CURLcode curlCode = CURLE_OK;
+      return ERROR_WEBDAV_SESSION_FAIL;
+    }
 
-      if (curlCode == CURLE_OK)
+    Errors            error;
+    StringTokenizer   stringTokenizer;
+    File_initSplitFileName(&stringTokenizer,fileName);
+    bool              doneFlag  = FALSE;
+    struct curl_slist *curlSList = curl_slist_append(NULL,"Depth: 1");
+    String            pathName  = String_new();
+    do
+    {
+      // get URL
+      String url = getWebDAVURL(type,hostName,hostPort,pathName);
+
+      // init WebDAV login
+      error = setWebDAVLogin(curlHandle,
+                             userName,
+                             password,
+                             publicKeyData,
+                             publicKeyLength,
+                             privateKeyData,
+                             privateKeyLength,
+                             WEBDAV_TIMEOUT
+                            );
+
+      // check access via URL
+      if (error == ERROR_NONE)
       {
-        curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-      }
-      if (curlCode == CURLE_OK)
-      {
-        curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
-      }
-      if (curlCode == CURLE_OK)
-      {
-        curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
-      }
-      if (curlCode == CURLE_OK)
-      {
-        curlCode = curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,curlSList);
-      }
-      if (curlCode == CURLE_OK)
-      {
-        curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-      }
-      if (curlCode == CURLE_OK)
-      {
-        curlCode = curl_easy_perform(curlHandle);
-      }
-      curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,NULL);
-      if (curlCode != CURLE_OK)
-      {
-        switch (curlCode)
+        CURLcode curlCode = CURLE_OK;
+
+        if (curlCode == CURLE_OK)
         {
-          case CURLE_COULDNT_CONNECT: error = ERRORX_(CONNECT_FAIL,0,"%s",curl_easy_strerror(curlCode)); break;
-          default:                    error = ERRORX_(WEBDAV_AUTHENTICATION,0,"%s",curl_easy_strerror(curlCode)); break;
+          curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+        }
+        if (curlCode == CURLE_OK)
+        {
+          curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+        }
+        if (curlCode == CURLE_OK)
+        {
+          curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
+        }
+        if (curlCode == CURLE_OK)
+        {
+          curlCode = curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,curlSList);
+        }
+        if (curlCode == CURLE_OK)
+        {
+          curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+        }
+        if (curlCode == CURLE_OK)
+        {
+          curlCode = curl_easy_perform(curlHandle);
+        }
+        curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,NULL);
+        if (curlCode != CURLE_OK)
+        {
+          switch (curlCode)
+          {
+            case CURLE_COULDNT_CONNECT: error = ERRORX_(CONNECT_FAIL,0,"%s",curl_easy_strerror(curlCode)); break;
+            default:                    error = ERRORX_(WEBDAV_AUTHENTICATION,0,"%s",curl_easy_strerror(curlCode)); break;
+          }
         }
       }
-    }
 
-    String_delete(url);
+      String_delete(url);
 
-    // next directory
-    ConstString token;
-    if (File_getNextSplitFileName(&stringTokenizer,&token))
-    {
-      File_appendFileName(pathName,token);
+      // next directory
+      ConstString token;
+      if (File_getNextSplitFileName(&stringTokenizer,&token))
+      {
+        File_appendFileName(pathName,token);
+      }
+      else
+      {
+        doneFlag = TRUE;
+      }
     }
-    else
-    {
-      doneFlag = TRUE;
-    }
-  }
-  while ((error != ERROR_NONE) && !doneFlag);
-  String_delete(pathName);
-  curl_slist_free_all(curlSList);
-  File_doneSplitFileName(&stringTokenizer);
-  (void)curl_easy_cleanup(curlHandle);
+    while ((error != ERROR_NONE) && !doneFlag);
+    String_delete(pathName);
+    curl_slist_free_all(curlSList);
+    File_doneSplitFileName(&stringTokenizer);
+    (void)curl_easy_cleanup(curlHandle);
+  #else
+    UNUSED_VARIABLE(curlHandle);
+    UNUSED_VARIABLE(hostName);
+    UNUSED_VARIABLE(hostPort);
+    UNUSED_VARIABLE(userName);
+    UNUSED_VARIABLE(password);
+    UNUSED_VARIABLE(publicKeyData);
+    UNUSED_VARIABLE(publicKeyLength);
+    UNUSED_VARIABLE(privateKeyData);
+    UNUSED_VARIABLE(privateKeyLength);
+    UNUSED_VARIABLE(fileName);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif
 
   return error;
 }
@@ -786,12 +814,12 @@ static void walk_tree(mxml_node_t *node, int depth)
 * Notes  : -
 \***********************************************************************/
 
-mxml_node_t *firstXMLNode(const mxml_node_t *xmlTree, const mxml_node_t *node, const char *nodeName)
+LOCAL mxml_node_t *firstXMLNode(mxml_node_t *xmlTree, mxml_node_t *node, const char *nodeName)
 {
   assert(xmlTree != NULL);
   assert(nodeName != NULL);
 
-  const mxml_node_t *foundNode = NULL;
+  mxml_node_t *foundNode = NULL;
 //walk_tree(xmlTree,0);
 //walk_tree((node == NULL) ? mxmlGetFirstChild(xmlTree) : node,0);
 
@@ -849,16 +877,15 @@ mxml_node_t *firstXMLNode(const mxml_node_t *xmlTree, const mxml_node_t *node, c
 * Notes  : -
 \***********************************************************************/
 
-mxml_node_t *nextXMLNode(const mxml_node_t *xmlTree, const mxml_node_t *node, const char *nodeName)
+LOCAL mxml_node_t *nextXMLNode(mxml_node_t *xmlTree, mxml_node_t *node, const char *nodeName)
 {
   assert(xmlTree != NULL);
   assert(nodeName != NULL);
 
-  const mxml_node_t *foundNode = NULL;
+  mxml_node_t *foundNode = NULL;
 //walk_tree(xmlTree,0);
 //walk_tree((node == NULL) ? mxmlGetFirstChild(xmlTree) : node,0);
 
-//fprintf(stderr,"%s:%d: --- next node %s\n",__FILE__,__LINE__,nodeName);
   if (node != NULL)
   {
     do
@@ -912,7 +939,7 @@ mxml_node_t *nextXMLNode(const mxml_node_t *xmlTree, const mxml_node_t *node, co
 * Notes  : -
 \***********************************************************************/
 
-String getXMLNodeText(String text, const mxml_node_t *xmlTree, const mxml_node_t *node, const char *nodeName)
+LOCAL String getXMLNodeText(String text, mxml_node_t *xmlTree, mxml_node_t *node, const char *nodeName)
 {
   assert(text != NULL);
   assert(xmlTree != NULL);
@@ -960,7 +987,7 @@ String getXMLNodeText(String text, const mxml_node_t *xmlTree, const mxml_node_t
 * Notes  : -
 \***********************************************************************/
 
-String getXMLPropertyText(String text, const mxml_node_t *xmlTree, const mxml_node_t *node, const char *propertyName)
+LOCAL String getXMLPropertyText(String text, mxml_node_t *xmlTree, mxml_node_t *node, const char *propertyName)
 {
   assert(text != NULL);
   assert(xmlTree != NULL);
@@ -1050,7 +1077,7 @@ String getXMLPropertyText(String text, const mxml_node_t *xmlTree, const mxml_no
 * Notes  : -
 \***********************************************************************/
 
-int64 getXMLPropertyInt64(const mxml_node_t *xmlTree, const mxml_node_t *node, const char *propertyName)
+LOCAL int64 getXMLPropertyInt64(mxml_node_t *xmlTree, mxml_node_t *node, const char *propertyName)
 {
   assert(xmlTree != NULL);
   assert(node != NULL);
@@ -1100,13 +1127,15 @@ int64 getXMLPropertyInt64(const mxml_node_t *xmlTree, const mxml_node_t *node, c
                   value = (int64)mxmlGetInteger(mxmlGetFirstChild(foundNode));
                   break;
                 case MXML_TYPE_REAL:
-                  value = (int64)mxmlGetReal(mxmlGetFirstChild(foundNode));
+                  value = (int64)floor(mxmlGetReal(mxmlGetFirstChild(foundNode)));
                   break;
                 case MXML_TYPE_TEXT:
                   stringToInt64(mxmlGetText(mxmlGetFirstChild(foundNode),NULL),&value,NULL);
                   break;
                 case MXML_TYPE_OPAQUE:
                   stringToInt64(mxmlGetOpaque(mxmlGetFirstChild(foundNode)),&value,NULL);
+                  break;
+                default:
                   break;
               }
             }
@@ -1133,7 +1162,7 @@ int64 getXMLPropertyInt64(const mxml_node_t *xmlTree, const mxml_node_t *node, c
 * Notes  : -
 \***********************************************************************/
 
-LOCAL bool parseXMLFileInfo(FileInfo *fileInfo, const mxml_node_t *xmlTree, const mxml_node_t *responseNode, ConstString fileName)
+LOCAL bool parseXMLFileInfo(FileInfo *fileInfo, mxml_node_t *xmlTree, mxml_node_t *responseNode, ConstString fileName)
 {
   assert(fileInfo != NULL);
   assert(xmlTree != NULL);
@@ -1226,75 +1255,84 @@ LOCAL Errors getFileInfo(FileInfo *fileInfo, CURL *curlHandle, ConstString url, 
 
   Errors error = ERROR_FILE_NOT_FOUND_;
 
-  CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
-  }
-  struct curl_slist *curlSList = curl_slist_append(NULL,"Depth: 1");
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,curlSList);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlWebDAVReadDirectoryDataCallback);
-  }
-  String directoryData = String_new();
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,directoryData);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_perform(curlHandle);
-  }
-  curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,NULL);
-
-  long responseCode;
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    if (responseCode == HTTP_CODE_MULTI_STATUS)
+  #if   defined(HAVE_CURL)
+    CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+    if (curlCode == CURLE_OK)
     {
-      mxml_node_t *xmlTree = newXMLTree(String_cString(directoryData));
-      if (xmlTree != NULL)
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"PROPFIND");
+    }
+    struct curl_slist *curlSList = curl_slist_append(NULL,"Depth: 1");
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,curlSList);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlWebDAVReadDirectoryDataCallback);
+    }
+    String directoryData = String_new();
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,directoryData);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_perform(curlHandle);
+    }
+    curl_easy_setopt(curlHandle,CURLOPT_HTTPHEADER,NULL);
+
+    long responseCode;
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_getinfo(curlHandle,CURLINFO_RESPONSE_CODE,&responseCode);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      if (responseCode == HTTP_CODE_MULTI_STATUS)
       {
-        String string = String_new();
-        mxml_node_t *responseNode = firstXMLNode(xmlTree,NULL,"response");
-        while (responseNode != NULL)
+        mxml_node_t *xmlTree = newXMLTree(String_cString(directoryData));
+        if (xmlTree != NULL)
         {
-          if (parseXMLFileInfo(fileInfo,xmlTree,responseNode,fileName))
+          String string = String_new();
+          mxml_node_t *responseNode = firstXMLNode(xmlTree,NULL,"response");
+          while (responseNode != NULL)
           {
-            error = ERROR_NONE;
-            break;
+            if (parseXMLFileInfo(fileInfo,xmlTree,responseNode,fileName))
+            {
+              error = ERROR_NONE;
+              break;
+            }
+            responseNode = nextXMLNode(xmlTree, responseNode, "response");
           }
-          responseNode = nextXMLNode(xmlTree, responseNode, "response");
+          String_delete(string);
+          deleteXMLTree(xmlTree);
         }
-        String_delete(string);
-        deleteXMLTree(xmlTree);
+      }
+      else
+      {
+        error = ERRORX_(WEBDAV,responseCode,"http error %u",responseCode);
       }
     }
     else
     {
-      error = ERRORX_(WEBDAV,responseCode,"http error %u",responseCode);
+      error = ERRORX_(WEBDAV,curlCode,"%s",curl_easy_strerror(curlCode));
     }
-  }
-  else
-  {
-    error = ERRORX_(WEBDAV,curlCode,"%s",curl_easy_strerror(curlCode));
-  }
 
-  // free resources
-  String_delete(directoryData);
-  curl_slist_free_all(curlSList);
+    // free resources
+    String_delete(directoryData);
+    curl_slist_free_all(curlSList);
+  #else
+    UNUSED_VARIABLE(fileInfo);
+    UNUSED_VARIABLE(curlHandle);
+    UNUSED_VARIABLE(url);
+    UNUSED_VARIABLE(fileName);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif
 
   return error;
 }
@@ -1314,31 +1352,38 @@ LOCAL Errors makeDirectory(CURL *curlHandle, ConstString url)
   assert(curlHandle != NULL);
   assert(url != NULL);
 
-  CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"MKCOL");
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_perform(curlHandle);
-  }
+  #if   defined(HAVE_CURL)
+    CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_FAILONERROR,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"MKCOL");
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_perform(curlHandle);
+    }
 
-  return (curlCode == CURLE_OK)
-    ? ERROR_NONE
-    : getCurlHTTPResponseError(curlHandle,url);
+    return (curlCode == CURLE_OK)
+      ? ERROR_NONE
+      : getCurlHTTPResponseError(curlHandle,url);
+  #else
+    UNUSED_VARIABLE(curlHandle);
+    UNUSED_VARIABLE(url);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif
 }
 
 /***********************************************************************\
@@ -1356,27 +1401,34 @@ LOCAL Errors deleteFileDirectory(CURL *curlHandle, ConstString url)
   assert(curlHandle != NULL);
   assert(url != NULL);
 
-  CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_perform(curlHandle);
-  }
+  #if   defined(HAVE_CURL)
+    CURLcode curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_NOBODY,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(curlHandle,CURLOPT_CUSTOMREQUEST,"DELETE");
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_perform(curlHandle);
+    }
 
-  return (curlCode == CURLE_OK)
-    ? ERROR_NONE
-    : getCurlHTTPResponseError(curlHandle,url);
+    return (curlCode == CURLE_OK)
+      ? ERROR_NONE
+      : getCurlHTTPResponseError(curlHandle,url);
+  #else
+    UNUSED_VARIABLE(curlHandle);
+    UNUSED_VARIABLE(url);
+
+    return ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif
 }
 
 /***********************************************************************\
@@ -1399,65 +1451,72 @@ LOCAL Errors initDownload(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo != NULL);
   assert(url != NULL);
 
-  CURLcode curlCode = CURLE_OK;
+  #if   defined(HAVE_CURL)
+    CURLcode curlCode = CURLE_OK;
 
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FOLLOWLOCATION,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle, CURLOPT_FOLLOWLOCATION, 1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"GET");
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_WRITEFUNCTION,curlWebDAVWriteDataCallback);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_WRITEDATA,storageHandle);
-  }
-  if (curlCode != CURLE_OK)
-  {
-    return getCurlHTTPResponseError(storageHandle->webdav.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
-  }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle, CURLOPT_FOLLOWLOCATION, 1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"GET");
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_WRITEFUNCTION,curlWebDAVWriteDataCallback);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_WRITEDATA,storageHandle);
+    }
+    if (curlCode != CURLE_OK)
+    {
+      return getCurlHTTPResponseError(storageHandle->webdav.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
+    }
 
-  // add handle
-  CURLMcode curlmCode = curl_multi_add_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
-  if (curlmCode != CURLM_OK)
-  {
-    return ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
-  }
+    // add handle
+    CURLMcode curlmCode = curl_multi_add_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
+    if (curlmCode != CURLM_OK)
+    {
+      return ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
+    }
 
-  // start WebDAV download
-  int runningHandles = 0;
-  do
-  {
-    curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
-  }
-  while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-         && (runningHandles > 0)
-        );
-  if (curlmCode != CURLM_OK)
-  {
-    error = ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlmCode));
-  }
-  else
-  {
-    error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
-  }
+    // start WebDAV download
+    int runningHandles = 0;
+    do
+    {
+      curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
+    }
+    while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+           && (runningHandles > 0)
+          );
+    if (curlmCode != CURLM_OK)
+    {
+      error = ERRORX_(WEBDAV_SESSION_FAIL,0,"%s",curl_multi_strerror(curlmCode));
+    }
+    else
+    {
+      error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
+    }
+  #else
+    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(url);
+
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif
 
   return error;
 }
@@ -1484,72 +1543,80 @@ LOCAL Errors initUpload(StorageHandle *storageHandle,
   assert(storageHandle->storageInfo != NULL);
   assert(url != NULL);
 
-  CURLcode curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FOLLOWLOCATION,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FAILONERROR,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"PUT");
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_UPLOAD,1L);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)fileSize);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_READFUNCTION,curlWebDAVReadDataCallback);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_READDATA,storageHandle);
-  }
-  if (curlCode == CURLE_OK)
-  {
-    curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)storageHandle->webdav.size);
-  }
-  if (curlCode != CURLE_OK)
-  {
-    return getCurlHTTPResponseError(storageHandle->webdav.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
-  }
+  #if   defined(HAVE_CURL)
+    CURLcode curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_URL,String_cString(url));
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FOLLOWLOCATION,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_FAILONERROR,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_NOBODY,0L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_CUSTOMREQUEST,"PUT");
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_UPLOAD,1L);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)fileSize);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_READFUNCTION,curlWebDAVReadDataCallback);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_READDATA,storageHandle);
+    }
+    if (curlCode == CURLE_OK)
+    {
+      curlCode = curl_easy_setopt(storageHandle->webdav.curlHandle,CURLOPT_INFILESIZE_LARGE,(curl_off_t)storageHandle->webdav.size);
+    }
+    if (curlCode != CURLE_OK)
+    {
+      return getCurlHTTPResponseError(storageHandle->webdav.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
+    }
 
-  // add handle
-  CURLMcode curlmCode = curl_multi_add_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
-  if (curlmCode != CURLM_OK)
-  {
-    return ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
-  }
+    // add handle
+    CURLMcode curlmCode = curl_multi_add_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
+    if (curlmCode != CURLM_OK)
+    {
+      return ERRORX_(NETWORK_RECEIVE,0,"%s",curl_multi_strerror(curlmCode));
+    }
 
-  // start WebDAV upload
-  int runningHandles = 0;
-  do
-  {
-    curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
-  }
-  while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
-         && (runningHandles > 0)
-        );
-  if (curlmCode == CURLM_OK)
-  {
-    error = ERROR_NONE;
-  }
-  else
-  {
-    error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
-  }
+    // start WebDAV upload
+    int runningHandles = 0;
+    do
+    {
+      curlmCode = curl_multi_perform(storageHandle->webdav.curlMultiHandle,&runningHandles);
+    }
+    while (   (curlmCode == CURLM_CALL_MULTI_PERFORM)
+           && (runningHandles > 0)
+          );
+    if (curlmCode == CURLM_OK)
+    {
+      error = ERROR_NONE;
+    }
+    else
+    {
+      error = getCurlHTTPResponseError(storageHandle->webdav.curlHandle,storageHandle->storageInfo->storageSpecifier.archiveName);
+    }
+  #else
+    UNUSED_VARIABLE(storageHandle);
+    UNUSED_VARIABLE(url);
+    UNUSED_VARIABLE(fileSize);
+
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif
 
   return error;
 }
@@ -1569,7 +1636,11 @@ LOCAL void doneDownloadUpload(StorageHandle *storageHandle)
   assert(storageHandle->webdav.curlHandle != NULL);
   assert(storageHandle->webdav.curlMultiHandle != NULL);
 
-  (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
+  #if   defined(HAVE_CURL)
+    (void)curl_multi_remove_handle(storageHandle->webdav.curlMultiHandle,storageHandle->webdav.curlHandle);
+  #else
+    UNUSED_VARIABLE(storageHandle);
+  #endif
 }
 #endif /* HAVE_CURL */
 
@@ -2771,8 +2842,8 @@ LOCAL bool StorageWebDAV_eof(StorageHandle *storageHandle)
         );
 
   #ifdef HAVE_CURL
-    return    (   (storageHandle->webdav.index >= storageHandle->webdav.size)
-              );
+    return    (storageHandle->webdav.size < 0)
+           || (storageHandle->webdav.index >= (uint64)storageHandle->webdav.size);
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageHandle);
     return TRUE;
@@ -3165,7 +3236,9 @@ LOCAL Errors StorageWebDAV_seek(StorageHandle *storageHandle,
       // seek inside receive buffer (backward/forward)
       storageHandle->webdav.index = offset;
     }
-    else if (offset < storageHandle->webdav.size)
+    else if (   (storageHandle->webdav.size >= 0)
+             && (offset < (uint64)storageHandle->webdav.size)
+            )
     {
       // seek
 

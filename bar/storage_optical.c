@@ -79,9 +79,13 @@
 typedef struct
 {
   int                fileHandle;
-  IsoImage           *isoImage;
-  IsoWriteOpts       *isoWriteOpts;
-  struct burn_source *burnSource;
+  #ifdef HAVE_ISO9660
+    IsoImage           *isoImage;
+    IsoWriteOpts       *isoWriteOpts;
+  #endif
+  #ifdef HAVE_BURN
+    struct burn_source *burnSource;
+  #endif
 } ISOSourceHandle;
 
 // execute I/O info
@@ -154,16 +158,18 @@ LOCAL void setMessageSeveritity(long verboseLevel)
 
 LOCAL void libisofsPollMessages(void)
 {
-  int  errorCode;
-  int  imageId;
-  char messageText[ISO_MSGS_MESSAGE_LEN];
-  char severity[80];
-  while (iso_obtain_msgs("ALL",&errorCode,&imageId,messageText,severity) == 1)
-  {
-    UNUSED_VARIABLE(imageId);
-    UNUSED_VARIABLE(severity);
-    printInfo(0, "DEBUG libisofs: %s (error %d)\n", messageText, errorCode);
-  }
+  #ifdef HAVE_ISO9660
+    int  errorCode;
+    int  imageId;
+    char messageText[ISO_MSGS_MESSAGE_LEN];
+    char severity[80];
+    while (iso_obtain_msgs("ALL",&errorCode,&imageId,messageText,severity) == 1)
+    {
+      UNUSED_VARIABLE(imageId);
+      UNUSED_VARIABLE(severity);
+      printInfo(0, "DEBUG libisofs: %s (error %d)\n", messageText, errorCode);
+    }
+  #endif
 }
 
 /***********************************************************************\
@@ -177,16 +183,18 @@ LOCAL void libisofsPollMessages(void)
 
 LOCAL void libburnPollMessages(void)
 {
-  int  errorCode;
-  char messageText[BURN_MSGS_MESSAGE_LEN];
-  int  osError;
-  char severity[80];
-  while (burn_msgs_obtain("ALL",&errorCode,messageText,&osError,severity) == 1)
-  {
-    UNUSED_VARIABLE(osError);
-    UNUSED_VARIABLE(severity);
-    printInfo(0, "DEBUG liburn: %s (error %d)\n", messageText, errorCode);
-  }
+  #ifdef HAVE_ISO9660
+    int  errorCode;
+    char messageText[BURN_MSGS_MESSAGE_LEN];
+    int  osError;
+    char severity[80];
+    while (burn_msgs_obtain("ALL",&errorCode,messageText,&osError,severity) == 1)
+    {
+      UNUSED_VARIABLE(osError);
+      UNUSED_VARIABLE(severity);
+      printInfo(0, "DEBUG liburn: %s (error %d)\n", messageText, errorCode);
+    }
+  #endif
 }
 
 /***********************************************************************\
@@ -273,14 +281,14 @@ LOCAL const char *getOpticalDeviceName(const StorageSpecifier *storageSpecifier)
 * Notes  : -
 \***********************************************************************/
 
-#ifdef HAVE_ISOFS
+#ifdef HAVE_ISO9660
 LOCAL void libcdioLogCallback(cdio_log_level_t level, const char *message)
 {
   UNUSED_VARIABLE(level);
 
   printInfo(5,"libcdio: %s\n",message);
 }
-#endif /* HAVE_ISOFS */
+#endif /* HAVE_ISO9660 */
 
 /***********************************************************************\
 * Name   : executeIOOpticalMkIsofsOutput
@@ -642,13 +650,17 @@ LOCAL void executeIOOpticalGrowIsofsStderr(ConstString line,
 
 LOCAL Errors StorageOptical_initAll(void)
 {
-  #ifdef HAVE_ISOFS
+  #ifdef HAVE_ISO9660
     (void)cdio_log_set_handler(libcdioLogCallback);
+  #endif
 
+  #ifdef HAVE_ISOFS
     int result = iso_init();
     if (result != ISO_SUCCESS)
     {
-      (void)cdio_log_set_handler(NULL);
+      #ifdef HAVE_ISO9660
+        (void)cdio_log_set_handler(NULL);
+      #endif
       return ERRORX_(INIT,result,"%s",iso_error_to_msg(result));
     }
   #endif // HAVE_ISOFS
@@ -658,8 +670,10 @@ LOCAL Errors StorageOptical_initAll(void)
     {
       #ifdef HAVE_ISOFS
         iso_finish();
-      #endif // HAVE_ISOFS
-      (void)cdio_log_set_handler(NULL);
+      #endif
+      #ifdef HAVE_ISO9660
+        (void)cdio_log_set_handler(NULL);
+      #endif
       return ERROR_INIT;
     }
   #endif // HAVE_BURN
@@ -1646,16 +1660,16 @@ LOCAL bool isFormatted(const StorageInfo *storageInfo)
 
   bool result = FALSE;
 
-  const char *deviceName = getOpticalDeviceName(&storageInfo->storageSpecifier);
-  #ifndef NDEBUG
-    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-    if (debugEmulateBlockDevice != NULL)
-    {
-      deviceName = debugEmulateBlockDevice;
-    }
-  #endif
-
   #ifdef HAVE_BURN
+    const char *deviceName = getOpticalDeviceName(&storageInfo->storageSpecifier);
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        deviceName = debugEmulateBlockDevice;
+      }
+    #endif
+
     // aquire drive
     #ifndef NDEBUG
     if (debugEmulateBlockDevice == NULL)
@@ -1712,16 +1726,16 @@ LOCAL Errors getWritebaleDiscSectors(uint64 *writableDiscSectors, const StorageI
 
   Errors error = ERROR_NONE;
 
-  const char *deviceName = getOpticalDeviceName(&storageInfo->storageSpecifier);
-  #ifndef NDEBUG
-    const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
-    if (debugEmulateBlockDevice != NULL)
-    {
-      deviceName = debugEmulateBlockDevice;
-    }
-  #endif
-
   #ifdef HAVE_BURN
+  const char *deviceName = getOpticalDeviceName(&storageInfo->storageSpecifier);
+    #ifndef NDEBUG
+      const char *debugEmulateBlockDevice = debugGetEmulateBlockDevice();
+      if (debugEmulateBlockDevice != NULL)
+      {
+        deviceName = debugEmulateBlockDevice;
+      }
+    #endif
+
     // aquire drive
     #ifndef NDEBUG
     if (debugEmulateBlockDevice == NULL)
@@ -1751,6 +1765,9 @@ LOCAL Errors getWritebaleDiscSectors(uint64 *writableDiscSectors, const StorageI
     }
     #endif
   #else
+    UNUSED_VARIABLE(writableDiscSectors);
+    UNUSED_VARIABLE(storageInfo);
+
     error = ERROR_FUNCTION_NOT_SUPPORTED;
   #endif
 
@@ -2142,67 +2159,74 @@ LOCAL Errors createISOSourceFromDirectory(ISOSourceHandle *isoSourceHandle, Cons
 
   Errors error = ERROR_NONE;
 
-  isoSourceHandle->fileHandle = -1;
+  #ifdef HAVE_ISO9660
+    isoSourceHandle->fileHandle = -1;
 
-  int result;
+    int result;
 
-  // create new ISO image
-  result = iso_image_new("Backup", &isoSourceHandle->isoImage);
-  if (result == ISO_SUCCESS)
-  {
-    assert(isoSourceHandle->isoImage != NULL);
-
-    // read ISO image content from dirctory
-    iso_tree_set_follow_symlinks(isoSourceHandle->isoImage,1);
-    iso_tree_set_ignore_hidden(isoSourceHandle->isoImage,1);
-    iso_tree_set_ignore_special(isoSourceHandle->isoImage,1);
-    result = iso_tree_add_dir_rec(isoSourceHandle->isoImage,
-                                  iso_image_get_root(isoSourceHandle->isoImage),
-                                  String_cString(directory)
-                                 );
+    // create new ISO image
+    result = iso_image_new("Backup", &isoSourceHandle->isoImage);
     if (result == ISO_SUCCESS)
     {
-      // set ISO options
-      result = iso_write_opts_new(&isoSourceHandle->isoWriteOpts, 0);
+      assert(isoSourceHandle->isoImage != NULL);
+
+      // read ISO image content from dirctory
+      iso_tree_set_follow_symlinks(isoSourceHandle->isoImage,1);
+      iso_tree_set_ignore_hidden(isoSourceHandle->isoImage,1);
+      iso_tree_set_ignore_special(isoSourceHandle->isoImage,1);
+      result = iso_tree_add_dir_rec(isoSourceHandle->isoImage,
+                                    iso_image_get_root(isoSourceHandle->isoImage),
+                                    String_cString(directory)
+                                   );
       if (result == ISO_SUCCESS)
       {
-        assert(isoSourceHandle->isoWriteOpts != NULL);
-        iso_write_opts_set_iso_level(isoSourceHandle->isoWriteOpts,2);
-        iso_write_opts_set_rockridge(isoSourceHandle->isoWriteOpts,1);
-        iso_write_opts_set_joliet(isoSourceHandle->isoWriteOpts,0);
-        iso_write_opts_set_iso1999(isoSourceHandle->isoWriteOpts,0);
-
-        // create burn source from ISO image
-        result = iso_image_create_burn_source(isoSourceHandle->isoImage,
-                                              isoSourceHandle->isoWriteOpts,
-                                              &isoSourceHandle->burnSource
-                                             );
+        // set ISO options
+        result = iso_write_opts_new(&isoSourceHandle->isoWriteOpts, 0);
         if (result == ISO_SUCCESS)
         {
-          assert(isoSourceHandle->burnSource != NULL);
-          assert(isoSourceHandle->burnSource->read == NULL);
-          assert(isoSourceHandle->burnSource->version >= 1);
+          assert(isoSourceHandle->isoWriteOpts != NULL);
+          iso_write_opts_set_iso_level(isoSourceHandle->isoWriteOpts,2);
+          iso_write_opts_set_rockridge(isoSourceHandle->isoWriteOpts,1);
+          iso_write_opts_set_joliet(isoSourceHandle->isoWriteOpts,0);
+          iso_write_opts_set_iso1999(isoSourceHandle->isoWriteOpts,0);
+
+          // create burn source from ISO image
+          result = iso_image_create_burn_source(isoSourceHandle->isoImage,
+                                                isoSourceHandle->isoWriteOpts,
+                                                &isoSourceHandle->burnSource
+                                               );
+          if (result == ISO_SUCCESS)
+          {
+            assert(isoSourceHandle->burnSource != NULL);
+            assert(isoSourceHandle->burnSource->read == NULL);
+            assert(isoSourceHandle->burnSource->version >= 1);
+          }
+          else
+          {
+            iso_write_opts_free(isoSourceHandle->isoWriteOpts);
+          }
         }
         else
         {
-          iso_write_opts_free(isoSourceHandle->isoWriteOpts);
+          error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
         }
       }
       else
       {
+        iso_image_unref(isoSourceHandle->isoImage);
         error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
       }
     }
     else
     {
-      iso_image_unref(isoSourceHandle->isoImage);
       error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
     }
-  }
-  else
-  {
-    error = ERRORX_(CREATE_ISO9660,result,"%s",iso_error_to_msg(result));
-  }
+  #else
+    UNUSED_VARIABLE(isoSourceHandle);
+    UNUSED_VARIABLE(directory);
+
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif
 
   return error;
 }
@@ -2224,35 +2248,42 @@ LOCAL Errors createISOSourceFromImage(ISOSourceHandle *isoSourceHandle, ConstStr
 
   Errors error = ERROR_NONE;
 
-  isoSourceHandle->isoImage     = NULL;
-  isoSourceHandle->isoWriteOpts = NULL;
+  #ifdef HAVE_ISO9660
+    isoSourceHandle->isoImage     = NULL;
+    isoSourceHandle->isoWriteOpts = NULL;
 
-  // get image size
-  FileInfo fileInfo;
-  File_getInfo(&fileInfo,imageFileName);
+    // get image size
+    FileInfo fileInfo;
+    File_getInfo(&fileInfo,imageFileName);
 
-  // open image file
-  isoSourceHandle->fileHandle = open(String_cString(imageFileName),O_RDONLY);
-  if (isoSourceHandle->fileHandle != -1)
-  {
-    // create burn source from image file
-    isoSourceHandle->burnSource = burn_fd_source_new(isoSourceHandle->fileHandle,-1,fileInfo.size);
-    if (isoSourceHandle->burnSource != NULL)
+    // open image file
+    isoSourceHandle->fileHandle = open(String_cString(imageFileName),O_RDONLY);
+    if (isoSourceHandle->fileHandle != -1)
     {
-      assert(isoSourceHandle->burnSource != NULL);
-      assert(isoSourceHandle->burnSource->read != NULL);
-      assert(isoSourceHandle->burnSource->data != NULL);
+      // create burn source from image file
+      isoSourceHandle->burnSource = burn_fd_source_new(isoSourceHandle->fileHandle,-1,fileInfo.size);
+      if (isoSourceHandle->burnSource != NULL)
+      {
+        assert(isoSourceHandle->burnSource != NULL);
+        assert(isoSourceHandle->burnSource->read != NULL);
+        assert(isoSourceHandle->burnSource->data != NULL);
+      }
+      else
+      {
+        close(isoSourceHandle->fileHandle);
+        error = ERRORX_(WRITE_OPTICAL_DISK,0,"initialize write source");
+      }
     }
     else
     {
-      close(isoSourceHandle->fileHandle);
-      error = ERRORX_(WRITE_OPTICAL_DISK,0,"initialize write source");
+      error = ERRORX_(OPEN_FILE,errno,"%s",strerror(errno));
     }
-  }
-  else
-  {
-    error = ERRORX_(OPEN_FILE,errno,"%s",strerror(errno));
-  }
+  #else
+    UNUSED_VARIABLE(isoSourceHandle);
+    UNUSED_VARIABLE(imageFileName);
+
+    error = ERROR_FUNCTION_NOT_SUPPORTED;
+  #endif
 
   return error;
 }
@@ -2270,15 +2301,19 @@ LOCAL void deleteISOSource(ISOSourceHandle *isoSourceHandle)
 {
   assert(isoSourceHandle != NULL);
 
-  burn_source_free(isoSourceHandle->burnSource);
-  if (isoSourceHandle->isoWriteOpts != NULL)
-  {
-    iso_write_opts_free(isoSourceHandle->isoWriteOpts);
-  }
-  if (isoSourceHandle->isoImage != NULL)
-  {
-    iso_image_unref(isoSourceHandle->isoImage);
-  }
+  #ifdef HAVE_BURN
+    burn_source_free(isoSourceHandle->burnSource);
+  #endif
+  #ifdef HAVE_ISO9660
+    if (isoSourceHandle->isoWriteOpts != NULL)
+    {
+      iso_write_opts_free(isoSourceHandle->isoWriteOpts);
+    }
+    if (isoSourceHandle->isoImage != NULL)
+    {
+      iso_image_unref(isoSourceHandle->isoImage);
+    }
+  #endif
   if (isoSourceHandle->fileHandle != -1)
   {
     close(isoSourceHandle->fileHandle);

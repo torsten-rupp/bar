@@ -1960,8 +1960,6 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
                                      const Password      *password
                                     )
 {
-  Errors error;
-
   assert(cryptKey != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
   assert(encryptedKeyData != NULL);
@@ -1980,7 +1978,6 @@ Errors Crypt_setPublicPrivateKeyData(CryptKey            *cryptKey,
 
     // check CRC
     uint32 crc = crc32(crc32(0,Z_NULL,0),(Bytef*)keyImportExportInfo->data,encryptedKeyDataLength-sizeof(KeyImportExportInfo));
-fprintf(stderr,"%s:%d: crc=%x\n",__FILE__,__LINE__,crc);
     if (crc != ntohl(keyImportExportInfo->crc))
     {
       return ERROR_CORRUPT_KEY;
@@ -2015,6 +2012,8 @@ fprintf(stderr,"%s:%d: crc=%x\n",__FILE__,__LINE__,crc);
     // decrypt key
     if (password != NULL)
     {
+      Errors error;
+
       // get required key length for algorithm
       size_t keyLength = Crypt_getKeyLength(SECRET_KEY_CRYPT_ALGORITHM);
 
@@ -2663,8 +2662,6 @@ Errors Crypt_getRandomCryptKey(CryptKey       *cryptKey,
                                uint           *encryptedKeyDataLength
                               )
 {
-  Errors error;
-
   assert(cryptKey != NULL);
   DEBUG_CHECK_RESOURCE_TRACE(cryptKey);
   assert(keyLength > 0);
@@ -2741,14 +2738,13 @@ Errors Crypt_getRandomCryptKey(CryptKey       *cryptKey,
 #ifdef DEBUG_ASYMMETRIC_CRYPT
 fprintf(stderr,"%s, %d: encoded pkcs1EncodedMessage %d\n",__FILE__,__LINE__,PKCS1_ENCODED_MESSAGE_LENGTH); debugDumpMemory(pkcs1EncodedMessage,PKCS1_ENCODED_MESSAGE_LENGTH,0);
 #endif
-
-    error = Crypt_encryptWithPublicKey(publicKey,
-                                       pkcs1EncodedMessage,
-                                       PKCS1_ENCODED_MESSAGE_LENGTH,
-                                       encryptedKeyData,
-                                       encryptedKeyDataLength,
-                                       maxEncryptedKeyDataLength
-                                      );
+    Errors error = Crypt_encryptWithPublicKey(publicKey,
+                                              pkcs1EncodedMessage,
+                                              PKCS1_ENCODED_MESSAGE_LENGTH,
+                                              encryptedKeyData,
+                                              encryptedKeyDataLength,
+                                              maxEncryptedKeyDataLength
+                                             );
     if (error != ERROR_NONE)
     {
       freeSecure(pkcs1EncodedMessage);
