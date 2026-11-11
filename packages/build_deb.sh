@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x
 # constants
 BUILD_DIR=$PWD
 
@@ -212,7 +212,7 @@ fi
   # create changelog
   LANG=en_US.utf8 ./packages/changelog.pl --type deb < ChangeLog > debian/changelog
 
-# TODO: out-of-source build, build from source instead of extrac distribution file
+# TODO: out-of-source build, build from source instead of extract distribution file
   # build deb
   #debuild \
   #  -rfakeroot \

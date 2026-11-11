@@ -1,15 +1,15 @@
 #!groovy
 
-DOCKER_IMAGE_NAME='bar'
+def DOCKER_IMAGE_NAME='bar'
 
-TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
-               TEST_USER=jenkins \
-               TEST_LOGIN_NAME=test \
-               TEST_PASSWORD=test \
-               TEST_BASE_DIR=/home/jenkins \
-               TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa \
-               TEST_IMAGE_OPERATIONS=no \
-              "
+def TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
+                   TEST_USER=jenkins \
+                   TEST_LOGIN_NAME=test \
+                   TEST_PASSWORD=test \
+                   TEST_BASE_DIR=/home/jenkins \
+                   TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa \
+                   TEST_IMAGE_OPERATIONS=no \
+                  "
 
 // build
 def build()

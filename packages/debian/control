@@ -54,11 +54,13 @@ Build-Profiles: <gui>
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, backup-archiver, default-jre, java-common
 Description: graphical user interface for Backup Archiver
- BAR is backup archiver program. It can create compressed and
- encrypted archives of files and hard disk images which can be
- stored on hard disks, CDs, DVDs, or Blu-ray discs or directly on
- a server via ftp, scp or sftp. A server-mode and a scheduler is
- integrated for making automated backups in the background.
+ BAR is backup archiver program. It can create compressed, encrypted
+ and split archives of files and harddisk images which can be
+ stored on hard disks, CDs, DVDs, or Blu-ray discs or directly on a
+ server via FTP, SCP, SFTP, WebDAV, WebDAVS, or SMB/CIFS. BAR can
+ create full and incremental/differential archives. A server-mode
+ and a scheduler is integrated for making automated backups in the
+ background.
  .
  This package contain the graphical user interface (based on Java
  with SWT) for Backup Archiver.

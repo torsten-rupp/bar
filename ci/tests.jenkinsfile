@@ -1,48 +1,48 @@
 #!groovy
 
-DOCKER_IMAGE_NAME_HOST='bar'
-DOCKER_IMAGE_NAME_WIN32='bar-win32'
+def DOCKER_IMAGE_NAME_HOST='bar'
+def DOCKER_IMAGE_NAME_WIN32='bar-win32'
 
-TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
-               TEST_USER=jenkins \
-               TEST_LOGIN_NAME=jenkins \
-               TEST_PASSWORD=jenkins \
-               TEST_BASE_DIR=/home/jenkins \
-               TEST_PUBLIC_KEY_SSH=/home/jenkins/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/jenkins/.ssh/id_rsa \
-               TEST_MOUNT_OPERATIONS=no \
-               TEST_FTP_FILE_PATH=/home/jenkins/intermediate \
-               TEST_SCP_FILE_PATH=/home/jenkins/intermediate \
-               TEST_WEBDAV_FILE_PATH=/var/www/intermediate \
-               TEST_SMB_SHARE=jenkins \
-               TEST_SMB_FILE_PATH=/home/jenkins/intermediate \
-              "
+def TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
+                   TEST_USER=jenkins \
+                   TEST_LOGIN_NAME=jenkins \
+                   TEST_PASSWORD=jenkins \
+                   TEST_BASE_DIR=/home/jenkins \
+                   TEST_PUBLIC_KEY_SSH=/home/jenkins/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/jenkins/.ssh/id_rsa \
+                   TEST_MOUNT_OPERATIONS=no \
+                   TEST_FTP_FILE_PATH=/home/jenkins/intermediate \
+                   TEST_SCP_FILE_PATH=/home/jenkins/intermediate \
+                   TEST_WEBDAV_FILE_PATH=/var/www/intermediate \
+                   TEST_SMB_SHARE=jenkins \
+                   TEST_SMB_FILE_PATH=/home/jenkins/intermediate \
+                  "
 
-TEST_STEPS = ["basic",
-              "compress",
-              "delta_compress",
-              "crypt",
-              "asymmetric_crypt",
-              "signatures",
-              "split",
-              "convert",
-              "image",
-              "storage_file",
+def TEST_STEPS = ["basic",
+                  "compress",
+                  "delta_compress",
+                  "crypt",
+                  "asymmetric_crypt",
+                  "signatures",
+                  "split",
+                  "convert",
+                  "image",
+                  "storage_file",
 // TODO: instable
-              "storage_ftp",
-              "storage_scp",
+                  "storage_ftp",
+                  "storage_scp",
 // TODO: instable
-              "storage_sftp",
-              "storage_webdav",
-              "storage_webdavs",
-              "storage_smb",
-              "storage_optical",
-              "index",
-              "server",
-              "master_slave",
-              "arguments",
-              "config",
-              "misc"
-             ];
+                  "storage_sftp",
+                  "storage_webdav",
+                  "storage_webdavs",
+                  "storage_smb",
+                  "storage_optical",
+                  "index",
+                  "server",
+                  "master_slave",
+                  "arguments",
+                  "config",
+                  "misc"
+                 ];
 
 // tests
 def tests()
