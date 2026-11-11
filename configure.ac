@@ -1528,7 +1528,7 @@ if test "$ENABLE_GUI" = "yes"; then
   fi
   AC_PATH_PROGS(JAR,jar)
   AC_PROVIDE(AC_PROG_JAR)
-  if test -z "$JAVAC"; then
+  if test -z "$JAR"; then
     AC_MSG_WARN([No 'jar' command found in path - cannot compile GUI])
     ENABLE_GUI="no"
   fi

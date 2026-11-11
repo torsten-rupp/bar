@@ -2,7 +2,7 @@
 
 # get base directory
 if test -h "$0"; then
-  BASE_DIRECTORY=`dirname \`readlink $0\``
+  BASE_DIRECTORY=$(dirname "$(readlink "$0")")
 else
   BASE_DIRECTORY=`dirname $0`
 fi
@@ -46,11 +46,11 @@ case $HOST_PLATFORM in
     JAVA_FLAGS="@JAVA_FLAGS@"
 
     if test ! -f "$BASE_DIRECTORY/barcontrol-linux.jar"; then
-      echo >&2 "ERROR: JAR file \'$BASE_DIRECTORY/barcontrol-linux.jar\' not found!"
+      echo >&2 "ERROR: JAR file '$BASE_DIRECTORY/barcontrol-linux.jar' not found!"
       exit 1
     fi
     if test ! -f "$BASE_DIRECTORY/barcontrol-linux_64.jar"; then
-      echo >&2 "ERROR: JAR file \'$BASE_DIRECTORY/barcontrol-linux_64.jar\' not found!"
+      echo >&2 "ERROR: JAR file '$BASE_DIRECTORY/barcontrol-linux_64.jar' not found!"
       exit 1
     fi
 
@@ -74,11 +74,11 @@ case $HOST_PLATFORM in
     JAVA_FLAGS="@JAVA_FLAGS@ -XstartOnFirstThread"
 
     if test ! -f "$BASE_DIRECTORY/barcontrol-macosx.jar"; then
-      echo >&2 "ERROR: JAR file \'$BASE_DIRECTORY/barcontrol-macosx.jar\' not found!"
+      echo >&2 "ERROR: JAR file '$BASE_DIRECTORY/barcontrol-macosx.jar' not found!"
       exit 1
     fi
     if test ! -f "$BASE_DIRECTORY/barcontrol-macosx_64.jar"; then
-      echo >&2 "ERROR: JAR file \'$BASE_DIRECTORY/barcontrol-macosx_64.jar\' not found!"
+      echo >&2 "ERROR: JAR file '$BASE_DIRECTORY/barcontrol-macosx_64.jar' not found!"
       exit 1
     fi
 

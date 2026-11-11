@@ -15,7 +15,7 @@ RUN    apt clean \
     && rm -rf /var/lib/apt/lists/*
 
 # update
-RUN apt-get -y update --no-install-recommends --fix-missing
+RUN apt-get -y update
 
 # install packages
 RUN apt-get -y --no-install-recommends --fix-missing install \

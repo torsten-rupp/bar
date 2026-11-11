@@ -1,48 +1,50 @@
 #!groovy
 
-def DOCKER_IMAGE_NAME_HOST='bar'
-def DOCKER_IMAGE_NAME_WIN32='bar-win32'
+import groovy.transform.Field
 
-def TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
-                   TEST_USER=jenkins \
-                   TEST_LOGIN_NAME=jenkins \
-                   TEST_PASSWORD=jenkins \
-                   TEST_BASE_DIR=/home/jenkins \
-                   TEST_PUBLIC_KEY_SSH=/home/jenkins/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/jenkins/.ssh/id_rsa \
-                   TEST_MOUNT_OPERATIONS=no \
-                   TEST_FTP_FILE_PATH=/home/jenkins/intermediate \
-                   TEST_SCP_FILE_PATH=/home/jenkins/intermediate \
-                   TEST_WEBDAV_FILE_PATH=/var/www/intermediate \
-                   TEST_SMB_SHARE=jenkins \
-                   TEST_SMB_FILE_PATH=/home/jenkins/intermediate \
-                  "
+@Field def DOCKER_IMAGE_NAME_HOST='bar'
+@Field def DOCKER_IMAGE_NAME_WIN32='bar-win32'
 
-def TEST_STEPS = ["basic",
-                  "compress",
-                  "delta_compress",
-                  "crypt",
-                  "asymmetric_crypt",
-                  "signatures",
-                  "split",
-                  "convert",
-                  "image",
-                  "storage_file",
+@Field def TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
+                          TEST_USER=jenkins \
+                          TEST_LOGIN_NAME=jenkins \
+                          TEST_PASSWORD=jenkins \
+                          TEST_BASE_DIR=/home/jenkins \
+                          TEST_PUBLIC_KEY_SSH=/home/jenkins/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/jenkins/.ssh/id_rsa \
+                          TEST_MOUNT_OPERATIONS=no \
+                          TEST_FTP_FILE_PATH=/home/jenkins/intermediate \
+                          TEST_SCP_FILE_PATH=/home/jenkins/intermediate \
+                          TEST_WEBDAV_FILE_PATH=/var/www/intermediate \
+                          TEST_SMB_SHARE=jenkins \
+                          TEST_SMB_FILE_PATH=/home/jenkins/intermediate \
+                         "
+
+@Field def TEST_STEPS = ["basic",
+                         "compress",
+                         "delta_compress",
+                         "crypt",
+                         "asymmetric_crypt",
+                         "signatures",
+                         "split",
+                         "convert",
+                         "image",
+                         "storage_file",
 // TODO: instable
-                  "storage_ftp",
-                  "storage_scp",
+                         "storage_ftp",
+                         "storage_scp",
 // TODO: instable
-                  "storage_sftp",
-                  "storage_webdav",
-                  "storage_webdavs",
-                  "storage_smb",
-                  "storage_optical",
-                  "index",
-                  "server",
-                  "master_slave",
-                  "arguments",
-                  "config",
-                  "misc"
-                 ];
+                         "storage_sftp",
+                         "storage_webdav",
+                         "storage_webdavs",
+                         "storage_smb",
+                         "storage_optical",
+                         "index",
+                         "server",
+                         "master_slave",
+                         "arguments",
+                         "config",
+                         "misc"
+                        ];
 
 // tests
 def tests()
@@ -175,6 +177,7 @@ def tests()
           {
             if (params.TESTS)
             {
+              def binaryExtension
               switch (params.BINARY_TYPE)
               {
                 case "DEBUG":
@@ -196,7 +199,6 @@ def tests()
 //              unstash "host"
 //              unstash "win32"
 //sh "wine bin/bar-debug.exe --xhelp"
-sh "echo binaryExtension="+binaryExtension
               switch (params.TEST_TYPE)
               {
                 case "SMOKE":
@@ -215,7 +217,7 @@ sh "echo binaryExtension="+binaryExtension
 
                     sh "rm -f bar-test.log"
                     // Note: "sh" is not the system sh. Thus wrap command with bash to enable pipe fail flag.
-                    sh "bash -o pipefail -c 'ulimit -c unlimited && (cd host; make tests_smoke-"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test.log'"
+                    sh "bash -o pipefail -c 'ulimit -c unlimited && (cd host; make tests_smoke"+binaryExtension+" "+TEST_SETTINGS+" O=\'--verbose=1\') | tee -a bar-test.log'"
 
                     // stop services
                     sh "sudo -n /etc/init.d/smbd stop || true"
@@ -374,8 +376,13 @@ sh "echo binaryExtension="+binaryExtension
   {
     script
     {
-      archiveArtifacts artifacts: 'bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log, core*', allowEmptyArchive: true
-//      archiveArtifacts artifacts: 'win32/**, bar-test.log, bar-test-valgrind.log, barcontrol-test.log, /var/log/sshd.log, /var/log/vsftpd.log, core*', allowEmptyArchive: true
+      archiveArtifacts artifacts: ' \
+        bar-test.log, \
+        bar-test-valgrind.log, \
+        barcontrol-test.log, \
+        core* \
+      ', \
+      allowEmptyArchive: true
     }
 
     cleanWs notFailBuild: true
@@ -410,5 +417,5 @@ try
 catch (error)
 {
   echo "ERROR: ${error.message}"
-  currentBuild.result = 'FAILED'
+  currentBuild.result = 'FAILURE'
 }

@@ -728,14 +728,11 @@ endif
 
 # create Unix start script
 barcontrol: $(SOURCE_DIR)/barcontrol.in barcontrol-linux.jar barcontrol-linux_64.jar
-	$(CAT) $(SOURCE_DIR)/barcontrol.in | \
-        ( \
-          while IFS="" read line; do \
-            line=`$(ECHO) "$$line"|$(SED) 's|\@JAVA\@|$(JAVA)|g'`; \
-            line=`$(ECHO) "$$line"|$(SED) 's|\@JAVA_FLAGS\@|$(JAVA_FLAGS)|g'`; \
-            $(ECHO) "$$line"; \
-          done; \
-        ) > $@
+	$(SED) \
+          -e 's|\@JAVA\@|$(JAVA)|g' \
+          -e 's|\@JAVA_FLAGS\@|$(JAVA_FLAGS)|g' \
+          < $(SOURCE_DIR)/barcontrol.in \
+          > $@
 	$(CHMOD) 775 $@
 
 # create Windows executable/start script

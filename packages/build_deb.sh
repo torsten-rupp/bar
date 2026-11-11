@@ -121,6 +121,10 @@ while test $# != 0; do
   esac
   shift
 done
+if test \( $toolsFlag -eq 0 -a $guiFlag -eq 0 \); then
+  toolsFlag=1
+  guiFlag=1
+fi
 
 # print help
 if test $helpFlag -eq 1; then
@@ -221,10 +225,10 @@ fi
   #  -us -uc
   #ln -s packages/debian
   debBuildProfiles=""
-  if test \( $toolsFlag -eq 0 -a $guiFlag -eq 0 \) -o $toolsFlag -eq 1; then
+  if test $toolsFlag -eq 1; then
     debBuildProfiles="$debBuildProfiles tools"
   fi
-  if test \( $toolsFlag -eq 0 -a $guiFlag -eq 0 \) -o $guiFlag -eq 1; then
+  if test $guiFlag -eq 1; then
     debBuildProfiles="$debBuildProfiles gui"
   fi
   if test $linkDynamicFlag -eq 1; then

@@ -901,12 +901,14 @@ deb-gui64d:
 	$(MAKE) $(DISTRIBUTION_NAME_GUI)-x86_64.deb PACKAGE_DEBUG=1
 
 clean_deb:
-	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.deb
-	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-dynamic-x86_64.deb
-	$(RMF) build/rpm/$(DISTRIBUTION_NAME_GUI)-x86_64.deb
-	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.deb.log
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb
+	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb.log
+	$(RMF) $(DISTRIBUTION_NAME)-dynamic-x86_64.deb
+	$(RMF) $(DISTRIBUTION_NAME)-dynamic-x86_64.deb.log
+	$(RMF) $(DISTRIBUTION_NAME_GUI)-x86_64.deb
 
-$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
+# Note: tools and GUI package are created by a single build
+$(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb &: \
   $(DISTRIBUTION_NAME).tar.bz2
 	@$(call functionPrintInfo,Build DEB on Debian 13)
 	( \
@@ -917,7 +919,7 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb: \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
             bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb PACKAGE_TOOLS=1 PACKAGE_GUI=1 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
-        ) | tee $@.log
+        ) | tee $(DISTRIBUTION_NAME)-x86_64.deb.log
 	@$(call functionPrintResult,OK)
 
 $(DISTRIBUTION_NAME)-dynamic-x86_64.deb: \
@@ -988,7 +990,7 @@ build_win32:
 	install -d build/win32
 	(cd build/win32; \
 	 ../../packages/build_win32.sh \
-           $(if $(PACKAGE_DEBUG),--debug); \
+           $(if $(PACKAGE_DEBUG),--debug) \
            ../.. \
            $(PACKAGE_NAME) \
            ../../$(DISTRIBUTION_NAME).tar.bz2 \

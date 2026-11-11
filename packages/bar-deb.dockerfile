@@ -1,13 +1,13 @@
 # require Debian >= 13
 FROM debian:13
-ENV container docker
+ENV container=docker
 
 # variables
 ARG uid=1000
 ARG gid=1000
 
 # disable interactive installion
-ENV DEBIAN_FRONTEND noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 
 # clear APT cache
 RUN    apt clean \
@@ -111,7 +111,6 @@ RUN apt-get -y install --no-install-recommends --fix-missing \
   uuid-dev \
   libblkid-dev \
   liburcu-dev \
-  libfrog-dev \
   binutils-dev \
   ;
 

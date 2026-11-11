@@ -1,13 +1,13 @@
 # require AlmaLinux >= 9.0
 FROM almalinux:9.0
-ENV container docker
+ENV container=docker
 
 # variables
 ARG uid=1000
 ARG gid=1000
 
 # add EPEL repository
-RUN yum -y install elrepo-release
+RUN yum -y install epel-release
 
 # update
 RUN yum -y update
@@ -156,7 +156,6 @@ RUN yum -y install --allowerasing \
   c-ares-devel \
   libidn2-devel \
   libgcrypt-devel \
-  libssh-devel \
   libmount-devel \
   krb5-devel \
   mariadb-connector-c-devel \

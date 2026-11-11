@@ -1,15 +1,17 @@
 #!groovy
 
-def DOCKER_IMAGE_NAME='bar'
+import groovy.transform.Field
 
-def TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
-                   TEST_USER=jenkins \
-                   TEST_LOGIN_NAME=test \
-                   TEST_PASSWORD=test \
-                   TEST_BASE_DIR=/home/jenkins \
-                   TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa \
-                   TEST_IMAGE_OPERATIONS=no \
-                  "
+@Field def DOCKER_IMAGE_NAME='bar'
+
+@Field def TEST_SETTINGS="TEST_INDEX_DATABASES=sqlite:intermediate/index.db \
+                          TEST_USER=jenkins \
+                          TEST_LOGIN_NAME=test \
+                          TEST_PASSWORD=test \
+                          TEST_BASE_DIR=/home/jenkins \
+                          TEST_PUBLIC_KEY_SSH=/home/test/.ssh/id_rsa.pub TEST_PRIVATE_KEY_SSH=/home/test/.ssh/id_rsa \
+                          TEST_IMAGE_OPERATIONS=no \
+                         "
 
 // build
 def build()
@@ -63,6 +65,7 @@ def build()
         }
       }
 
+      def binaryExtension
       switch (params.BINARY_TYPE)
       {
         case "":
@@ -113,7 +116,12 @@ def build()
   {
     script
     {
-      archiveArtifacts artifacts: 'backup-archiver*.tar.bz2, *.rpm, *.deb', allowEmptyArchive: true
+      archiveArtifacts artifacts: ' \
+        backup-archiver*.tar.bz2, \
+        *.rpm, \
+        *.deb \
+      ', \
+      allowEmptyArchive: true
     }
     cleanWs notFailBuild: true
   }
@@ -139,5 +147,5 @@ try
 catch (error)
 {
   echo "ERROR: ${error.message}"
-  currentBuild.result = 'FAILED'
+  currentBuild.result = 'FAILURE'
 }

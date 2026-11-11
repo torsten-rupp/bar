@@ -5604,7 +5604,7 @@ fi
 done
 
 
-  if test -z "$JAVAC"; then
+  if test -z "$JAR"; then
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: WARNING: No 'jar' command found in path - cannot compile GUI" >&5
 printf "%s\n" "$as_me: WARNING: No 'jar' command found in path - cannot compile GUI" >&2;}
     ENABLE_GUI="no"
