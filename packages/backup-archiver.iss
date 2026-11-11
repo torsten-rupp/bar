@@ -9,9 +9,8 @@ DefaultDirName={pf}\BAR
 DefaultGroupName=BAR
 ShowLanguageDialog=yes
 SetupLogging=yes
-
-; debug only
-Compression = none
+Compression=lzma2/max
+SolidCompression=yes
 
 [Tasks]
 ; NOTE: The following entry contains English phrases ("Create a desktop icon" and "Additional icons"). You are free to translate them into another language if required.
