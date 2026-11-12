@@ -3693,7 +3693,7 @@ LOCAL Errors postgresqlConnect(PGconn         **connection,
       {
         postgresPollingStatusType = PQconnectPoll(*connection);
         if (   (postgresPollingStatusType == PGRES_POLLING_READING)
-            || (postgresPollingStatusType == PGRES_POLLING_READING)
+            || (postgresPollingStatusType == PGRES_POLLING_WRITING)
            )
         {
           (void)Misc_waitHandle(PQsocket(*connection),NULL,HANDLE_EVENT_INPUT|HANDLE_EVENT_OUTPUT,60*MS_PER_SECOND);
@@ -13805,7 +13805,7 @@ assert(Thread_isCurrentThread(databaseHandle->debug.threadId));
           uint j = ARRAY_FIND(columnNames,columnCount,j,stringEqualsIgnoreCase(referenceColumns[i].name,columns[j].name));
           if (j < columnCount)
           {
-            if (   (referenceColumns[j].type != DATABASE_DATATYPE_NONE)
+            if (   (referenceColumns[i].type != DATABASE_DATATYPE_NONE)
                 && !areCompatibleTypes(referenceColumns[i].type,columns[j].type)
                )
             {
