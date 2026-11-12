@@ -1242,12 +1242,6 @@ LOCAL bool parseValue(const ConfigValue    *configValue,
                         STRING_ESCAPE_CHARACTER_MAP_LENGTH
                       );
 
-        // free old string
-        if ((*configValue->variable.cString) != NULL)
-        {
-          free(*configValue->variable.cString);
-        }
-
         // store string
         if (configValue->offset >= 0)
         {
@@ -1269,6 +1263,10 @@ LOCAL bool parseValue(const ConfigValue    *configValue,
         else
         {
           assert(configValue->variable.cString != NULL);
+          if ((*configValue->variable.cString) != NULL)
+          {
+            free(*configValue->variable.cString);
+          }
           (*configValue->variable.cString) = stringNewBuffer(String_cString(string),String_length(string)+1);
         }
 
