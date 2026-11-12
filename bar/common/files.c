@@ -217,6 +217,11 @@ LOCAL const struct
 #endif /* not NDEBUG */
 
 /***************************** Variables *******************************/
+#if defined(PLATFORM_LINUX)
+  LOCAL pthread_once_t umaskOnce = PTHREAD_ONCE_INIT;
+  LOCAL mode_t         umaskValue;
+#endif
+
 #ifndef NDEBUG
   LOCAL pthread_once_t      debugFileInitFlag = PTHREAD_ONCE_INIT;
   LOCAL pthread_mutexattr_t debugFileLockAttribute;
@@ -353,6 +358,64 @@ LOCAL Errors __getLastError(const char *__fileName__,
 
   return error;
 }
+
+#if defined(PLATFORM_LINUX)
+/***********************************************************************\
+* Name   : initUmask
+* Purpose: initialize current umask value once
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initUmask(void)
+{
+  bool result = FALSE;
+
+  if (!result)
+  {
+    // try to read umask without modifying it (Linux >= 4.7)
+    FILE *file = fopen("/proc/self/status","r");
+    if (file != NULL)
+    {
+      char line[256];
+      while (!result && (fgets(line,sizeof(line),file) != NULL))
+      {
+        unsigned int mask;
+        if (sscanf(line,"Umask: %o",&mask) == 1)
+        {
+          umaskValue = (mode_t)mask;
+          result = TRUE;
+        }
+      }
+      fclose(file);
+    }
+  }
+
+  if (!result)
+  {
+    // fallback: get+restore umask (Note: not thread-safe, but done only once)
+    umaskValue = umask(0);
+    umask(umaskValue);
+  }
+}
+
+/***********************************************************************\
+* Name   : getUmask
+* Purpose: get current (cached) umask
+* Input  : -
+* Output : -
+* Return : umask
+* Notes  : -
+\***********************************************************************/
+
+LOCAL mode_t getUmask(void)
+{
+  pthread_once(&umaskOnce,initUmask);
+  return umaskValue;
+}
+#endif
 
 /***********************************************************************\
 * Name   : getFileType
@@ -2199,11 +2262,8 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
           return error;
         }
       #elif (MKDIR_ARGUMENTS_COUNT == 2)
-        // get current umask (get and restore current value)
-        currentCreationMask = umask(0);
-        umask(currentCreationMask);
-
         // create directory
+        currentCreationMask = getUmask();
         if (mkdir(name,0777 & ~currentCreationMask) != 0)
         {
           error = getLastError(ERROR_CODE_IO,name);
@@ -2245,9 +2305,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
         return error;
       }
     #elif (MKDIR_ARGUMENTS_COUNT == 2)
-      currentCreationMask = umask(0);
-      umask(currentCreationMask);
-
+      currentCreationMask = getUmask();
       if (mkdir(name,0777 & ~currentCreationMask) != 0)
       {
         error = getLastError(ERROR_CODE_IO,name);
@@ -2332,9 +2390,7 @@ FilePermissions File_getDefaultFilePermissions(void)
   FilePermissions filePermissions;
 
   #if   defined(PLATFORM_LINUX)
-    mode_t mask = umask(0);
-    umask(mask);
-
+    mode_t mask = getUmask();
     filePermissions = (FilePermissions)(0666 & ~mask);
   #elif defined(PLATFORM_WINDOWS)
     filePermissions = (FilePermissions)0;
@@ -2348,9 +2404,7 @@ FilePermissions File_getDefaultDirectoryPermissions(void)
   FilePermissions filePermissions;
 
   #if   defined(PLATFORM_LINUX)
-    mode_t mask = umask(0);
-    umask(mask);
-
+    mode_t mask = getUmask();
     filePermissions = (FilePermissions)(0777 & ~mask);
   #elif defined(PLATFORM_WINDOWS)
     filePermissions = (FilePermissions)0;
@@ -5109,10 +5163,6 @@ Errors File_makeDirectory(ConstString     pathName,
   String directoryName       = File_newFileName();
   String parentDirectoryName = File_newFileName();
 
-  // get current umask (get and restore current value)
-  mode_t currentCreationMask = umask(0);
-  umask(currentCreationMask);
-
   StringTokenizer pathNameTokenizer;
   File_initSplitFileName(&pathNameTokenizer,pathName);
 
@@ -5165,6 +5215,7 @@ Errors File_makeDirectory(ConstString     pathName,
     if (permissions != FILE_DEFAULT_PERMISSIONS)
     {
       #ifdef HAVE_CHMOD
+        mode_t currentCreationMask = getUmask();
         if (chmod(String_cString(directoryName),
                   ((mode_t)permissions|FILE_PERMISSION_DIRECTORY) & ~currentCreationMask
                  ) != 0
@@ -5176,7 +5227,7 @@ Errors File_makeDirectory(ConstString     pathName,
           File_deleteFileName(directoryName);
           return error;
         }
-      #endif /* HAVE_CHOWN */
+      #endif /* HAVE_CHMOD */
     }
   }
   else if (!File_isDirectory(directoryName))
@@ -5189,6 +5240,7 @@ Errors File_makeDirectory(ConstString     pathName,
   }
 
   // create/check sub-directories
+  mode_t currentCreationMask = getUmask();
   while (File_getNextSplitFileName(&pathNameTokenizer,&token))
   {
     if (!String_isEmpty(token))
@@ -5707,6 +5759,8 @@ Errors File_makeSpecialCString(const char       *name,
     unlink(name);
     switch (type)
     {
+      case FILE_SPECIAL_TYPE_NONE:
+        break;
       case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
         #ifndef NDEBUG
           if (debugIsEmulateMknod())
