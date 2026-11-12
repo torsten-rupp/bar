@@ -1112,7 +1112,7 @@ LOCAL void formatString(struct __String *string,
                   __ensureStringLength(string,string->length+length);
                   length = (formatToken.widthArguments > 0)
                              ? snprintf(&string->data[string->length],length+1,formatToken.token,i0,data.ul)
-                             : snprintf(&string->data[string->length],length+1,formatToken.token,i0,data.ul);
+                             : snprintf(&string->data[string->length],length+1,formatToken.token,data.ul);
                   string->length += length;
                   STRING_UPDATE_VALID(string);
                 }
@@ -1376,7 +1376,9 @@ LOCAL void formatString(struct __String *string,
           {
             // non quoted string format
             char buffer[64];
-            int length = snprintf(buffer,sizeof(buffer),formatToken.token,String_cString(data.string));
+            int length = (formatToken.widthArguments > 0)
+                           ? snprintf(buffer,sizeof(buffer),formatToken.token,i0,String_cString(data.string))
+                           : snprintf(buffer,sizeof(buffer),formatToken.token,String_cString(data.string));
             assert(length >= 0);
             if ((uint)length < sizeof(buffer))
             {
