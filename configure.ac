@@ -2874,7 +2874,7 @@ if test $ENABLE_SSH = "yes"; then
             LIBRARIES="$LIBRARIES ssl crypto"
             ;;
           windows*|mingw*)
-            LIBRARIES="$LIBRARIES ssl crypto crypt32"
+            LIBRARIES="$LIBRARIES ssl crypto crypt32 bcrypt"
             ;;
         esac
       else
@@ -2883,7 +2883,7 @@ if test $ENABLE_SSH = "yes"; then
             STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto"
             ;;
           windows*|mingw*)
-            STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto crypt32"
+            STATIC_LIBRARIES="$STATIC_LIBRARIES ssl crypto crypt32 bcrypt"
             ;;
         esac
       fi
@@ -3715,7 +3715,7 @@ if test $ENABLE_CURL = "yes"; then
         fi
       else
         # cross-compile host
-        (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CPPFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32 -liphlpapi -lssp" ./configure \
+        (cd curl; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CPPFLAGS="-DCARES_STATICLIB" LDFLAGS="" LIBS="-lcrypt32 -lbcrypt -liphlpapi -lssp" ./configure \
           --host=$host \
           --build=$build \
           --prefix=$cwd/extern \
@@ -4083,7 +4083,7 @@ if test $ENABLE_POSTGRESQL = "yes"; then
           ) 1>$tmpFile 2>&1
           ;;
         windows*|mingw*)
-          (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
+          (cd postgresql; PKG_CONFIG_PATH=$cwd/extern/lib/pkgconfig CC="$CC" CPPFLAGS="" CFLAGS="" CXXFLAGS="" AS="$AS" LD="$LD" LDFLAGS="" LIBS="-lpthread -lcrypt32 -lbcrypt -lwsock32 -lws2_32" AR="$AR" RANLIB="$RANLIB" WINDRES="$WINDRES" ./configure \
             --host=$host \
             --build=$build \
             --prefix=$cwd/extern \
