@@ -573,7 +573,7 @@ bool Password_input(Password   *password,
       bool eolFlag = FALSE;
       do
       {
-        char ch = getc(file);
+        int ch = getc(file);
         if (ch != EOF)
         {
           switch ((char)ch)
