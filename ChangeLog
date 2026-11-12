@@ -28,7 +28,7 @@
   * upgrade nettle 3.10.2
   * upgrade GNU TLS 3.8.13
   * upgrade iconv 1.19
-  * upgrade openSSL 4.1.0-beta2
+  * upgrade openSSL 4.1.0
   * upgrade c-ares 1.34.9
   * upgrade curl 8.23.0
   * upgrade SQLite 3.54.1

@@ -42,7 +42,7 @@ IDN2_VERSION=2.3.8
 GNU_TLS_SUB_DIRECTORY=v3.8
 GNU_TLS_VERSION=3.8.13
 ICONV_VERSION=1.19
-OPENSSL_VERSION=4.1.0-beta2
+OPENSSL_VERSION=4.1.0
 SSH2_VERSION=1.11.1
 # Note: 1.33.0 does not compile on legacy systems; fix is in
 #       main, but not in 1.33. Thus use previous version for
