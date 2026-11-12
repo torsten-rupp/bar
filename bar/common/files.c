@@ -217,6 +217,11 @@ LOCAL const struct
 #endif /* not NDEBUG */
 
 /***************************** Variables *******************************/
+#if defined(PLATFORM_LINUX)
+  LOCAL pthread_once_t umaskOnce = PTHREAD_ONCE_INIT;
+  LOCAL mode_t         umaskValue;
+#endif
+
 #ifndef NDEBUG
   LOCAL pthread_once_t      debugFileInitFlag = PTHREAD_ONCE_INIT;
   LOCAL pthread_mutexattr_t debugFileLockAttribute;
@@ -352,6 +357,68 @@ LOCAL Errors __getLastError(const char *__fileName__,
   }
 
   return error;
+}
+
+#if defined(PLATFORM_LINUX)
+/***********************************************************************\
+* Name   : initUmask
+* Purpose: initialize current umask value once
+* Input  : -
+* Output : -
+* Return : -
+* Notes  : -
+\***********************************************************************/
+
+LOCAL void initUmask(void)
+{
+  bool result = FALSE;
+
+  if (!result)
+  {
+    // try to read umask without modifying it (Linux >= 4.7)
+    FILE *file = fopen("/proc/self/status","r");
+    if (file != NULL)
+    {
+      char line[256];
+      while (!result && (fgets(line,sizeof(line),file) != NULL))
+      {
+        unsigned int mask;
+        if (sscanf(line,"Umask: %o",&mask) == 1)
+        {
+          umaskValue = (mode_t)mask;
+          result = TRUE;
+        }
+      }
+      fclose(file);
+    }
+  }
+
+  if (!result)
+  {
+    // fallback: get+restore umask (Note: not thread-safe, but done only once)
+    umaskValue = umask(0);
+    umask(umaskValue);
+  }
+}
+#endif
+
+/***********************************************************************\
+* Name   : getUmask
+* Purpose: get current (cached) umask
+* Input  : -
+* Output : -
+* Return : umask or 0
+* Notes  : -
+\***********************************************************************/
+
+LOCAL mode_t getUmask(void)
+{
+  #if   defined(PLATFORM_LINUX)
+    pthread_once(&umaskOnce,initUmask);
+    return umaskValue;
+  #elif defined(PLATFORM_WINDOWS)
+    return 0;
+  #endif
 }
 
 /***********************************************************************\
@@ -2152,14 +2219,6 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
   }
 
   #if   defined(PLATFORM_LINUX)
-    char   *name;
-    #ifdef HAVE_MKDTEMP
-    #elif HAVE_MKTEMP
-      #if (MKDIR_ARGUMENTS_COUNT == 2)
-        mode_t currentCreationMask;
-      #endif /* MKDIR_ARGUMENTS_COUNT == 2 */
-    #endif /* HAVE_MKSTEMP || HAVE_MKTEMP */
-
     // get temporary directory template name
     if (!String_isEmpty(directoryName))
     {
@@ -2169,7 +2228,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
     String_appendCString(directoryName,"-XXXXXX");
 
     // create directory
-    name = String_toCString(directoryName);
+    char *name = String_toCString(directoryName);
     if (name == NULL)
     {
       HALT_INSUFFICIENT_MEMORY();
@@ -2199,11 +2258,8 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
           return error;
         }
       #elif (MKDIR_ARGUMENTS_COUNT == 2)
-        // get current umask (get and restore current value)
-        currentCreationMask = umask(0);
-        umask(currentCreationMask);
-
         // create directory
+        mode_t currentCreationMask = getUmask();
         if (mkdir(name,0777 & ~currentCreationMask) != 0)
         {
           error = getLastError(ERROR_CODE_IO,name);
@@ -2245,9 +2301,7 @@ Errors File_getTmpDirectoryNameCString(String     directoryName,
         return error;
       }
     #elif (MKDIR_ARGUMENTS_COUNT == 2)
-      currentCreationMask = umask(0);
-      umask(currentCreationMask);
-
+      mode_t currentCreationMask = getUmask();
       if (mkdir(name,0777 & ~currentCreationMask) != 0)
       {
         error = getLastError(ERROR_CODE_IO,name);
@@ -2329,34 +2383,12 @@ bool File_parseFileSpecialType(const char *name, FileSpecialTypes *fileSpecialTy
 
 FilePermissions File_getDefaultFilePermissions(void)
 {
-  FilePermissions filePermissions;
-
-  #if   defined(PLATFORM_LINUX)
-    mode_t mask = umask(0);
-    umask(mask);
-
-    filePermissions = (FilePermissions)(0666 & ~mask);
-  #elif defined(PLATFORM_WINDOWS)
-    filePermissions = (FilePermissions)0;
-  #endif /* PLATFORM_... */
-
-  return filePermissions;
+  return (FilePermissions)(0666 & ~getUmask());
 }
 
 FilePermissions File_getDefaultDirectoryPermissions(void)
 {
-  FilePermissions filePermissions;
-
-  #if   defined(PLATFORM_LINUX)
-    mode_t mask = umask(0);
-    umask(mask);
-
-    filePermissions = (FilePermissions)(0777 & ~mask);
-  #elif defined(PLATFORM_WINDOWS)
-    filePermissions = (FilePermissions)0;
-  #endif /* PLATFORM_... */
-
-  return filePermissions;
+  return (FilePermissions)(0777 & ~getUmask());
 }
 
 #ifdef NDEBUG
@@ -5109,10 +5141,6 @@ Errors File_makeDirectory(ConstString     pathName,
   String directoryName       = File_newFileName();
   String parentDirectoryName = File_newFileName();
 
-  // get current umask (get and restore current value)
-  mode_t currentCreationMask = umask(0);
-  umask(currentCreationMask);
-
   StringTokenizer pathNameTokenizer;
   File_initSplitFileName(&pathNameTokenizer,pathName);
 
@@ -5165,6 +5193,7 @@ Errors File_makeDirectory(ConstString     pathName,
     if (permissions != FILE_DEFAULT_PERMISSIONS)
     {
       #ifdef HAVE_CHMOD
+        mode_t currentCreationMask = getUmask();
         if (chmod(String_cString(directoryName),
                   ((mode_t)permissions|FILE_PERMISSION_DIRECTORY) & ~currentCreationMask
                  ) != 0
@@ -5176,7 +5205,7 @@ Errors File_makeDirectory(ConstString     pathName,
           File_deleteFileName(directoryName);
           return error;
         }
-      #endif /* HAVE_CHOWN */
+      #endif /* HAVE_CHMOD */
     }
   }
   else if (!File_isDirectory(directoryName))
@@ -5211,6 +5240,7 @@ Errors File_makeDirectory(ConstString     pathName,
           File_deleteFileName(directoryName);
           return error;
         }
+        mode_t currentCreationMask = getUmask();
         if (   ((fileStat.st_mode & FILE_PERMISSION_DIRECTORY) != FILE_PERMISSION_DIRECTORY)
             && (chmod(String_cString(parentDirectoryName),
                       (fileStat.st_mode|FILE_PERMISSION_DIRECTORY) & ~currentCreationMask
@@ -5239,17 +5269,20 @@ Errors File_makeDirectory(ConstString     pathName,
             }
           }
         #elif (MKDIR_ARGUMENTS_COUNT == 2)
-          if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
-          {
-            error = getLastError(ERROR_CODE_IO,String_cString(directoryName));
-            if (!ignoreExistingFlag && !File_isDirectory(directoryName))
+          #if   defined(PLATFORM_LINUX)
+            if (mkdir(String_cString(directoryName),0777 & ~currentCreationMask) != 0)
             {
-              File_doneSplitFileName(&pathNameTokenizer);
-              File_deleteFileName(parentDirectoryName);
-              File_deleteFileName(directoryName);
-              return error;
+              error = getLastError(ERROR_CODE_IO,String_cString(directoryName));
+              if (!ignoreExistingFlag && !File_isDirectory(directoryName))
+              {
+                File_doneSplitFileName(&pathNameTokenizer);
+                File_deleteFileName(parentDirectoryName);
+                File_deleteFileName(directoryName);
+                return error;
+              }
             }
-          }
+          #elif defined(PLATFORM_WINDOWS)
+          #endif
         #endif /* MKDIR_ARGUMENTS_COUNT == ... */
 
         // set owner/group
@@ -5284,6 +5317,7 @@ Errors File_makeDirectory(ConstString     pathName,
         {
           // set permission
           #ifdef HAVE_CHMOD
+            mode_t currentCreationMask = getUmask();
             if (chmod(String_cString(directoryName),
                       ((mode_t)permissions|FILE_PERMISSION_DIRECTORY) & ~currentCreationMask
                      ) != 0
@@ -5707,6 +5741,8 @@ Errors File_makeSpecialCString(const char       *name,
     unlink(name);
     switch (type)
     {
+      case FILE_SPECIAL_TYPE_NONE:
+        break;
       case FILE_SPECIAL_TYPE_CHARACTER_DEVICE:
         #ifndef NDEBUG
           if (debugIsEmulateMknod())
