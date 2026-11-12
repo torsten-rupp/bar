@@ -1201,14 +1201,9 @@ INLINE StringIterator String_iterateBegin(String string)
 {
   STRING_CHECK_VALID(string);
 
-  if (string != NULL)
-  {
-    return 0;
-  }
-  else
-  {
-    return 0;
-  }
+  UNUSED_VARIABLE(string);
+
+  return 0;
 }
 #endif /* NDEBUG || __STRINGS_IMPLEMENTATION__ */
 
