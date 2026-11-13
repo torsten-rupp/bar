@@ -79,7 +79,7 @@
 typedef struct
 {
   int                fileHandle;
-  #ifdef HAVE_ISO9660
+  #ifdef HAVE_ISOFS
     IsoImage           *isoImage;
     IsoWriteOpts       *isoWriteOpts;
   #endif
@@ -158,7 +158,7 @@ LOCAL void setMessageSeveritity(long verboseLevel)
 
 LOCAL void libisofsPollMessages(void)
 {
-  #ifdef HAVE_ISO9660
+  #ifdef HAVE_ISOFS
     int  errorCode;
     int  imageId;
     char messageText[ISO_MSGS_MESSAGE_LEN];
@@ -183,7 +183,7 @@ LOCAL void libisofsPollMessages(void)
 
 LOCAL void libburnPollMessages(void)
 {
-  #ifdef HAVE_ISO9660
+  #ifdef HAVE_BURN
     int  errorCode;
     char messageText[BURN_MSGS_MESSAGE_LEN];
     int  osError;
@@ -2159,7 +2159,7 @@ LOCAL Errors createISOSourceFromDirectory(ISOSourceHandle *isoSourceHandle, Cons
 
   Errors error = ERROR_NONE;
 
-  #ifdef HAVE_ISO9660
+  #ifdef HAVE_ISOFS
     isoSourceHandle->fileHandle = -1;
 
     int result;
@@ -2248,7 +2248,7 @@ LOCAL Errors createISOSourceFromImage(ISOSourceHandle *isoSourceHandle, ConstStr
 
   Errors error = ERROR_NONE;
 
-  #ifdef HAVE_ISO9660
+  #ifdef HAVE_ISOFS
     isoSourceHandle->isoImage     = NULL;
     isoSourceHandle->isoWriteOpts = NULL;
 
@@ -2304,7 +2304,7 @@ LOCAL void deleteISOSource(ISOSourceHandle *isoSourceHandle)
   #ifdef HAVE_BURN
     burn_source_free(isoSourceHandle->burnSource);
   #endif
-  #ifdef HAVE_ISO9660
+  #ifdef HAVE_ISOFS
     if (isoSourceHandle->isoWriteOpts != NULL)
     {
       iso_write_opts_free(isoSourceHandle->isoWriteOpts);
