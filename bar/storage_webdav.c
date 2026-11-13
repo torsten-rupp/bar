@@ -1127,7 +1127,10 @@ LOCAL int64 getXMLPropertyInt64(mxml_node_t *xmlTree, mxml_node_t *node, const c
                   value = (int64)mxmlGetInteger(mxmlGetFirstChild(foundNode));
                   break;
                 case MXML_TYPE_REAL:
-                  value = (int64)floor(mxmlGetReal(mxmlGetFirstChild(foundNode)));
+                  {
+                    double d = floor(mxmlGetReal(mxmlGetFirstChild(foundNode)));
+                    value = (int64)d;
+                  }
                   break;
                 case MXML_TYPE_TEXT:
                   stringToInt64(mxmlGetText(mxmlGetFirstChild(foundNode),NULL),&value,NULL);
