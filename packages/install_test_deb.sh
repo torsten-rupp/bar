@@ -73,8 +73,8 @@ else
 fi
 
 # set error handler: execute bash shell
-trap /bin/bash ERR
-set -e
+trap 'echo "ERRPR at line $LINENO: command '\''$BASH_COMMAND'\'' failed with exit code $?" && /bin/bash' ERR
+set -Eeuo pipefail
 
 # install/upgrade packages
 apt update 1>/dev/null 2>/dev/null

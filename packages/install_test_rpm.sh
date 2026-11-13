@@ -57,8 +57,7 @@ if test -z "$tmpFile"; then
 fi
 
 # install required base packages
-type yum 1>/dev/null 2>/dev/null
-if test $? -eq 0; then
+if type yum 1>/dev/null 2>/dev/null; then
   echo -n "Update packages..."
 
   yum -y update 1>/dev/null 2>/dev/null
@@ -77,8 +76,7 @@ if test $? -eq 0; then
     exit 1
   fi
 fi
-type zypper 1>/dev/null 2>/dev/null
-if test $? -eq 0; then
+if type zypper 1>/dev/null 2>/dev/null; then
   echo -n "Update packages..."
 
   zypper -q update -y 1>/dev/null 2>/dev/null
@@ -98,14 +96,21 @@ if test $? -eq 0; then
 fi
 
 # set error handler: execute bash shell
-trap /bin/bash ERR
-set -e
+trap 'echo "ERRPR at line $LINENO: command '\''$BASH_COMMAND'\'' failed with exit code $?" && /bin/bash' ERR
+set -Eeuo pipefail
 
 # install/upgrade packages
-yum -y update 1>/dev/null 2>/dev/null
-yum -y upgrade 1>/dev/null 2>/dev/null
-yum -y install \
-  procps 1>/dev/null 2>/dev/null
+if type yum 1>/dev/null 2>/dev/null; then
+  yum -y update 1>/dev/null 2>/dev/null
+  yum -y upgrade 1>/dev/null 2>/dev/null
+  yum -y install \
+    procps 1>/dev/null 2>/dev/null
+fi
+if type zypper 1>/dev/null 2>/dev/null; then
+  zypper -q update 1>/dev/null 2>/dev/null
+  zypper -q install \
+    procps 1>/dev/null 2>/dev/null
+fi
 
 # install rpm
 rpm -i $rpmFiles
