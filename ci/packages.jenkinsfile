@@ -12,7 +12,7 @@ import groovy.transform.Field
 @Field def TEST_PACKAGES_ALMALINUX     = ["9.0","9.1","9.2","9.3","9.4","9.5","9.6","9.7","9.8"]
 @Field def TEST_PACKAGES_FEDORA        = ["37","38","39","40","41","42"]
 @Field def TEST_PACKAGES_OPENSUSE_LEAP = ["15.6","16.0"]
-@Field def TEST_PACKAGES_DEBIAN        = ["12","13"]
+@Field def TEST_PACKAGES_DEBIAN        = ["13"]
 @Field def TEST_PACKAGES_UBUNTU        = ["20.04","22.04","24.04","25.04","25.10"]
 
 // build

@@ -61,6 +61,9 @@ RUN apt-get -y --no-install-recommends --fix-missing install \
 
 # install packages for building
 RUN apt-get -y --no-install-recommends --fix-missing install \
+  autoconf \
+  automake \
+  libtool \
   gcc \
   g++ \
   libblkid-dev \
@@ -85,7 +88,7 @@ RUN apt-get -y --no-install-recommends --fix-missing install \
   ;
 
 # install packages for tests
-RUN apt-get update --no-install-recommends --fix-missing
+RUN apt-get update
 RUN apt-get -y --no-install-recommends --fix-missing install \
   apache2 \
   openssh-server \

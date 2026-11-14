@@ -56,6 +56,25 @@ if test -z "$tmpFile"; then
   exit 1
 fi
 
+# set error handler: execute bash shell
+trap 'echo "ERRPR at line $LINENO: command '\''$BASH_COMMAND'\'' failed with exit code $?" && /bin/bash' ERR
+set -Eeuo pipefail
+
+# install/upgrade packages
+if type yum 1>/dev/null 2>/dev/null; then
+  yum -y update 1>/dev/null 2>/dev/null
+  yum -y upgrade 1>/dev/null 2>/dev/null
+  yum -y install \
+    procps \
+    1>/dev/null 2>/dev/null
+fi
+if type zypper 1>/dev/null 2>/dev/null; then
+  zypper -q update 1>/dev/null 2>/dev/null
+  zypper -q install \
+    procps \
+    1>/dev/null 2>/dev/null
+fi
+
 # install required base packages
 if type yum 1>/dev/null 2>/dev/null; then
   echo -n "Update packages..."
@@ -93,23 +112,6 @@ if type zypper 1>/dev/null 2>/dev/null; then
     rm -f $tmpFile
     exit 1
   fi
-fi
-
-# set error handler: execute bash shell
-trap 'echo "ERRPR at line $LINENO: command '\''$BASH_COMMAND'\'' failed with exit code $?" && /bin/bash' ERR
-set -Eeuo pipefail
-
-# install/upgrade packages
-if type yum 1>/dev/null 2>/dev/null; then
-  yum -y update 1>/dev/null 2>/dev/null
-  yum -y upgrade 1>/dev/null 2>/dev/null
-  yum -y install \
-    procps 1>/dev/null 2>/dev/null
-fi
-if type zypper 1>/dev/null 2>/dev/null; then
-  zypper -q update 1>/dev/null 2>/dev/null
-  zypper -q install \
-    procps 1>/dev/null 2>/dev/null
 fi
 
 # install rpm

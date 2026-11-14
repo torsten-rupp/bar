@@ -56,11 +56,21 @@ if test -z "$tmpFile"; then
   exit 1
 fi
 
+# set error handler: execute bash shell
+trap 'echo "ERRPR at line $LINENO: command '\''$BASH_COMMAND'\'' failed with exit code $?" && /bin/bash' ERR
+set -Eeuo pipefail
+
+# install/upgrade packages
+apt update 1>/dev/null 2>/dev/null
+apt -y upgrade --fix-missing 1>/dev/null 2>/dev/null
+apt -y install --fix-missing \
+  procps 1>/dev/null 2>/dev/null
+
 # install required base packages
 echo -n "Update packages..."
 DEBIAN_FRONTEND=noninteractive apt-get -yq update 1>/dev/null 2>/dev/null
 DEBIAN_FRONTEND=noninteractive apt-get -yq install \
-  default-jre-headless \
+  default-jre \
   systemd \
   1>/dev/null 2>$tmpFile
 if test $? -eq 0; then
@@ -71,16 +81,6 @@ else
   rm -f $tmpFile
   exit 1
 fi
-
-# set error handler: execute bash shell
-trap 'echo "ERRPR at line $LINENO: command '\''$BASH_COMMAND'\'' failed with exit code $?" && /bin/bash' ERR
-set -Eeuo pipefail
-
-# install/upgrade packages
-apt update 1>/dev/null 2>/dev/null
-apt -y upgrade --fix-missing 1>/dev/null 2>/dev/null
-apt -y install --fix-missing \
-  procps 1>/dev/null 2>/dev/null
 
 # install deb
 dpkg -i $debFiles
