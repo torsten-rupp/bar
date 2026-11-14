@@ -1,4 +1,4 @@
-# require Debian >= 13
+# require Debian >= 13 (see below)
 FROM debian:13
 ENV container=docker
 
@@ -77,12 +77,11 @@ RUN apt-get -y install --no-install-recommends --fix-missing \
   xz-utils \
   ;
 
-# install packages for dynamic linkage
+# install packages for dynamic linkage (libsmb2-dev only available from Debian > 12)
 RUN apt-get -y install --no-install-recommends --fix-missing \
   libiberty-dev \
   libicu-dev \
   zlib1g-dev \
-  libz-dev \
   liblzo2-dev \
   liblz4-dev \
   liblzma-dev \
@@ -96,6 +95,7 @@ RUN apt-get -y install --no-install-recommends --fix-missing \
   libc-ares-dev \
   libidn2-dev \
   libgcrypt20-dev \
+  libgnutls28-dev \
   libssh2-1-dev \
   libmount-dev \
   libburn-dev \
@@ -109,7 +109,6 @@ RUN apt-get -y install --no-install-recommends --fix-missing \
   libmariadb-dev \
   libpq-dev \
   uuid-dev \
-  libblkid-dev \
   liburcu-dev \
   binutils-dev \
   ;

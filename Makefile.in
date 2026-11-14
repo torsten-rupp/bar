@@ -121,8 +121,8 @@ DISTRIBUTION_NAME_GUI       = $(PACKAGE_NAME_GUI)-$(VERSION)
 TEST_PACKAGES_ALMALINUX     := 9.0 9.1 9.2 9.3 9.4 9.5 9.6 9.7 9.8
 TEST_PACKAGES_FEDORA        := 37 38 39 40 41 42
 TEST_PACKAGES_OPENSUSE_LEAP := 15.6 16.0
-TEST_PACKAGES_DEBIAN        := 12 13
-TEST_PACKAGES_UBUNTU        := 20.04 22.04 24.04 25.04 25.10
+TEST_PACKAGES_DEBIAN        := 13
+TEST_PACKAGES_UBUNTU        := 24.04 25.04 25.10 26.04 26.10
 
 #-------------------------------- functions ----------------------------------
 
@@ -831,7 +831,7 @@ rpmd: \
 rpm64: \
   $(DISTRIBUTION_NAME)-x86_64.rpm $(DISTRIBUTION_NAME)-dynamic-x86_64.rpm
 rpm64d:
-	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm $(DISTRIBUTION_NAME)-dynamic-x86_64.rpm PACKAGE_DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.rpm $(DISTRIBUTION_NAME)-dynamic-x86_64.rpm BUILD_DEBUG=1
 
 clean_rpm:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME)-x86_64.rpm
@@ -849,7 +849,7 @@ $(DISTRIBUTION_NAME)-x86_64.rpm: \
             --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
-            bar-rpm setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
+            bar-rpm setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm BUILD_DEBUG=$(BUILD_DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -863,7 +863,7 @@ $(DISTRIBUTION_NAME)-dynamic-x86_64.rpm: \
             --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
-            bar-rpm setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm PACKAGE_LINK_DYNAMIC=1 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
+            bar-rpm setarch x86_64 -- /bin/bash -c "make -C /media/home build_rpm BUILD_LINK_DYNAMIC=1 BUILD_DEBUG=$(BUILD_DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -872,14 +872,14 @@ build_rpm:
 	install -d build/rpm
 	(cd build/rpm; \
          ../../packages/build_rpm.sh \
-           $(if $(PACKAGE_LINK_DYNAMIC),--link-dynamic) \
-           $(if $(PACKAGE_DEBUG),--debug) \
+           $(if $(BUILD_LINK_DYNAMIC),--link-dynamic) \
+           $(if $(BUILD_DEBUG),--debug) \
            ../.. \
            $(PACKAGE_NAME) \
            ../../$(DISTRIBUTION_NAME).tar.bz2 \
            $(VERSION) \
            $(shell id -u):$(shell id -g) \
-           $(if $(PACKAGE_LINK_DYNAMIC),$(DISTRIBUTION_NAME)-dynamic-x86_64.rpm,$(DISTRIBUTION_NAME)-x86_64.rpm) \
+           $(if $(BUILD_LINK_DYNAMIC),$(DISTRIBUTION_NAME)-dynamic-x86_64.rpm,$(DISTRIBUTION_NAME)-x86_64.rpm) \
            ; \
         )
 
@@ -894,11 +894,11 @@ debd: \
 deb64: \
   $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME)-dynamic-x86_64.deb
 deb64d:
-	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME)-dynamic-x86_64.deb PACKAGE_DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME)-dynamic-x86_64.deb BUILD_DEBUG=1
 deb-gui64: \
   $(DISTRIBUTION_NAME_GUI)-x86_64.deb
 deb-gui64d:
-	$(MAKE) $(DISTRIBUTION_NAME_GUI)-x86_64.deb PACKAGE_DEBUG=1
+	$(MAKE) $(DISTRIBUTION_NAME_GUI)-x86_64.deb BUILD_DEBUG=1
 
 clean_deb:
 	$(RMF) $(DISTRIBUTION_NAME)-x86_64.deb
@@ -918,7 +918,7 @@ $(DISTRIBUTION_NAME)-x86_64.deb $(DISTRIBUTION_NAME_GUI)-x86_64.deb &: \
             --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
-            bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb PACKAGE_TOOLS=1 PACKAGE_GUI=1 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
+            bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb BUILD_TOOLS=1 BUILD_GUI=1 BUILD_DEBUG=$(BUILD_DEBUG)" \
         ) | tee $(DISTRIBUTION_NAME)-x86_64.deb.log
 	@$(call functionPrintResult,OK)
 
@@ -932,7 +932,7 @@ $(DISTRIBUTION_NAME)-dynamic-x86_64.deb: \
             --user $(shell id -u):$(shell id -g) \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
-            bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb PACKAGE_TOOLS=1 PACKAGE_LINK_DYNAMIC=1 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
+            bar-deb setarch x86_64 -- /bin/bash -c "make -C /media/home build_deb BUILD_TOOLS=1 BUILD_LINK_DYNAMIC=1 BUILD_DEBUG=$(BUILD_DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -942,16 +942,16 @@ build_deb:
 	install -d build/deb
 	(cd build/deb; \
 	 ../../packages/build_deb.sh \
-           $(if $(PACKAGE_TOOLS),--tools) \
-           $(if $(PACKAGE_GUI),--gui) \
-           $(if $(PACKAGE_LINK_DYNAMIC),--link-dynamic) \
-           $(if $(PACKAGE_DEBUG),--debug) \
+           $(if $(BUILD_TOOLS),--tools) \
+           $(if $(BUILD_GUI),--gui) \
+           $(if $(BUILD_LINK_DYNAMIC),--link-dynamic) \
+           $(if $(BUILD_DEBUG),--debug) \
            ../.. \
            $(PACKAGE_NAME) \
            ../../$(DISTRIBUTION_NAME).tar.bz2 \
            $(VERSION) \
            $(shell id -u):$(shell id -g) \
-           $(if $(PACKAGE_LINK_DYNAMIC),$(DISTRIBUTION_NAME)-dynamic-x86_64.deb,$(DISTRIBUTION_NAME)-x86_64.deb) \
+           $(if $(BUILD_LINK_DYNAMIC),$(DISTRIBUTION_NAME)-dynamic-x86_64.deb,$(DISTRIBUTION_NAME)-x86_64.deb) \
            $(DISTRIBUTION_NAME_GUI)-x86_64.deb \
            ; \
         )
@@ -961,7 +961,7 @@ build_deb:
 win32:
 	$(MAKE) $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@
 win32d:
-	$(MAKE) $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@ PACKAGE_DEBUG=1
+	$(MAKE) $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@ BUILD_DEBUG=1
 
 clean_win32:
 	$(RMF) build/rpm/$(DISTRIBUTION_NAME).rpm
@@ -981,7 +981,7 @@ $(PACKAGE_NAME)-setup-$(VERSION)@EXEEXT@: \
             -e COLUMNS="`tput cols`" -e LINES="`tput lines`" \
             -v $(PWD):/media/home \
             -v $(WINE_C_DRIVE):/media/wine \
-            bar-win32 setarch x86_64 -- /bin/bash -c "make -C /media/home build_win32 PACKAGE_DEBUG=$(PACKAGE_DEBUG)" \
+            bar-win32 setarch x86_64 -- /bin/bash -c "make -C /media/home build_win32 BUILD_DEBUG=$(BUILD_DEBUG)" \
         ) | tee $@.log
 	@$(call functionPrintResult,OK)
 
@@ -990,7 +990,7 @@ build_win32:
 	install -d build/win32
 	(cd build/win32; \
 	 ../../packages/build_win32.sh \
-           $(if $(PACKAGE_DEBUG),--debug) \
+           $(if $(BUILD_DEBUG),--debug) \
            ../.. \
            $(PACKAGE_NAME) \
            ../../$(DISTRIBUTION_NAME).tar.bz2 \
