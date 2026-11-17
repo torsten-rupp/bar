@@ -1024,31 +1024,31 @@ LOCAL bool StorageSMB_isFile(const StorageInfo *storageInfo, ConstString archive
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
+  bool isFileFlag = FALSE;
+
   #ifdef HAVE_SMB2
     // get share name+sub directory path name
     String shareName,subPathName;
     smb2InitShareNamePath(&shareName,&subPathName,&storageInfo->storageSpecifier,archiveName);
 
     struct smb2_stat_64 smbStatus;
-    bool isFileFlag =    (smb2stat(&smbStatus,
-                                   storageInfo->storageSpecifier.hostName,
-                                   storageInfo->storageSpecifier.userName,
-                                   &storageInfo->storageSpecifier.password,
-                                   shareName,
-                                   subPathName
-                                  ) == ERROR_NONE
-                         )
-                      && (smbStatus.smb2_type == SMB2_TYPE_FILE);
+    isFileFlag =    (smb2stat(&smbStatus,
+                              storageInfo->storageSpecifier.hostName,
+                              storageInfo->storageSpecifier.userName,
+                              &storageInfo->storageSpecifier.password,
+                              shareName,
+                              subPathName
+                             ) == ERROR_NONE
+                    )
+                 && (smbStatus.smb2_type == SMB2_TYPE_FILE);
 
     smb2DoneShareNamePath(shareName,subPathName);
-
-    return isFileFlag;
   #else /* not HAVE_SMB2 */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
-
-    return FALSE;
   #endif /* HAVE_SMB2 */
+
+  return isFileFlag;
 }
 
 /***********************************************************************\
@@ -1066,31 +1066,31 @@ LOCAL bool StorageSMB_isDirectory(const StorageInfo *storageInfo, ConstString ar
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_SMB);
 
+  bool isDirectoryFlag = FALSE;
+
   #ifdef HAVE_SMB2
     // get share name+sub directory path name
     String shareName,subPathName;
     smb2InitShareNamePath(&shareName,&subPathName,&storageInfo->storageSpecifier,archiveName);
 
     struct smb2_stat_64 smbStatus;
-    bool isDirectoryFlag =    (smb2stat(&smbStatus,
-                                        storageInfo->storageSpecifier.hostName,
-                                        storageInfo->storageSpecifier.userName,
-                                        &storageInfo->storageSpecifier.password,
-                                        shareName,
-                                        subPathName
-                                       ) == ERROR_NONE
-                              )
-                           && (smbStatus.smb2_type == SMB2_TYPE_DIRECTORY);
+    isDirectoryFlag =    (smb2stat(&smbStatus,
+                                   storageInfo->storageSpecifier.hostName,
+                                   storageInfo->storageSpecifier.userName,
+                                   &storageInfo->storageSpecifier.password,
+                                   shareName,
+                                   subPathName
+                                   ) == ERROR_NONE
+                         )
+                       && (smbStatus.smb2_type == SMB2_TYPE_DIRECTORY);
 
     smb2DoneShareNamePath(shareName,subPathName);
-
-    return isDirectoryFlag;
   #else /* not HAVE_SMB2 */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
-
-    return FALSE;
   #endif /* HAVE_SMB2 */
+
+  return isDirectoryFlag;
 }
 
 /***********************************************************************\
@@ -1113,7 +1113,7 @@ LOCAL bool StorageSMB_isReadable(const StorageInfo *storageInfo, ConstString arc
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-return ERROR_STILL_NOT_IMPLEMENTED;
+  return FALSE;
 }
 
 /***********************************************************************\
@@ -1136,9 +1136,7 @@ LOCAL bool StorageSMB_isWritable(const StorageInfo *storageInfo, ConstString arc
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  return FALSE;
 }
 
 /***********************************************************************\

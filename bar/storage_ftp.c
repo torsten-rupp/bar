@@ -419,7 +419,7 @@ LOCAL size_t curlFTPLineListCallback(const void *buffer,
                                     )
 {
   assert(buffer != NULL);
-  assert(size > 0);
+  assert((size * n)> 0);
 
   StringList *stringList = (StringList*)userData;
   assert(stringList != NULL);
@@ -441,6 +441,7 @@ LOCAL size_t curlFTPLineListCallback(const void *buffer,
     }
     s++;
   }
+  if (!String_isEmpty(line)) StringList_append(stringList,line);
   String_delete(line);
 
   return size * n;
@@ -1304,71 +1305,62 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo,
                              ConstString archiveName
                             )
 {
-  bool existsFlag;
-
   assert(storageInfo != NULL);
   assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
-  existsFlag = FALSE;
+  bool existsFlag = FALSE;
 
   #if   defined(HAVE_CURL)
     // open curl handle
     CURL *curlHandle = curl_easy_init();
-    if (curlHandle == NULL)
+    if (curlHandle != NULL)
     {
-      return ERROR_FTP_SESSION_FAIL;
-    }
+      // get directory name, base name
+      String directoryName = File_getDirectoryName(String_new(),archiveName);
+      String baseName      = File_getBaseName(String_new(),archiveName,TRUE);
 
-    // get directory name, base name
-    String directoryName = File_getDirectoryName(String_new(),archiveName);
-    String baseName      = File_getBaseName(String_new(),archiveName,TRUE);
-
-    // get URL
-    String url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
-    if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageInfo->storageSpecifier.hostPort);
-    StringTokenizer nameTokenizer;
-    File_initSplitFileName(&nameTokenizer,directoryName);
-    ConstString     token;
-    while (File_getNextSplitFileName(&nameTokenizer,&token))
-    {
+      // get URL
+      String url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+      if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageInfo->storageSpecifier.hostPort);
+      StringTokenizer nameTokenizer;
+      File_initSplitFileName(&nameTokenizer,directoryName);
+      ConstString     token;
+      while (File_getNextSplitFileName(&nameTokenizer,&token))
+      {
+        String_appendChar(url,'/');
+        String_append(url,token);
+      }
+      File_doneSplitFileName(&nameTokenizer);
       String_appendChar(url,'/');
-      String_append(url,token);
-    }
-    File_doneSplitFileName(&nameTokenizer);
-    String_appendChar(url,'/');
-    String_append(url,baseName);
+      String_append(url,baseName);
 
-    // set FTP connect
-    CURLcode curlCode = setFTPLogin(curlHandle,
-                                    storageInfo->storageSpecifier.userName,
-                                    &storageInfo->storageSpecifier.password,
-                                    FTP_TIMEOUT
-                                   );
-    if (curlCode != CURLE_OK)
-    {
+      // set FTP connect
+      CURLcode curlCode = setFTPLogin(curlHandle,
+                                      storageInfo->storageSpecifier.userName,
+                                      &storageInfo->storageSpecifier.password,
+                                      FTP_TIMEOUT
+                                     );
+
+      // check if file exists (Note: by default curl use passive FTP)
+      if (curlCode == CURLE_OK)
+      {
+        curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+      }
+      if (curlCode == CURLE_OK)
+      {
+        curlCode = curl_easy_perform(curlHandle);
+      }
+      existsFlag = (curlCode == CURLE_OK);
+
+      // close FTP connection
+      (void)curl_easy_cleanup(curlHandle);
+
+      // free resources
       String_delete(url);
       String_delete(baseName);
       String_delete(directoryName);
-      (void)curl_easy_cleanup(curlHandle);
-      return ERRORX_(FTP_SESSION_FAIL,0,"%s",curl_easy_strerror(curlCode));
     }
-
-    // check if file exists (Note: by default curl use passive FTP)
-    curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
-    if (curlCode == CURLE_OK)
-    {
-      curlCode = curl_easy_perform(curlHandle);
-    }
-    existsFlag = (curlCode == CURLE_OK);
-
-    // close FTP connection
-    (void)curl_easy_cleanup(curlHandle);
-
-    // free resources
-    String_delete(url);
-    String_delete(baseName);
-    String_delete(directoryName);
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
@@ -1380,25 +1372,245 @@ LOCAL bool StorageFTP_exists(StorageInfo *storageInfo,
 LOCAL bool StorageFTP_isFile(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
-//TODO: still not implemented
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(archiveName);
+  bool isFileFlag = FALSE;
 
-  return ERROR_STILL_NOT_IMPLEMENTED;
+  #if   defined(HAVE_CURL)
+    if (!String_isEmpty(storageInfo->storageSpecifier.hostName))
+    {
+      // get FTP server settings
+      FTPServer ftpServer;
+      uint serverId = Configuration_initFTPServerSettings(&ftpServer,storageInfo->storageSpecifier.hostName,storageInfo->jobOptions);
+      if (String_isEmpty(ftpServer.userName)) String_set(ftpServer.userName,storageInfo->storageSpecifier.userName);
+      if (String_isEmpty(ftpServer.userName)) String_setCString(ftpServer.userName,getenv("LOGNAME"));
+      if (String_isEmpty(ftpServer.userName)) String_setCString(ftpServer.userName,getenv("USER"));
+      if (Password_isEmpty(&ftpServer.password)) Password_set(&ftpServer.password,&storageInfo->storageSpecifier.password);
+
+      // allocate FTP server
+      if (allocateServer(serverId,SERVER_CONNECTION_PRIORITY_LOW,ALLOCATE_SERVER_TIMEOUT))
+      {
+        // open curl handle
+        CURL *curlHandle = curl_easy_init();
+        if (curlHandle != NULL)
+        {
+          // get directory, basename
+          String directoryPath = File_getDirectoryName(String_new(),archiveName);
+          String baseName      = File_getBaseName(String_new(),archiveName,TRUE);
+
+          // get URL
+          String  url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+          if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageInfo->storageSpecifier.hostPort);
+          StringTokenizer nameTokenizer;
+          File_initSplitFileName(&nameTokenizer,directoryPath);
+          ConstString token;
+          while (File_getNextSplitFileName(&nameTokenizer,&token))
+          {
+            String_appendChar(url,'/');
+            String_append(url,token);
+          }
+          String_appendChar(url,'/');
+          File_doneSplitFileName(&nameTokenizer);
+
+          // set FTP connect
+          CURLcode curlCode = setFTPLogin(curlHandle,
+                                          ftpServer.userName,
+                                          &ftpServer.password,
+                                          FTP_TIMEOUT
+                                         );
+
+          // get directory list
+          StringList lineList;
+          StringList_init(&lineList);
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPLineListCallback);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,&lineList);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_perform(curlHandle);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            // find entry and check type
+            bool   foundFlag = FALSE;
+            String fileName  = String_new();
+            while (!StringList_isEmpty(&lineList) && !foundFlag)
+            {
+              String          line = StringList_removeFirst(&lineList,NULL);
+              FileTypes       type;
+              uint64          size;
+              uint64          timeModified;
+              uint32          userId,groupId;
+              FilePermissions permissions;
+              foundFlag =    parseFTPDirectoryLine(line,
+                                                   fileName,
+                                                   &type,
+                                                   &size,
+                                                   &timeModified,
+                                                   &userId,
+                                                   &groupId,
+                                                   &permissions
+                                                  )
+                          && String_equals(fileName,baseName);
+              if (foundFlag)
+              {
+                isFileFlag = (type == FILE_TYPE_FILE);
+              }
+              String_delete(line);
+            }
+            String_delete(fileName);
+          }
+          StringList_done(&lineList);
+
+          // free resources
+          String_delete(url);
+          String_delete(baseName);
+          String_delete(directoryPath);
+          (void)curl_easy_cleanup(curlHandle);
+        }
+
+        freeServer(serverId);
+        Configuration_doneFTPServerSettings(&ftpServer);
+      }
+    }
+  #else /* not HAVE_CURL || HAVE_FTP */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+  #endif /* HAVE_CURL || HAVE_FTP */
+
+  return isFileFlag;
 }
 
 LOCAL bool StorageFTP_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
 {
   assert(storageInfo != NULL);
+  assert(storageInfo->storageSpecifier.type == STORAGE_TYPE_FTP);
   assert(!String_isEmpty(archiveName));
 
-//TODO: still not implemented
-  UNUSED_VARIABLE(storageInfo);
-  UNUSED_VARIABLE(archiveName);
+  bool isDirectoryFlag = FALSE;
 
-  return ERROR_STILL_NOT_IMPLEMENTED;
+  #if   defined(HAVE_CURL)
+    if (!String_isEmpty(storageInfo->storageSpecifier.hostName))
+    {
+      // get FTP server settings
+      FTPServer ftpServer;
+      uint serverId = Configuration_initFTPServerSettings(&ftpServer,storageInfo->storageSpecifier.hostName,storageInfo->jobOptions);
+      if (String_isEmpty(ftpServer.userName)) String_set(ftpServer.userName,storageInfo->storageSpecifier.userName);
+      if (String_isEmpty(ftpServer.userName)) String_setCString(ftpServer.userName,getenv("LOGNAME"));
+      if (String_isEmpty(ftpServer.userName)) String_setCString(ftpServer.userName,getenv("USER"));
+      if (Password_isEmpty(&ftpServer.password)) Password_set(&ftpServer.password,&storageInfo->storageSpecifier.password);
+
+      // allocate FTP server
+      if (allocateServer(serverId,SERVER_CONNECTION_PRIORITY_LOW,ALLOCATE_SERVER_TIMEOUT))
+      {
+        // open curl handle
+        CURL *curlHandle = curl_easy_init();
+        if (curlHandle != NULL)
+        {
+          // get directory, basename
+          String directoryPath = File_getDirectoryName(String_new(),archiveName);
+          String baseName      = File_getBaseName(String_new(),archiveName,TRUE);
+
+          // get URL
+          String  url = String_format(String_new(),"ftp://%S",storageInfo->storageSpecifier.hostName);
+          if (storageInfo->storageSpecifier.hostPort != 0) String_appendFormat(url,":%d",storageInfo->storageSpecifier.hostPort);
+          StringTokenizer nameTokenizer;
+          File_initSplitFileName(&nameTokenizer,directoryPath);
+          ConstString token;
+          while (File_getNextSplitFileName(&nameTokenizer,&token))
+          {
+            String_appendChar(url,'/');
+            String_append(url,token);
+          }
+          String_appendChar(url,'/');
+          File_doneSplitFileName(&nameTokenizer);
+
+          // set FTP connect
+          CURLcode curlCode = setFTPLogin(curlHandle,
+                                          ftpServer.userName,
+                                          &ftpServer.password,
+                                          FTP_TIMEOUT
+                                         );
+
+          // get directory list
+          StringList lineList;
+          StringList_init(&lineList);
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_URL,String_cString(url));
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEFUNCTION,curlFTPLineListCallback);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_setopt(curlHandle,CURLOPT_WRITEDATA,&lineList);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            curlCode = curl_easy_perform(curlHandle);
+          }
+          if (curlCode == CURLE_OK)
+          {
+            // find entry and check type
+            bool   foundFlag = FALSE;
+            String fileName  = String_new();
+            while (!StringList_isEmpty(&lineList) && !foundFlag)
+            {
+              String          line = StringList_removeFirst(&lineList,NULL);
+              FileTypes       type;
+              uint64          size;
+              uint64          timeModified;
+              uint32          userId,groupId;
+              FilePermissions permissions;
+              foundFlag =    parseFTPDirectoryLine(line,
+                                                   fileName,
+                                                   &type,
+                                                   &size,
+                                                   &timeModified,
+                                                   &userId,
+                                                   &groupId,
+                                                   &permissions
+                                                  )
+                          && String_equals(fileName,baseName);
+              if (foundFlag)
+              {
+                isDirectoryFlag = (type == FILE_TYPE_DIRECTORY);
+              }
+              String_delete(line);
+            }
+            String_delete(fileName);
+          }
+          StringList_done(&lineList);
+
+          // free resources
+          String_delete(url);
+          String_delete(baseName);
+          String_delete(directoryPath);
+          (void)curl_easy_cleanup(curlHandle);
+        }
+
+        freeServer(serverId);
+        Configuration_doneFTPServerSettings(&ftpServer);
+      }
+    }
+  #else /* not HAVE_CURL || HAVE_FTP */
+    UNUSED_VARIABLE(storageInfo);
+    UNUSED_VARIABLE(archiveName);
+  #endif /* HAVE_CURL || HAVE_FTP */
+
+  return isDirectoryFlag;
 }
 
 LOCAL bool StorageFTP_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
@@ -2750,8 +2962,11 @@ LOCAL Errors StorageFTP_openDirectoryList(StorageDirectoryListHandle *storageDir
     AutoFreeList autoFreeList;
     AutoFree_init(&autoFreeList);
 
+    storageDirectoryListHandle->ftp.pathName      = String_duplicate(pathName);
+    AUTOFREE_ADD(&autoFreeList,storageDirectoryListHandle->ftp.pathName,{ String_delete(storageDirectoryListHandle->ftp.pathName); });
     StringList_init(&storageDirectoryListHandle->ftp.lineList);
     storageDirectoryListHandle->ftp.fileName      = String_new();
+    AUTOFREE_ADD(&autoFreeList,storageDirectoryListHandle->ftp.fileName,{ String_delete(storageDirectoryListHandle->ftp.fileName); });
     storageDirectoryListHandle->ftp.entryReadFlag = FALSE;
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.lineList,{ StringList_done(&storageDirectoryListHandle->ftp.lineList); });
     AUTOFREE_ADD(&autoFreeList,&storageDirectoryListHandle->ftp.fileName,{ String_delete(storageDirectoryListHandle->ftp.fileName); });
@@ -2920,6 +3135,7 @@ LOCAL void StorageFTP_closeDirectoryList(StorageDirectoryListHandle *storageDire
     freeServer(storageDirectoryListHandle->ftp.serverId);
     String_delete(storageDirectoryListHandle->ftp.fileName);
     StringList_done(&storageDirectoryListHandle->ftp.lineList);
+    String_delete(storageDirectoryListHandle->ftp.pathName);
   #else /* not HAVE_CURL || HAVE_FTP */
     UNUSED_VARIABLE(storageDirectoryListHandle);
   #endif /* HAVE_CURL || HAVE_FTP */
@@ -2927,13 +3143,12 @@ LOCAL void StorageFTP_closeDirectoryList(StorageDirectoryListHandle *storageDire
 
 LOCAL bool StorageFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDirectoryListHandle)
 {
-  bool endOfDirectoryFlag;
-
   assert(storageDirectoryListHandle != NULL);
   assert(storageDirectoryListHandle->storageSpecifier.type == STORAGE_TYPE_FTP);
 
-  endOfDirectoryFlag = TRUE;
+  bool endOfDirectoryFlag = TRUE;
   #if   defined(HAVE_CURL)
+    String name = String_new();
     while (   !storageDirectoryListHandle->ftp.entryReadFlag
            && !StringList_isEmpty(&storageDirectoryListHandle->ftp.lineList)
           )
@@ -2943,7 +3158,7 @@ LOCAL bool StorageFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDire
 
       // parse
       storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,
-                                                                            storageDirectoryListHandle->ftp.fileName,
+                                                                            name,
                                                                             &storageDirectoryListHandle->ftp.type,
                                                                             &storageDirectoryListHandle->ftp.size,
                                                                             &storageDirectoryListHandle->ftp.timeModified,
@@ -2951,10 +3166,16 @@ LOCAL bool StorageFTP_endOfDirectoryList(StorageDirectoryListHandle *storageDire
                                                                             &storageDirectoryListHandle->ftp.groupId,
                                                                             &storageDirectoryListHandle->ftp.permissions
                                                                            );
+      if (storageDirectoryListHandle->ftp.entryReadFlag)
+      {
+        String_set(storageDirectoryListHandle->ftp.fileName,storageDirectoryListHandle->ftp.pathName);
+        File_appendFileName(storageDirectoryListHandle->ftp.fileName,name);
+      }
 
       // free resources
       String_delete(line);
     }
+    String_delete(name);
 
     endOfDirectoryFlag = !storageDirectoryListHandle->ftp.entryReadFlag;
   #else /* not HAVE_CURL || HAVE_FTP */
@@ -2976,6 +3197,7 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
 
   error = ERROR_UNKNOWN;
   #if   defined(HAVE_CURL)
+    String name = String_new();
     while (   !storageDirectoryListHandle->ftp.entryReadFlag
            && !StringList_isEmpty(&storageDirectoryListHandle->ftp.lineList)
           )
@@ -2985,7 +3207,7 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
 
       // parse
       storageDirectoryListHandle->ftp.entryReadFlag = parseFTPDirectoryLine(line,
-                                                                            fileName,
+                                                                            name,
                                                                             &storageDirectoryListHandle->ftp.type,
                                                                             &storageDirectoryListHandle->ftp.size,
                                                                             &storageDirectoryListHandle->ftp.timeModified,
@@ -2993,10 +3215,17 @@ LOCAL Errors StorageFTP_readDirectoryList(StorageDirectoryListHandle *storageDir
                                                                             &storageDirectoryListHandle->ftp.groupId,
                                                                             &storageDirectoryListHandle->ftp.permissions
                                                                            );
+      if (storageDirectoryListHandle->ftp.entryReadFlag)
+      {
+fprintf(stderr,"%s:%d %s: _\n",__FILE__,__LINE__,__FUNCTION__);
+        String_set(storageDirectoryListHandle->ftp.fileName,storageDirectoryListHandle->ftp.pathName);
+        File_appendFileName(storageDirectoryListHandle->ftp.fileName,name);
+      }
 
       // free resources
       String_delete(line);
     }
+    String_delete(name);
 
     if (storageDirectoryListHandle->ftp.entryReadFlag)
     {

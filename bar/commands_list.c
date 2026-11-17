@@ -3585,7 +3585,6 @@ Errors Command_list(StringList              *storageNameList,
   StorageSpecifier storageSpecifier;
   Storage_initSpecifier(&storageSpecifier);
 
-
   // list archive content
   Errors      failError        = ERROR_NONE;
   bool        someStorageFound = FALSE;

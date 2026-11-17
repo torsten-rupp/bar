@@ -852,29 +852,27 @@ LOCAL bool StorageSFTP_isFile(StorageInfo *storageInfo,
   bool isFileFlag = FALSE;
 
   #ifdef HAVE_SSH2
-    Errors error;
-
     SocketHandle socketHandle;
-    error = Network_connect(&socketHandle,
-                            SOCKET_TYPE_SSH,
-                            storageInfo->storageSpecifier.hostName,
-                            storageInfo->storageSpecifier.hostPort,
-                            storageInfo->storageSpecifier.userName,
-                            &storageInfo->storageSpecifier.password,
-                            NULL,  // caData
-                            0,     // caLength
-                            NULL,  // certData
-                            0,     // certLength
-                            storageInfo->sftp.publicKey.data,
-                            storageInfo->sftp.publicKey.length,
-                            storageInfo->sftp.privateKey.data,
-                            storageInfo->sftp.privateKey.length,
-                              SOCKET_FLAG_NONE
-                            | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
-                            | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
-                            30*MS_PER_SECOND
-                           );
-    if (error == ERROR_NONE)
+    if (Network_connect(&socketHandle,
+                        SOCKET_TYPE_SSH,
+                        storageInfo->storageSpecifier.hostName,
+                        storageInfo->storageSpecifier.hostPort,
+                        storageInfo->storageSpecifier.userName,
+                        &storageInfo->storageSpecifier.password,
+                        NULL,  // caData
+                        0,     // caLength
+                        NULL,  // certData
+                        0,     // certLength
+                        storageInfo->sftp.publicKey.data,
+                        storageInfo->sftp.publicKey.length,
+                        storageInfo->sftp.privateKey.data,
+                        storageInfo->sftp.privateKey.length,
+                          SOCKET_FLAG_NONE
+                        | ((globalOptions.verboseLevel >= 5) ? SOCKET_FLAG_VERBOSE1 : 0)
+                        | ((globalOptions.verboseLevel >= 6) ? SOCKET_FLAG_VERBOSE2 : 0),
+                        30*MS_PER_SECOND
+                       ) == ERROR_NONE
+       )
     {
       libssh2_session_set_timeout(Network_getSSHSession(&socketHandle),READ_TIMEOUT);
 
@@ -982,7 +980,7 @@ LOCAL bool StorageSFTP_isReadable(const StorageInfo *storageInfo, ConstString ar
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-return ERROR_STILL_NOT_IMPLEMENTED;
+  return FALSE;
 }
 
 /***********************************************************************\
@@ -1005,9 +1003,7 @@ LOCAL bool StorageSFTP_isWritable(const StorageInfo *storageInfo, ConstString ar
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return ERROR_STILL_NOT_IMPLEMENTED;
-  return File_exists(archiveName);
+  return FALSE;
 }
 
 /***********************************************************************\

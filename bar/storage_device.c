@@ -1446,10 +1446,10 @@ LOCAL bool StorageDevice_isFile(const StorageInfo *storageInfo, ConstString arch
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
+  //TODO: still not implemented
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-  //TODO: still not implemented
   return FALSE;
 }
 
@@ -1458,10 +1458,10 @@ LOCAL bool StorageDevice_isDirectory(const StorageInfo *storageInfo, ConstString
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
+  //TODO: still not implemented
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-  //TODO: still not implemented
   return FALSE;
 }
 
@@ -1470,10 +1470,10 @@ LOCAL bool StorageDevice_isReadable(const StorageInfo *storageInfo, ConstString 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
+  //TODO: still not implemented
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-  //TODO: still not implemented
   return FALSE;
 }
 
@@ -1482,10 +1482,10 @@ LOCAL bool StorageDevice_isWritable(const StorageInfo *storageInfo, ConstString 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
+  //TODO: still not implemented
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-  //TODO: still not implemented
   return FALSE;
 }
 

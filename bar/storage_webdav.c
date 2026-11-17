@@ -2361,45 +2361,37 @@ LOCAL bool StorageWebDAV_isFile(const StorageInfo *storageInfo, ConstString arch
   #if   defined(HAVE_CURL)
     // open curl handle
     CURL *curlHandle = curl_easy_init();
-    if (curlHandle == NULL)
+    if (curlHandle != NULL)
     {
-      return ERROR_WEBDAV_SESSION_FAIL;
-    }
+      // get URL
+      String url = getWebDAVURL(storageInfo->storageSpecifier.type,
+                                storageInfo->storageSpecifier.hostName,
+                                storageInfo->storageSpecifier.hostPort,
+                                archiveName
+                               );
 
-    // get URL
-    String url = getWebDAVURL(storageInfo->storageSpecifier.type,
-                              storageInfo->storageSpecifier.hostName,
-                              storageInfo->storageSpecifier.hostPort,
-                              archiveName
-                             );
+      // init WebDAV login
+      if (setWebDAVLogin(curlHandle,
+                         storageInfo->storageSpecifier.userName,
+                         &storageInfo->storageSpecifier.password,
+                         storageInfo->webdav.publicKey.data,
+                         storageInfo->webdav.publicKey.length,
+                         storageInfo->webdav.privateKey.data,
+                         storageInfo->webdav.privateKey.length,
+                         WEBDAV_TIMEOUT
+                        ) == ERROR_NONE
+         )
+      {
+        // check if file exists
+        FileInfo fileInfo;
+        isFileFlag =    (getFileInfo(&fileInfo,curlHandle,url,archiveName) == ERROR_NONE)
+                     && (fileInfo.type == FILE_TYPE_FILE);
+      }
 
-    Errors error;
-
-    // init WebDAV login
-    error = setWebDAVLogin(curlHandle,
-                           storageInfo->storageSpecifier.userName,
-                           &storageInfo->storageSpecifier.password,
-                           storageInfo->webdav.publicKey.data,
-                           storageInfo->webdav.publicKey.length,
-                           storageInfo->webdav.privateKey.data,
-                           storageInfo->webdav.privateKey.length,
-                           WEBDAV_TIMEOUT
-                          );
-    if (error != ERROR_NONE)
-    {
+      // free resources
       String_delete(url);
       (void)curl_easy_cleanup(curlHandle);
-      return error;
     }
-
-    // check if file exists
-    FileInfo fileInfo;
-    isFileFlag =    (getFileInfo(&fileInfo,curlHandle,url,archiveName) == ERROR_NONE)
-                 && (fileInfo.type == FILE_TYPE_FILE);
-
-    // free resources
-    String_delete(url);
-    (void)curl_easy_cleanup(curlHandle);
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
@@ -2421,45 +2413,37 @@ LOCAL bool StorageWebDAV_isDirectory(const StorageInfo *storageInfo, ConstString
   #if   defined(HAVE_CURL)
     // open curl handle
     CURL *curlHandle = curl_easy_init();
-    if (curlHandle == NULL)
+    if (curlHandle != NULL)
     {
-      return ERROR_WEBDAV_SESSION_FAIL;
-    }
+      // get URL
+      String url = getWebDAVURL(storageInfo->storageSpecifier.type,
+                                storageInfo->storageSpecifier.hostName,
+                                storageInfo->storageSpecifier.hostPort,
+                                archiveName
+                               );
 
-    // get URL
-    String url = getWebDAVURL(storageInfo->storageSpecifier.type,
-                              storageInfo->storageSpecifier.hostName,
-                              storageInfo->storageSpecifier.hostPort,
-                              archiveName
-                             );
+      // init WebDAV login
+      if (setWebDAVLogin(curlHandle,
+                         storageInfo->storageSpecifier.userName,
+                         &storageInfo->storageSpecifier.password,
+                         storageInfo->webdav.publicKey.data,
+                         storageInfo->webdav.publicKey.length,
+                         storageInfo->webdav.privateKey.data,
+                         storageInfo->webdav.privateKey.length,
+                         WEBDAV_TIMEOUT
+                        ) == ERROR_NONE
+         )
+      {
+        // check if directory exists
+        FileInfo fileInfo;
+        isDirectoryFlag =    (getFileInfo(&fileInfo,curlHandle,url,archiveName) == ERROR_NONE)
+                          && (fileInfo.type == FILE_TYPE_DIRECTORY);
+      }
 
-    Errors error;
-
-    // init WebDAV login
-    error = setWebDAVLogin(curlHandle,
-                           storageInfo->storageSpecifier.userName,
-                           &storageInfo->storageSpecifier.password,
-                           storageInfo->webdav.publicKey.data,
-                           storageInfo->webdav.publicKey.length,
-                           storageInfo->webdav.privateKey.data,
-                           storageInfo->webdav.privateKey.length,
-                           WEBDAV_TIMEOUT
-                          );
-    if (error != ERROR_NONE)
-    {
+      // free resources
       String_delete(url);
       (void)curl_easy_cleanup(curlHandle);
-      return error;
     }
-
-    // check if directory exists
-    FileInfo fileInfo;
-    isDirectoryFlag =    (getFileInfo(&fileInfo,curlHandle,url,archiveName) == ERROR_NONE)
-                      && (fileInfo.type == FILE_TYPE_DIRECTORY);
-
-    // free resources
-    String_delete(url);
-    (void)curl_easy_cleanup(curlHandle);
   #else /* not HAVE_CURL */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
@@ -2473,12 +2457,11 @@ LOCAL bool StorageWebDAV_isReadable(const StorageInfo *storageInfo, ConstString 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
+//TODO: still not implemented
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return FALSE;
-  return File_exists(archiveName);
+  return FALSE;
 }
 
 LOCAL bool StorageWebDAV_isWritable(const StorageInfo *storageInfo, ConstString archiveName)
@@ -2486,11 +2469,11 @@ LOCAL bool StorageWebDAV_isWritable(const StorageInfo *storageInfo, ConstString 
   assert(storageInfo != NULL);
   assert(!String_isEmpty(archiveName));
 
+//TODO: still not implemented
   UNUSED_VARIABLE(storageInfo);
   UNUSED_VARIABLE(archiveName);
 
-//TODO: still not implemented
-return FALSE;
+  return FALSE;
 }
 
 LOCAL Errors StorageWebDAV_getTmpName(String archiveName, const StorageInfo *storageInfo)

@@ -4201,6 +4201,8 @@ LOCAL bool StorageOptical_isFile(const StorageInfo *storageInfo, ConstString arc
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(archiveName != NULL);
 
+  bool isFileFlag = FALSE;
+
   #ifdef HAVE_ISO9660
     const char *deviceName = getOpticalDeviceName(&storageInfo->storageSpecifier);
     #ifndef NDEBUG
@@ -4212,40 +4214,33 @@ LOCAL bool StorageOptical_isFile(const StorageInfo *storageInfo, ConstString arc
     #endif
 
     // check if device exists
-    if (stringIsEmpty(deviceName))
+    if (!stringIsEmpty(deviceName))
     {
-      return FALSE;
+      if (File_existsCString(deviceName))
+      {
+        iso9660_t *iso9660Handle = iso9660_open_ext(deviceName,ISO_EXTENSION_ALL);
+        if (iso9660Handle != NULL)
+        {
+          iso9660_stat_t *iso9660Stat = iso9660_ifs_stat_translate(iso9660Handle,String_cString(archiveName));
+          if (iso9660Stat != NULL)
+          {
+            isFileFlag = iso9660Stat->type == _STAT_FILE;
+
+            iso9660_stat_free(iso9660Stat);
+          }
+
+          (void)iso9660_close(iso9660Handle);
+        }
+      }
     }
-    if (!File_existsCString(deviceName))
-    {
-      return FALSE;
-    }
-
-    iso9660_t *iso9660Handle = iso9660_open_ext(deviceName,ISO_EXTENSION_ALL);
-    if (iso9660Handle == NULL)
-    {
-      return FALSE;
-    }
-
-    iso9660_stat_t *iso9660Stat = iso9660_ifs_stat_translate(iso9660Handle,String_cString(archiveName));
-    if (iso9660Stat == NULL)
-    {
-      (void)iso9660_close(iso9660Handle);
-      return FALSE;
-    }
-
-    bool isFile = iso9660Stat->type == _STAT_FILE;
-
-    iso9660_stat_free(iso9660Stat);
-    (void)iso9660_close(iso9660Handle);
-
-    return isFile;
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
 
     return FALSE;
   #endif /* HAVE_ISO9660 */
+
+  return isFileFlag;
 }
 
 LOCAL bool StorageOptical_isDirectory(const StorageInfo *storageInfo, ConstString archiveName)
@@ -4254,6 +4249,8 @@ LOCAL bool StorageOptical_isDirectory(const StorageInfo *storageInfo, ConstStrin
   assert((storageInfo->storageSpecifier.type == STORAGE_TYPE_CD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_DVD) || (storageInfo->storageSpecifier.type == STORAGE_TYPE_BD));
   assert(archiveName != NULL);
 
+  bool isDirectoryFlag = FALSE;
+
   #ifdef HAVE_ISO9660
     const char *deviceName = getOpticalDeviceName(&storageInfo->storageSpecifier);
     #ifndef NDEBUG
@@ -4265,40 +4262,30 @@ LOCAL bool StorageOptical_isDirectory(const StorageInfo *storageInfo, ConstStrin
     #endif
 
     // check if device exists
-    if (stringIsEmpty(deviceName))
+    if (!stringIsEmpty(deviceName))
     {
-      return FALSE;
+      if (File_existsCString(deviceName))
+      {
+        iso9660_t *iso9660Handle = iso9660_open_ext(deviceName,ISO_EXTENSION_ALL);
+        if (iso9660Handle != NULL)
+        {
+          iso9660_stat_t *iso9660Stat = iso9660_ifs_stat_translate(iso9660Handle,String_cString(archiveName));
+          if (iso9660Stat != NULL)
+          {
+            isDirectoryFlag = iso9660Stat->type == _STAT_DIR;
+
+            iso9660_stat_free(iso9660Stat);
+          }
+          (void)iso9660_close(iso9660Handle);
+        }
+      }
     }
-    if (!File_existsCString(deviceName))
-    {
-      return FALSE;
-    }
-
-    iso9660_t *iso9660Handle = iso9660_open_ext(deviceName,ISO_EXTENSION_ALL);
-    if (iso9660Handle == NULL)
-    {
-      return FALSE;
-    }
-
-    iso9660_stat_t *iso9660Stat = iso9660_ifs_stat_translate(iso9660Handle,String_cString(archiveName));
-    if (iso9660Stat == NULL)
-    {
-      (void)iso9660_close(iso9660Handle);
-      return FALSE;
-    }
-
-    bool isFile = iso9660Stat->type == _STAT_DIR;
-
-    iso9660_stat_free(iso9660Stat);
-    (void)iso9660_close(iso9660Handle);
-
-    return isFile;
   #else /* not HAVE_ISO9660 */
     UNUSED_VARIABLE(storageInfo);
     UNUSED_VARIABLE(archiveName);
-
-    return FALSE;
   #endif /* HAVE_ISO9660 */
+
+  return isDirectoryFlag;
 }
 
 LOCAL bool StorageOptical_isReadable(const StorageInfo *storageInfo, ConstString archiveName)
@@ -4330,7 +4317,7 @@ LOCAL bool StorageOptical_isReadable(const StorageInfo *storageInfo, ConstString
     }
 
     iso9660_stat_t *iso9660Stat = iso9660_ifs_stat_translate(iso9660Handle,String_cString(archiveName));
-    bool isReadable = (iso9660Stat != NULL);
+    bool result = (iso9660Stat != NULL);
     if (iso9660Stat != NULL)
     {
       iso9660_stat_free(iso9660Stat);
@@ -4338,7 +4325,7 @@ LOCAL bool StorageOptical_isReadable(const StorageInfo *storageInfo, ConstString
 
     (void)iso9660_close(iso9660Handle);
 
-    return isReadable;
+    return result;
   #else /* not HAVE_ISO9660 */
     return FALSE;
   #endif /* HAVE_ISO9660 */
